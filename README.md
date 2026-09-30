@@ -13,6 +13,12 @@ npm test           # node --test test/
 
 Open the page, type a URL, press Scan. Two grades are shown: **security** (headers, cookies, tls, dns, mail, content, exposure) and **quality** (seo, ai, ux). Only `pass`/`warn`/`fail` count; `info` and `skipped` never affect the score.
 
+## UI
+
+One self-contained page, `public/index.html`, generated from `ui/src/` (design notes in `ui/DESIGN.md`). Edit the fragments, then run `npm run build:ui`; never edit `public/index.html` by hand. The built file is committed, so serving and deploying need no build step beyond the existing ones.
+
+CSS does the visual work (conic-gradient gauges with a counter() count-up via `@property`, donut, heat grid, `<details>` accordion, radio + `:has()` filters), with `@supports` fallbacks. JS only renders the result with `textContent`/`createElement`. No inline styles or handlers, no external requests (strict CSP by hash), system fonts, light/dark via `prefers-color-scheme`, and everything is static under `prefers-reduced-motion`.
+
 ## API
 
 All responses are JSON (`application/json; charset=utf-8`). Errors: `{"error":{"code","message"}}`.
@@ -27,7 +33,7 @@ All responses are JSON (`application/json; charset=utf-8`). Errors: `{"error":{"
 
 Error codes: `BAD_URL` 400, `BAD_REQUEST` 400, `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After`), `INTERNAL` 500, `SCAN_FAILED` 502, `BUSY` 503 (> 4 concurrent scans), `TIMEOUT` 504.
 
-Result: `{url, host, scannedAt, durationMs, verified, deep, rawHeaders:[{name,value}], score:{security,quality,categories}, findings:[Finding], errors:[{module,message}]}`. `rawHeaders` = the page's response headers for a raw-headers table (Set-Cookie values redacted, long values cut).
+Result: `{url, host, scannedAt, durationMs, verified, deep, rawHeaders:[{name,value}], score:{security,quality,categories}, findings:[Finding], errors:[{module,message}]}`. `rawHeaders` = the page's response headers for a raw-headers table (Set-Cookie values, Domain and non-root Path redacted, cookie lines capped, long values cut).
 Finding: `{id, category, title, status: pass|warn|fail|info|skipped, severity: 1-5, evidence (<=300 chars), fix, ref?, checklist?}`.
 
 ## Ownership verification (for deep scans)

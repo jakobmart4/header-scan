@@ -266,12 +266,28 @@
   function reveal(ev) {
     var l = ev.target.labels && ev.target.labels[0], strip = l && l.parentNode;
     if (strip && strip.scrollWidth > strip.clientWidth) {
-      requestAnimationFrame(function () { l.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
+      l.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     }
+  }
+
+  // Raw headers come from the scanned server (untrusted): textContent only. Set-Cookie values are already redacted server-side.
+  function renderRaw(r) {
+    var rows = Array.isArray(r.rawHeaders) ? r.rawHeaders : [], body = $('raw-body');
+    clear(body);
+    $('raw-card').hidden = !rows.length;
+    $('raw-count').textContent = rows.length ? '(' + rows.length + ')' : '';
+    rows.forEach(function (x) {
+      var tr = h('tr');
+      tr.appendChild(h('th', 'rn', x.name));
+      tr.lastChild.setAttribute('scope', 'row');
+      tr.appendChild(h('td', 'rv', x.value));
+      body.appendChild(tr);
+    });
   }
 
   function show(r) {
     result = r;
+    renderRaw(r);
     renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
     // Follow the latest scan unless the user typed their own host.
     if (!$('host').value || $('host').value === autoHost) {

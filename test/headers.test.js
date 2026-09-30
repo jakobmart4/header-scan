@@ -61,7 +61,7 @@ describe('headers.js (hand-made ctx)', () => {
     assert.equal(s['cors-wildcard-credentials'], 'fail');
     assert.equal(s['cors-null-origin'], 'fail');
     const star = by(await run(fakeCtx({ fetch: res({ 'access-control-allow-origin': '*', 'access-control-allow-credentials': 'true' }) })));
-    assert.equal(star['cors-wildcard-credentials'], 'fail');
+    assert.equal(star['cors-wildcard-credentials'], 'warn'); // "*" + credentials is rejected by browsers: misconfiguration, not exploitable
   });
   test('failed page fetch never throws', async () => {
     const ctx = fakeCtx({ status: 0 });

@@ -170,10 +170,11 @@ describe('cors-wildcard-public', () => {
     ['probe fails, page header silent', {}, 'pass', null, { fetch: boom }],
     ['reflected origin belongs to cors-reflected-origin', {}, 'pass', null, { fetch: reflect }],
   ]);
-  test('overlap with cors-wildcard-credentials is accepted: both report', async () => {
+  test('overlap with cors-wildcard-credentials: both report, and the public finding mentions the credentials header', async () => {
     const f = await H({}, { fetch: res({ [ACAO]: '*', 'access-control-allow-credentials': 'true' }) });
-    assert.equal(f['cors-wildcard-credentials'].status, 'fail');
+    assert.equal(f['cors-wildcard-credentials'].status, 'warn');
     assert.equal(f['cors-wildcard-public'].status, 'info');
+    assert.match(f['cors-wildcard-public'].evidence, /Allow-Credentials/);
   });
 });
 
@@ -238,7 +239,9 @@ describe('csp-style-unsafe-inline', () => {
     ["default-src 'unsafe-inline'", 'warn', /^default-src allows/],
     ["default-src 'unsafe-inline'; style-src 'self'", 'pass'],
     ["default-src 'unsafe-inline'; style-src", 'pass'], // present but empty counts
-    ["style-src 'unsafe-inline'; style-src-elem 'self'", 'pass'],
+    ["style-src 'unsafe-inline'; style-src-elem 'self'", 'info', /style-src-elem restricts <style> elements, but style-src still allows inline style attributes/], // style-src-attr falls back to style-src
+    ["style-src 'unsafe-inline'; style-src-elem 'self'; style-src-attr 'none'", 'pass'],
+    ["style-src 'unsafe-inline'; style-src-elem 'self'; style-src-attr 'unsafe-inline'", 'pass'], // explicit attr rule: approved, attributes cannot run script
     ["style-src 'self'; style-src-elem 'unsafe-inline'", 'warn', /^style-src-elem allows/],
     ["style-src 'self'; style-src-attr 'unsafe-inline'", 'pass'], // attributes cannot run script, not evaluated
     ["script-src 'self'", 'pass'], // no style directive at all: csp-default-src's job
@@ -346,12 +349,12 @@ describe('lib/data/csp-bypass-hosts.js', () => {
   const SEED = [
     ['cdnjs.cloudflare.com', E], ['cdn.jsdelivr.net', E], ['unpkg.com', Cb], ['ajax.googleapis.com', E], ['code.angularjs.org', Cb], ['cdn.shopify.com', E],
     ['www.gstatic.com/fsn/angular_js-bundle1.js', E], ['www.google.com/tools/feedback/escalation-options', E], ['www.google.com/recaptcha/about/js/main.min.js', Hk],
-    ['accounts.google.com/o/oauth2/revoke', E], ['apis.google.com', Cb], ['*.googleapis.com', E], ['*.blogspot.com', E], ['www.blogger.com', E], ['api.github.com', Cb],
+    ['accounts.google.com/o/oauth2/revoke', E], ['apis.google.com', Cb], ['*.googleapis.com', E], ['maps.googleapis.com', E], ['translate.googleapis.com', E], ['mts0.googleapis.com', E], ['mts1.googleapis.com', E], ['*.blogspot.com', E], ['www.blogger.com', E], ['api.github.com', Cb],
     ['*.github.io', E], ['*.cloudfront.net', E], ['*.amazonaws.com', E], ['*.appspot.com', E], ['*.herokuapp.com', E], ['*.azurewebsites.net', Hk],
     ['*.azurestaticapps.net', Hk], ['*.firebaseapp.com', Hk], ['*.blob.core.windows.net', E],
   ];
-  test('exactly the 24 seed entries of PARITY-SPEC section 3, in list order', () => {
-    assert.equal(BYPASS_HOSTS.length, 24);
+  test('exactly the 28 seed entries of PARITY-SPEC section 3, in list order', () => {
+    assert.equal(BYPASS_HOSTS.length, 28);
     assert.deepEqual(BYPASS_HOSTS.map((e) => [e.pattern, e.ref]), SEED);
   });
   test('entry shape: lowercase pattern, reason <= 80 chars, https ref, no duplicates', () => {
@@ -381,7 +384,7 @@ describe('buildRawHeaders()', () => {
   test('cookie values are redacted, only whitelisted attributes survive (original casing kept)', () => {
     const line = 'sid=SECRETVALUE; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=.x.test; Max-Age=5; Expires=Wed, 30 Sep 2026 13:12:15 GMT; Partitioned; Priority=High; Comment=leak; Version=1';
     assert.equal(val({ 'set-cookie': [line] }, 'set-cookie'),
-      'sid=<redacted>; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=.x.test; Max-Age=5; Expires=Wed, 30 Sep 2026 13:12:15 GMT; Partitioned; Priority=High');
+      'sid=<redacted>; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=<redacted>; Max-Age=5; Expires=Wed, 30 Sep 2026 13:12:15 GMT; Partitioned; Priority=High');
   });
   test('cookie values containing = or junk never appear, not even partially', () => {
     for (const line of ['token=a=b=c==; Secure', 'jwt=eyJ.a.b; path=/', 'x= spaced value ; Secure', 'empty=; Secure']) {
@@ -389,7 +392,7 @@ describe('buildRawHeaders()', () => {
       assert.ok(!/a=b|eyJ|spaced|value/.test(v), `${line} -> ${v}`);
       assert.match(v, /^[a-z]+=<redacted>/);
     }
-    assert.equal(val({ 'set-cookie': ['justvalue; Secure'] }, 'set-cookie'), 'justvalue=<redacted>; Secure'); // no "=": the whole pair is the name
+    assert.equal(val({ 'set-cookie': ['justvalue; Secure'] }, 'set-cookie'), '=<redacted>; Secure'); // no "=": nameless cookie, the pair is the VALUE
   });
   test('one entry per cookie line, string or array, set-cookie2 too, order kept', () => {
     const raw = buildRawHeaders({ a: '1', 'set-cookie': ['x=1; Secure', 'y=2; HttpOnly', 'z=3'], b: '2', 'set-cookie2': 'w=4; Path=/' });
@@ -412,8 +415,8 @@ describe('buildRawHeaders()', () => {
     const raw = buildRawHeaders(many);
     assert.equal(raw.length, 80);
     assert.equal(raw[0].name, 'h0');
-    assert.equal(raw[79].name, 'h79');
-    assert.equal(buildRawHeaders({ 'set-cookie': Array.from({ length: 200 }, (_, i) => `c${i}=1`) }).length, 80);
+    assert.equal(raw[78].name, 'h78');
+    assert.deepEqual(raw[79], { name: '(truncated)', value: '9921 more header/cookie line(s) not shown' }); // the marker takes the last slot
     const mixed = { ...Object.fromEntries(Array.from({ length: 79 }, (_, i) => [`h${i}`, 'v'])), 'set-cookie': ['a=1', 'b=2', 'c=3'] };
     assert.equal(buildRawHeaders(mixed).length, 80);
   });
@@ -422,7 +425,7 @@ describe('buildRawHeaders()', () => {
     assert.ok(val({ big: 'x'.repeat(1024 * 1024) }, 'big').endsWith('...'));
     assert.equal(val({ ok: 'y'.repeat(512) }, 'ok'), 'y'.repeat(512));
     assert.equal(val({ cut: 'z'.repeat(513) }, 'cut'), 'z'.repeat(509) + '...');
-    assert.equal(val({ 'set-cookie': ['a=1; path=/' + 'p'.repeat(5000)] }, 'set-cookie').length, 512);
+    assert.equal(val({ 'set-cookie': ['a=1' + '; Secure'.repeat(500)] }, 'set-cookie').length, 512);
     assert.equal(buildRawHeaders({ ['n'.repeat(500)]: 'v' })[0].name.length, 128);
   });
   test('token-like header names are masked, others (also www-authenticate) are not', () => {

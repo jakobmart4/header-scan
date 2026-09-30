@@ -17,7 +17,7 @@ Free tier sleeps after ~15 min idle: the first scan after a pause can take 30-60
 
 ## 2. Frontend (Cloudflare Pages, free)
 ```bash
-npm run build                                   # dist/ + _headers with the CSP hash
+npm run build                                   # dist/ + _headers with the CSP hash (copies the committed public/index.html)
 npx wrangler login
 npx wrangler pages project create header-scan --production-branch main
 npx wrangler pages secret put BACKEND_URL --project-name header-scan     # the Render URL
@@ -25,6 +25,8 @@ npx wrangler pages secret put PROXY_KEY   --project-name header-scan     # same 
 npm run deploy
 ```
 Or connect the GitHub repo in the Cloudflare dashboard: build command `npm run build`, output `dist`, add the two secrets.
+
+The UI is generated from `ui/src/` by `npm run build:ui`; `public/index.html` is committed, so deploying does not need that step. Run `npm run build:ui` and commit the result after changing `ui/src/`.
 
 ## 3. Check
 - `https://<project>.pages.dev` loads and scans work.

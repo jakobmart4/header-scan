@@ -1277,6 +1277,16 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   }
   .skel::after { display: none; }
 }
+
+/* raw response headers table */
+#raw > summary { cursor: pointer; padding: var(--s1) 0; }
+#raw > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.raw-wrap { overflow-x: auto; margin-top: var(--s2); }
+.raw { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: var(--fs-2); }
+.raw th, .raw td { padding: var(--s1) var(--s2); border-top: 1px solid var(--rule); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.raw thead th { font-family: var(--font-body); color: var(--muted); font-weight: 600; }
+.raw .rn { white-space: nowrap; font-weight: 600; }
+.raw .rv { word-break: break-word; }
 </style>
 </head>
 <body>
@@ -1366,6 +1376,12 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
       </div>
       <div id="findings"></div>
       <p id="empty" class="muted" hidden>No findings match these filters.</p>
+      <section id="raw-card" class="card" aria-labelledby="raw-h" hidden>
+        <details id="raw">
+          <summary><span id="raw-h" class="eyebrow">Raw response headers</span> <span id="raw-count" class="muted"></span></summary>
+          <div class="raw-wrap"><table class="raw"><thead><tr><th scope="col">Header</th><th scope="col">Value</th></tr></thead><tbody id="raw-body"></tbody></table></div>
+        </details>
+      </section>
     </div>
   </div>
 </section>
@@ -1660,12 +1676,28 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   function reveal(ev) {
     var l = ev.target.labels && ev.target.labels[0], strip = l && l.parentNode;
     if (strip && strip.scrollWidth > strip.clientWidth) {
-      requestAnimationFrame(function () { l.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
+      l.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     }
+  }
+
+  // Raw headers come from the scanned server (untrusted): textContent only. Set-Cookie values are already redacted server-side.
+  function renderRaw(r) {
+    var rows = Array.isArray(r.rawHeaders) ? r.rawHeaders : [], body = $('raw-body');
+    clear(body);
+    $('raw-card').hidden = !rows.length;
+    $('raw-count').textContent = rows.length ? '(' + rows.length + ')' : '';
+    rows.forEach(function (x) {
+      var tr = h('tr');
+      tr.appendChild(h('th', 'rn', x.name));
+      tr.lastChild.setAttribute('scope', 'row');
+      tr.appendChild(h('td', 'rv', x.value));
+      body.appendChild(tr);
+    });
   }
 
   function show(r) {
     result = r;
+    renderRaw(r);
     renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
     // Follow the latest scan unless the user typed their own host.
     if (!$('host').value || $('host').value === autoHost) {

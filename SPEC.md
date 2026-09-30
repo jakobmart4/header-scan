@@ -95,7 +95,7 @@ export async function scan({url, deep=false, verified=false, allowPrivate=(proce
              "categories":{"headers":{"score":80,"pass":9,"warn":2,"fail":1,"info":1,"skipped":0}, "...":{}} },
   "findings":[Finding], "errors":[{"module":"dns","message":"timeout"}] }
 ```
-`verified` is echoed from the server-side check. `score` per 4. `rawHeaders` = the page response headers as lowercase `name`/`value` pairs in arrival order (`[]` when the page fetch failed); Set-Cookie lines keep name + safe attributes only (value redacted), token-like header names are redacted, at most 80 entries, values cut to 512 chars.
+`verified` is echoed from the server-side check. `score` per 4. `rawHeaders` = the page response headers as lowercase `name`/`value` pairs in arrival order (`[]` when the page fetch failed); Set-Cookie lines keep name + safe attributes only (value redacted; a nameless cookie shows an empty name; Path only as `/`, Domain never; SameSite/Priority/Max-Age/Expires only in their strict shapes), token-like header names are redacted, other values are verbatim (report URLs may still carry tokens, they are public response data), at most 80 entries (cookie lines at most 20, overflow shown as a `(truncated)` row), values cut to 512 chars.
 
 ## 3. Scoring (lib/score.js)
 ```js
@@ -150,7 +150,7 @@ hdr-hsts-subdomains 2 W missing includeSubDomains; P present; S if hsts missing
 hdr-hsts-preload 1    P has preload and max-age>=31536000 and includeSubDomains; else I
 hdr-xcto 3            P value 'nosniff'; else F missing/other
 hdr-frame-protection 3 P X-Frame-Options DENY|SAMEORIGIN or CSP frame-ancestors present; else F
-hdr-referrer-policy 2 P value in {no-referrer, same-origin, strict-origin, strict-origin-when-cross-origin}; W missing or unsafe-url / no-referrer-when-downgrade / origin-when-cross-origin
+hdr-referrer-policy 2 P value in {no-referrer, same-origin, strict-origin, strict-origin-when-cross-origin}; W missing or unsafe-url / no-referrer-when-downgrade / origin-when-cross-origin / origin; unknown token W "unrecognized value"
 hdr-permissions-policy 2 P header present; W missing
 hdr-coop 1            P Cross-Origin-Opener-Policy enforcing (same-origin, same-origin-allow-popups, noopener-allow-popups); else I ("report-only, not enforced" when only the -report-only header is sent)
 hdr-coep 1            P Cross-Origin-Embedder-Policy enforcing (require-corp, credentialless); else I (report-only noted the same way)
@@ -160,7 +160,7 @@ hdr-powered-by 2      W X-Powered-By present (also X-AspNet-Version); P absent
 hdr-generator-leak 1  W <meta name=generator content=...> with a version number; P otherwise
 hdr-cache-control-html 2  W page has Set-Cookie and Cache-Control lacks no-store|private; W Cache-Control missing on HTML; P otherwise
 hdr-compression 2     P Content-Encoding gzip|br|deflate|zstd (page fetched with Accept-Encoding: gzip, br, via ctx.fetch opts); W absent and body>2 KiB; S otherwise
-cors-wildcard-credentials 4  refetch page with Origin: https://evil.example; F ACAO '*' with ACAC true, or reflected origin with ACAC true; P otherwise
+cors-wildcard-credentials 4  refetch page with Origin: https://evil.example; F reflected origin with ACAC true; W ACAO '*' with ACAC true (browsers reject it, misconfiguration); P otherwise
 cors-reflected-origin 3  W ACAO echoes the evil origin without credentials; P otherwise
 cors-null-origin 3    refetch with Origin: null; W/F(F if ACAC true) ACAO 'null'; P otherwise
 hdr-xss-protection 2  P header absent or first token 0; W any other value (legacy filter can introduce XSS); evidence is the first token only
@@ -184,11 +184,11 @@ cookie-cache-control 2    W cookie set while page Cache-Control contains 'public
 ### 6.3 csp.js (categories: `headers` for csp-*, `content` for mixed/sri) - 16
 CSP parsing: split on `;`, first token = directive (lowercased), `script-src` falls back to `default-src`; `'unsafe-inline'` only counts when no nonce/hash/`'strict-dynamic'` is in the same directive. Enforced header `content-security-policy` is evaluated; report-only is evaluated only for csp-report-only.
 ```
-csp-present 4              F no enforced CSP header (meta CSP counts as W); P present
+csp-present 4              F no enforced CSP header (meta CSP counts as W); P present. Several comma-joined policies are all evaluated; per check the best finding among the policies that set the relevant directive wins (a problem counts only if every policy has it); empty elements are skipped
 csp-report-only 1          I only Content-Security-Policy-Report-Only present; P/I otherwise (P if enforced too, I if none)
 csp-unsafe-inline 4        F script-src(or default-src) has effective 'unsafe-inline'; P otherwise; S no CSP
 csp-unsafe-eval 3          W 'unsafe-eval' in script-src/default-src; P otherwise; S no CSP
-csp-wildcard 3             F script-src/default-src has '*' or https: / http: bare scheme; P otherwise; S no CSP
+csp-wildcard 3             F script-src/default-src has '*', a bare TLD wildcard (*.com) or https: / http: bare scheme; P otherwise; S no CSP
 csp-data-uri 2             W data: in script-src/default-src/object-src; P otherwise; S no CSP
 csp-object-src 3           W no object-src 'none' (and default-src not 'none'); P otherwise; S no CSP
 csp-base-uri 2             W base-uri missing; P present; S no CSP
@@ -213,7 +213,7 @@ tls-cert-chain 4         F `authorized===false` (self-signed, incomplete chain, 
 tls-cert-key 2           F RSA <2048 bits; P RSA >=2048 or EC >=256
 tls-cert-sigalg 2        F SHA-1/MD5 signature; P otherwise (from `peerCertificate` fields; S if unavailable)
 tls-alpn-h2 1            P negotiated 'h2'; I otherwise
-tls-http-redirect 3      GET http://host/ (no redirects followed): P 301/302/307/308 to https://; F serves 200 on http; I no http listener (unreachable is fine)
+tls-http-redirect 3      GET http://host/ (no redirects followed): P 301/302/307/308 to https://; F serves 200 on http; I no http listener (unreachable is fine); I any other answer (403, 404, 5xx, 3xx without https): "HTTP responds <status>, no redirect, no content served"
 tls-redirect-permanent 1 P redirect status 301/308; I 302/307; S when tls-http-redirect not a redirect
 ```
 
@@ -222,9 +222,9 @@ SPF lookups counted recursively over `include:`/`a`/`mx`/`ptr`/`exists:`/`redire
 ```
 dns-caa 2                W no CAA records; P present
 dns-dnssec 2             P signed; W unsigned; S if unknown/ctx.resolve.dnssec missing
-dns-ns-count 2           W <2 NS records; P >=2
+dns-ns-count 2           W <2 NS records; P >=2 (looked up at the host, then its parents like CAA/MX; S none found)
 dns-ipv6 1               I no AAAA; P has AAAA
-mail-mx 1                I no MX (evidence: "no mail expected? add null MX '0 .'"); P present
+mail-mx 1                I no MX (evidence: "no mail expected? add null MX '0 .'"); P present or null MX (Node returns exchange '' for `0 .`); a null MX still counts as no MX for the SPF/DMARC severity
 mail-spf-present 4       F no SPF when MX present; W no SPF when no MX; P present (exactly one `v=spf1` TXT at host)
 mail-spf-single 4        F >1 SPF records; P otherwise; S no SPF
 mail-spf-all 4           F '+all' or '?all' or no all mechanism; W '~all'; P '-all'; S no SPF
@@ -248,7 +248,7 @@ seo-canonical 2         P absolute canonical href same host as finalUrl; W missi
 seo-h1 3                P exactly one <h1>; W >1; F 0 (evidence notes "0 in raw HTML" when SPA shell)   c9,c10
 seo-heading-order 1     W a heading level skips (h1->h3); P otherwise
 seo-lang 3              P <html lang> matches ^[a-z]{2,3}(-[A-Za-z0-9]+)*$; F missing/invalid   c16
-seo-viewport 3          P <meta name=viewport> contains width=device-width; F missing
+seo-viewport 3          P <meta name=viewport> contains width=device-width; W tag present without it; F tag missing
 seo-og-image 2          F og:image missing; W not absolute http(s) URL; P ok (no HEAD request here)   c7,c33
 seo-og-basic 1          W og:title or og:description missing; P both present
 seo-twitter-card 1      W twitter:card missing; P present
