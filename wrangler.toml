@@ -1,4 +1,10 @@
 name = "header-scan"
-pages_build_output_dir = "dist"
+main = "worker/index.js"
 compatibility_date = "2026-09-01"
-# Secrets (not stored here): wrangler pages secret put BACKEND_URL / PROXY_KEY
+
+# dist/ is produced by "npm run build" (scripts/build-pages.mjs: public/ + _headers with the CSP hashes).
+[assets]
+directory = "./dist"
+run_worker_first = ["/api/*"]
+
+# Secrets (Settings -> Variables and Secrets, not stored here): BACKEND_URL, PROXY_KEY

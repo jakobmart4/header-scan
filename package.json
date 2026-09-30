@@ -8,6 +8,6 @@
     "test": "node --test \"test/*.test.js\"",
     "build:ui": "node scripts/build-ui.mjs",
     "build": "node scripts/build-pages.mjs",
-    "deploy": "npm run build && npx wrangler pages deploy dist --project-name header-scan"
+    "deploy": "npm run build && npx wrangler deploy"
   }
 }

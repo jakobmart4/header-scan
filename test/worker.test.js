@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
-const { onRequest } = await import(pathToFileURL(path.resolve('functions/api/[[path]].js')).href);
+const { default: worker } = await import(pathToFileURL(path.resolve('worker/index.js')).href);
 const env = { BACKEND_URL: 'https://backend.example', PROXY_KEY: 'k' };
-const call = (url, init, e = env) => onRequest({ request: new Request(url, init), env: e });
+const call = (url, init, e = env) => worker.fetch(new Request(url, init), e);
 
 test('unknown path / wrong method / missing env are rejected before any fetch', async () => {
   const orig = globalThis.fetch; globalThis.fetch = () => { throw new Error('must not fetch'); };

@@ -1,12 +1,12 @@
-// Cloudflare Pages Function: thin proxy /api/* -> Node backend (BACKEND_URL).
-// Secrets (wrangler pages secret put): BACKEND_URL, PROXY_KEY. The backend only accepts calls carrying PROXY_KEY.
+// Cloudflare Worker (static assets in dist/ are served by the platform; wrangler.toml run_worker_first routes only /api/* here).
+// Thin proxy /api/* -> Node backend (BACKEND_URL). Secrets: BACKEND_URL, PROXY_KEY. The backend only accepts calls carrying PROXY_KEY.
 const ROUTES = { '/api/scan': ['GET', 'POST'], '/api/verify/start': ['POST'], '/api/verify/check': ['POST'], '/api/health': ['GET'] };
 
 const json = (status, code) => new Response(JSON.stringify({ error: { code } }), {
   status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
 });
 
-export async function onRequest({ request, env }) {
+async function handle(request, env) {
   const url = new URL(request.url);
   const methods = ROUTES[url.pathname];
   if (!methods) return json(404, 'NOT_FOUND');
@@ -38,3 +38,5 @@ export async function onRequest({ request, env }) {
   if (ra) out.set('retry-after', ra);
   return new Response(res.body, { status: res.status, headers: out });
 }
+
+export default { fetch: handle };
