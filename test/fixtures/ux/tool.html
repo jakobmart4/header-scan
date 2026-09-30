@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Example Scan Tool</title>
+<meta name="description" content="A single-page example tool with one JavaScript-driven form and no other pages of its own.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Example Scan Tool","url":"https://example.test/","applicationCategory":"SecurityApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
+</head>
+<body>
+<main id="app">
+<h1>Example Scan Tool</h1>
+<p>Type the address of a website into the box below and the tool checks it in a few seconds. The report lists what it found, grouped by topic, and explains how to fix each finding. Nothing is stored and no account is needed. The whole tool is this one page: the form talks to an interface in the background and draws the result right here.</p>
+<form id="scan-form" novalidate>
+<label for="url">Website URL</label>
+<input type="text" name="url" id="url" autocomplete="url" placeholder="example.com">
+<button type="submit">Scan</button>
+</form>
+<noscript><p>JavaScript is required to run a scan.</p></noscript>
+<details>
+<summary>Raw JSON</summary>
+<pre>{}</pre>
+</details>
+</main>
+</body>
+</html>
