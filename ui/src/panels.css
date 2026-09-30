@@ -4,7 +4,8 @@
 /* ---------- results visibility by state ---------- */
 #results > * { display: none; }
 #results[data-state="loading"] > #skeleton { display: grid; }
-#results[data-state="error"] > #error-box { display: flex; }
+#results[data-state="error"] > #error-box,
+#results[data-err="true"] > #error-box { display: flex; } /* err + done: the previous report stays below the box */
 #results[data-state="done"] > #report { display: grid; } /* same value as layout.css */
 
 /* ---------- indeterminate load bar (3px always reserved) ---------- */

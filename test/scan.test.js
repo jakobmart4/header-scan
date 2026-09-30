@@ -30,18 +30,18 @@ describe('scan() self-test', () => {
       assert.ok(r.score.security && r.score.quality && r.score.categories);
     }
   });
-  test('passive scan: 113 findings, unique IDs, no module errors, no probes', () => {
+  test('passive scan: 119 findings, unique IDs, no module errors, no probes', () => {
     assert.deepEqual(rBad.errors, []);
     assert.equal(new Set(rBad.findings.map((f) => f.id)).size, rBad.findings.length);
     assert.equal(rBad.findings.filter((f) => f.id.startsWith('exp-probe-')).length, 0);
-    assert.equal(rBad.findings.length, 113);
+    assert.equal(rBad.findings.length, 119);
     assert.equal(bad.requests.filter((r) => /^\/(\.git|\.env)/.test(r.path)).length, 0, 'passive scan must not probe');
   });
   test('deep without verification: only the skipped gate, probes never requested', () => {
     const f = by(rUnverified);
     assert.equal(f['exp-probes-gate'].status, 'skipped');
     assert.equal(rUnverified.verified, false);
-    assert.equal(rUnverified.findings.length, 114);
+    assert.equal(rUnverified.findings.length, 120);
   });
   test('bad site: grade <= D and the expected findings', () => {
     assert.ok(RANK.indexOf(rBad.score.security.grade) <= RANK.indexOf('D'), rBad.score.security.grade);
@@ -77,7 +77,7 @@ describe('scan() self-test', () => {
     assert.equal(rDeep.deep, true);
     assert.equal(f['exp-probe-git-head'].status, 'fail');
     assert.equal(f['exp-probe-env'].status, 'fail');
-    assert.equal(rDeep.findings.length, 138);
+    assert.equal(rDeep.findings.length, 144);
     const json = JSON.stringify(rDeep);
     for (const s of SECRETS) assert.ok(!json.includes(s), `result leaks ${s}`);
   });

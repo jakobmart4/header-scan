@@ -22,7 +22,7 @@
 <p id="status" class="muted" role="status" aria-live="polite" data-tone="muted"></p>
 <noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
-<section id="results" data-state="idle" aria-label="Scan results" aria-busy="false">
+<section id="results" data-state="idle" data-err="false" aria-label="Scan results" aria-busy="false">
   <div id="skeleton" aria-hidden="true">
     <div class="skel skel-gauges"></div><div class="skel skel-donut"></div><div class="skel skel-heat"></div><div class="skel skel-cats"></div><div class="skel skel-list"></div>
   </div>
@@ -66,6 +66,7 @@
         <ul id="cats" class="cats"></ul>
       </section>
 
+      <h2 class="sr">Findings</h2>
       <div id="filters" class="filters">
         <fieldset class="chips" id="tabs"><legend class="sr">Show category</legend>
           <input class="rb" type="radio" name="cat" id="cat-all" value="all" checked><label for="cat-all">All</label>

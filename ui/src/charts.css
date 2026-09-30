@@ -3,7 +3,6 @@
    under #results[data-state="done"] so no-@property / no-animation / reduced-motion show the finished picture. */
 
 @keyframes c-fade { from { opacity: 0; } }
-@keyframes c-donut { from { --a: 0; --b: 0; } }
 @keyframes c-grow { from { transform: scaleX(0); } }
 
 /* ---------- donut (pass / warn / fail split) ---------- */
@@ -19,7 +18,8 @@
   border-radius: 50%;
   text-align: center;
   background: var(--track);
-  /* hard stops with 0.6% --surface gaps; --a = pass %, --b = pass+warn % (registered in tokens.css) */
+  /* hard stops with 0.6% --surface gaps; --a = pass %, --b = pass+warn % (plain custom properties set by JS:
+     the donut fades in, it does not sweep, see gauge.css on why registered properties are kept to the two big gauges) */
   background:
     conic-gradient(
       var(--pass) 0 calc(var(--a) * 1%),
@@ -30,7 +30,7 @@
       var(--surface) 0 100%
     );
 }
-/* hole is an opaque overlay, not a mask: --a/--b are non-inherited so a pseudo-element could not read them */
+/* hole is an opaque overlay, not a mask */
 #donut::after {
   content: "";
   position: absolute;
@@ -225,9 +225,6 @@
 /* ---------- entrance choreography (from-side only, done state only) ---------- */
 #results[data-state="done"] #donut {
   animation: c-fade var(--d-reveal) var(--ease-out) 300ms backwards;
-}
-html.cp #results[data-state="done"] #donut {
-  animation: c-donut var(--d-draw) var(--ease-out) 300ms backwards;
 }
 #results[data-state="done"] #cats > .crow {
   animation: c-fade var(--d-reveal) var(--ease-out) calc(250ms + min(var(--i, 0), 10) * var(--step)) backwards;

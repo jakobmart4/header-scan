@@ -8,11 +8,9 @@
 <style>
 /* tokens.css - design tokens (editorial-light + night paper). Only this file declares @property. */
 
-/* Registered so the gauge/donut can sweep and count up. Without support the plain values still render. */
+/* Registered so the two big gauges can sweep and count up. Without support the plain values still render. */
 @property --p  { syntax: "<number>";  inherits: false; initial-value: 0; }
 @property --gn { syntax: "<integer>"; inherits: false; initial-value: 0; }
-@property --a  { syntax: "<number>";  inherits: false; initial-value: 0; }
-@property --b  { syntax: "<number>";  inherits: false; initial-value: 0; }
 
 :root {
   color-scheme: light dark;
@@ -271,7 +269,8 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
 
 /* report: one column on mobile (rail cards, then main); state visibility is panels.css */
 #report { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
-#rail, #report-main { display: grid; gap: var(--s4); min-width: 0; align-content: start; }
+/* explicit column: an implicit auto track would size to min-content (e.g. a long URL in #meta) and blow the card out */
+#rail, #report-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); min-width: 0; align-content: start; }
 
 #scorecard { box-shadow: var(--shadow-card), var(--shadow-lift); }
 
@@ -291,14 +290,11 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
   #cats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* #rail is deliberately not sticky: its height follows #meta and can exceed the viewport, which would make its
+   bottom cards unreachable until the end of the page */
 @media (min-width: 960px) {
   #report { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--s5); align-items: start; }
   #rail, #report-main { gap: var(--s5); }
-}
-
-/* sticky only when the whole rail fits the viewport; otherwise its bottom cards would be unreachable */
-@media (min-width: 960px) and (min-height: 60rem) {
-  #rail { position: sticky; top: var(--s4); }
 }
 /* gauge.css (B): grade rings. Base CSS = final state; animation only under #results[data-state=done]. */
 
@@ -306,7 +302,8 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
 .gauges { display: flex; justify-content: space-around; gap: var(--s3); }
 .gauge-item { display: flex; flex-direction: column; align-items: center; gap: var(--s2); min-width: 0; }
 .gauge-item .eyebrow { margin: 0; }
-#scorecard #meta { margin: var(--s4) 0 var(--s3); text-align: center; }
+#scorecard #meta { margin: var(--s4) 0 var(--s3); text-align: center; overflow-wrap: anywhere; min-width: 0; }
+#scorecard #meta .nw { white-space: nowrap; }
 #scorecard #actions { gap: var(--s2); justify-content: center; }
 #scorecard #actions .btn { flex: 1 1 9rem; }
 
@@ -374,24 +371,29 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
 .gauge-sm {
   --num-fs: var(--fs-1);
   --ring-w: .4rem;
-  --delay: calc(250ms + min(var(--i, 0), 10) * var(--step));
   width: var(--gauge-size-sm);
   height: var(--gauge-size-sm);
 }
 .gauge-sm .gauge-num { grid-column: 1 / -1; min-width: 0; text-align: center; }
 
-/* count-up (needs registered --gn): real text stays for no-@property, counter replaces it */
-html.cp .gauge:not([data-g="skip"]) .gauge-num { font-size: 0; counter-reset: gn var(--gn); }
-html.cp .gauge:not([data-g="skip"]) .gauge-num::after {
+/* count-up (needs registered --gn): real text stays for no-@property, counter replaces it.
+   Only the two big gauges animate: registered properties cannot be composited, so each animated ring costs a
+   main-thread style/layout/paint pass per frame; the ten small rings just fade in with their row. */
+html.cp .gauge:not(.gauge-sm):not([data-g="skip"]) .gauge-num { font-size: 0; counter-reset: gn var(--gn); }
+html.cp .gauge:not(.gauge-sm):not([data-g="skip"]) .gauge-num::after {
   content: counter(gn);
+  /* reserve the widest value up front (ch is measured on this element's own font-size, not the 0 of its parent) */
+  display: inline-block;
+  min-width: 3ch;
+  text-align: right;
   font-size: var(--num-fs);
 }
 
 /* one keyframe drives ring fill and count-up so they agree; only when @property exists (html.cp) */
 @keyframes gauge-fill { from { --p: 0; --gn: 0; } }
 @keyframes gauge-pop { from { opacity: 0; transform: scale(.6); } }
-html.cp #results[data-state="done"] .gauge-ring,
-html.cp #results[data-state="done"] .gauge-num {
+html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-ring,
+html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   animation: gauge-fill var(--d-draw) var(--ease-out) var(--delay) backwards;
 }
 #results[data-state="done"] .gauge-grade {
@@ -409,7 +411,6 @@ html.cp #results[data-state="done"] .gauge-num {
    under #results[data-state="done"] so no-@property / no-animation / reduced-motion show the finished picture. */
 
 @keyframes c-fade { from { opacity: 0; } }
-@keyframes c-donut { from { --a: 0; --b: 0; } }
 @keyframes c-grow { from { transform: scaleX(0); } }
 
 /* ---------- donut (pass / warn / fail split) ---------- */
@@ -425,7 +426,8 @@ html.cp #results[data-state="done"] .gauge-num {
   border-radius: 50%;
   text-align: center;
   background: var(--track);
-  /* hard stops with 0.6% --surface gaps; --a = pass %, --b = pass+warn % (registered in tokens.css) */
+  /* hard stops with 0.6% --surface gaps; --a = pass %, --b = pass+warn % (plain custom properties set by JS:
+     the donut fades in, it does not sweep, see gauge.css on why registered properties are kept to the two big gauges) */
   background:
     conic-gradient(
       var(--pass) 0 calc(var(--a) * 1%),
@@ -436,7 +438,7 @@ html.cp #results[data-state="done"] .gauge-num {
       var(--surface) 0 100%
     );
 }
-/* hole is an opaque overlay, not a mask: --a/--b are non-inherited so a pseudo-element could not read them */
+/* hole is an opaque overlay, not a mask */
 #donut::after {
   content: "";
   position: absolute;
@@ -632,9 +634,6 @@ html.cp #results[data-state="done"] .gauge-num {
 #results[data-state="done"] #donut {
   animation: c-fade var(--d-reveal) var(--ease-out) 300ms backwards;
 }
-html.cp #results[data-state="done"] #donut {
-  animation: c-donut var(--d-draw) var(--ease-out) 300ms backwards;
-}
 #results[data-state="done"] #cats > .crow {
   animation: c-fade var(--d-reveal) var(--ease-out) calc(250ms + min(var(--i, 0), 10) * var(--step)) backwards;
 }
@@ -745,8 +744,11 @@ html.cp #results[data-state="done"] #donut {
   font-size: var(--fs-2);
 }
 
-@media (min-width: 641px) {
+/* sticky only where it leaves room to read (on a short viewport the bar would eat a quarter of the screen) */
+@media (min-width: 641px) and (min-height: 45rem) {
   #filters { position: sticky; top: 0; z-index: 10; }
+  /* keyboard focus / scrollIntoView must not land under the bar; app.js keeps --filters-h equal to its height */
+  html { scroll-padding-top: calc(var(--filters-h, 10rem) + var(--s2)); }
 }
 
 @media (max-width: 640px) {
@@ -762,7 +764,8 @@ html.cp #results[data-state="done"] #donut {
     scrollbar-width: thin;
     overscroll-behavior-x: contain;
   }
-  #tabs label, #statuses label { flex: none; scroll-snap-align: start; }
+  /* scroll-margin keeps the focus ring of a chip revealed by scrollIntoView (app.js) clear of the strip edge */
+  #tabs label, #statuses label { flex: none; scroll-snap-align: start; scroll-margin-inline: 8px; }
 }
 
 /* ---------- category accordion ---------- */
@@ -815,20 +818,9 @@ html.cp #results[data-state="done"] #donut {
   font-size: var(--fs-2);
 }
 
-/* smooth open/close where ::details-content exists; instant elsewhere */
-@supports selector(::details-content) {
-  .cat::details-content {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows var(--d-mid) var(--ease-io),
-                content-visibility var(--d-mid) allow-discrete;
-  }
-  .cat[open]::details-content { grid-template-rows: 1fr; }
-  .cat > .list { min-height: 0; overflow: hidden; }
-  @media (prefers-reduced-motion: reduce) {
-    .cat::details-content { transition: none; }
-  }
-}
+/* open/close is instant (animating the height is a layout animation); the list only fades in on open */
+@keyframes f-fade { from { opacity: 0; } }
+.cat[open] > .list { animation: f-fade var(--d-mid) var(--ease-out); }
 
 /* ---------- findings ---------- */
 .list {
@@ -1028,11 +1020,10 @@ html.cp #results[data-state="done"] #donut {
 #results[data-state="done"] #empty {
   animation: f-rise var(--d-mid) var(--ease-out) backwards;
 }
-/* a filter change re-shows nodes: skip the initial 500ms wait while the user is on a filter control */
-@supports selector(:has(*)) {
-  #results[data-state="done"]:has(#filters input:focus) :is(.cat, .fnd) {
-    animation-delay: calc(min(var(--i, 0), 10) * 20ms);
-  }
+/* a filter change re-shows nodes: skip the initial wait. app.js sets data-refilter on the change event and clears
+   it on the next scan (not :focus, which Safari and Firefox on macOS do not give a radio clicked via its label) */
+#results[data-state="done"][data-refilter] :is(.cat, .fnd) {
+  animation-delay: calc(min(var(--i, 0), 10) * 20ms);
 }
 
 /* ---------- forced colors ---------- */
@@ -1051,7 +1042,8 @@ html.cp #results[data-state="done"] #donut {
 /* ---------- results visibility by state ---------- */
 #results > * { display: none; }
 #results[data-state="loading"] > #skeleton { display: grid; }
-#results[data-state="error"] > #error-box { display: flex; }
+#results[data-state="error"] > #error-box,
+#results[data-err="true"] > #error-box { display: flex; } /* err + done: the previous report stays below the box */
 #results[data-state="done"] > #report { display: grid; } /* same value as layout.css */
 
 /* ---------- indeterminate load bar (3px always reserved) ---------- */
@@ -1302,7 +1294,7 @@ html.cp #results[data-state="done"] #donut {
 <p id="status" class="muted" role="status" aria-live="polite" data-tone="muted"></p>
 <noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
-<section id="results" data-state="idle" aria-label="Scan results" aria-busy="false">
+<section id="results" data-state="idle" data-err="false" aria-label="Scan results" aria-busy="false">
   <div id="skeleton" aria-hidden="true">
     <div class="skel skel-gauges"></div><div class="skel skel-donut"></div><div class="skel skel-heat"></div><div class="skel skel-cats"></div><div class="skel skel-list"></div>
   </div>
@@ -1346,6 +1338,7 @@ html.cp #results[data-state="done"] #donut {
         <ul id="cats" class="cats"></ul>
       </section>
 
+      <h2 class="sr">Findings</h2>
       <div id="filters" class="filters">
         <fieldset class="chips" id="tabs"><legend class="sr">Show category</legend>
           <input class="rb" type="radio" name="cat" id="cat-all" value="all" checked><label for="cat-all">All</label>
@@ -1403,11 +1396,11 @@ html.cp #results[data-state="done"] #donut {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var STATUSES = ['fail', 'warn', 'info', 'pass', 'skipped'];
-  var ICON = { fail: '✖ ', warn: '⚠ ', info: 'ℹ ', pass: '✔ ', skipped: '– ' };
+  var ICON = { fail: '✖', warn: '⚠', info: 'ℹ', pass: '✔', skipped: '–' };
   var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
   var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
-  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0;
+  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null;
 
   // Progressive enhancement gate: count-up via a registered custom property needs @property.
   if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
@@ -1420,26 +1413,43 @@ html.cp #results[data-state="done"] #donut {
     return e;
   }
   function clear(e) { while (e.firstChild) e.removeChild(e.firstChild); }
+  function txt(s) { return document.createTextNode(s); }
+  // Status glyph for sighted users only; assistive tech reads the words that follow it.
+  function glyph(s) {
+    var g = h('span', '', ICON[s]);
+    g.setAttribute('aria-hidden', 'true');
+    return g;
+  }
   function say(el, text, tone) { el.textContent = text; el.dataset.tone = tone || 'muted'; }
   function num(el, name, v, digits) { el.style.setProperty(name, String(Number(v.toFixed(digits || 0)))); }
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
+  // Errors stay long enough to be reached with a screen reader or magnifier (WCAG 2.2.1); the text is cleared
+  // after the fade so a stale message is not left in the accessibility tree.
   function toast(text, tone) {
     var t = $('toast');
     t.textContent = text;
     t.dataset.tone = tone || 'ok';
     t.dataset.show = 'true';
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.dataset.show = 'false'; }, 2500);
+    toastTimer = setTimeout(function () {
+      t.dataset.show = 'false';
+      toastTimer = setTimeout(function () { t.textContent = ''; }, 400);
+    }, tone === 'err' ? 8000 : 2500);
   }
 
+  // Disabling the focused button drops focus to <body>: remember it and give it back when the request ends.
   function setBusy(b) {
+    var a = document.activeElement;
+    if (b) busyFocus = a && a.tagName === 'BUTTON' ? a : null;
     busy = b;
     $('app').dataset.busy = String(b);
     $('scan-btn').disabled = b;
     $('verify-start').disabled = b;
     $('verify-check').disabled = b;
     $('deep-btn').disabled = b || !verifiedHost;
+    if (!b && busyFocus && !busyFocus.disabled && (!a || a === document.body || a === busyFocus)) busyFocus.focus();
+    if (!b) busyFocus = null;
   }
   function setState(s) {
     $('results').dataset.state = s;
@@ -1485,9 +1495,18 @@ html.cp #results[data-state="done"] #donut {
       fillGauge(g, s.score, p[1] + ' grade ' + s.grade, gradeBand(s.grade));
       g.querySelector('.gauge-grade').textContent = s.grade === 'N/A' ? '–' : s.grade;
     });
-    var errs = r.errors && r.errors.length ? ' • ' + r.errors.length + ' module error(s): ' +
-      r.errors.map(function (e) { return e.module + ' (' + e.message + ')'; }).join(', ') : '';
-    $('meta').textContent = r.url + ' • ' + r.scannedAt + ' • ' + r.durationMs + ' ms • ' + (r.deep ? 'deep scan' : 'passive scan') + errs;
+    // The URL and module errors may be one long token (CSS breaks them anywhere); the fixed parts never wrap inside.
+    var m = $('meta');
+    clear(m);
+    m.appendChild(txt(r.url));
+    [r.scannedAt, r.durationMs + ' ms', r.deep ? 'deep scan' : 'passive scan'].forEach(function (t) {
+      m.appendChild(txt(' • '));
+      m.appendChild(h('span', 'nw', t));
+    });
+    if (r.errors && r.errors.length) {
+      m.appendChild(txt(' • ' + r.errors.length + ' module error(s): ' +
+        r.errors.map(function (e) { return e.module + ' (' + e.message + ')'; }).join(', ')));
+    }
   }
 
   function renderDonut(findings) {
@@ -1578,17 +1597,22 @@ html.cp #results[data-state="done"] #donut {
       sum.appendChild(h('span', 'cat-count', '(' + list.length + ')'));
       STATUSES.forEach(function (s) {
         if (!cnt[s]) return;
-        var chip = h('span', 'chip', ICON[s] + cnt[s]);
+        var chip = h('span', 'chip');
         chip.dataset.s = s;
+        chip.appendChild(glyph(s));
+        chip.appendChild(txt(cnt[s]));
+        chip.appendChild(h('span', 'sr', ' ' + s));
         sum.appendChild(chip);
       });
       d.appendChild(sum);
       var ul = h('ul', 'list');
       list.forEach(function (f) {
-        var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill', ICON[f.status] + f.status);
+        var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill');
         li.dataset.s = f.status; li.dataset.c = c;
         num(li, '--i', fi++);
         pill.dataset.s = f.status;
+        pill.appendChild(glyph(f.status));
+        pill.appendChild(txt(f.status));
         head.appendChild(pill);
         head.appendChild(h('h3', 'fnd-title', f.title));
         head.appendChild(h('span', 'tag', 'severity ' + f.severity + '/5'));
@@ -1623,7 +1647,21 @@ html.cp #results[data-state="done"] #donut {
         (st === 'all' || (st === 'issues' ? f.status === 'fail' || f.status === 'warn' : f.status === st));
     }).length : 0;
     $('shown').textContent = n + (n === 1 ? ' finding shown' : ' findings shown');
+    $('empty').textContent = st === 'issues' ? 'No fail or warn findings.' : 'No findings match these filters.';
     $('empty').hidden = n > 0;
+    // A narrowed view (one category, or pass/info/skipped) would otherwise show collapsed headers only.
+    if (cat !== 'all' || st === 'pass' || st === 'info' || st === 'skipped') {
+      Array.prototype.forEach.call(document.querySelectorAll('#findings .cat'), function (d) { d.open = true; });
+    }
+  }
+
+  // The filter radios are visually hidden and, in the scrolling chip strips on narrow screens, sit at the strip
+  // start: the browser never scrolls to the focused/checked chip on its own, so do it here.
+  function reveal(ev) {
+    var l = ev.target.labels && ev.target.labels[0], strip = l && l.parentNode;
+    if (strip && strip.scrollWidth > strip.clientWidth) {
+      requestAnimationFrame(function () { l.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
+    }
   }
 
   function show(r) {
@@ -1640,6 +1678,8 @@ html.cp #results[data-state="done"] #donut {
     var url = $('url').value.trim();
     if (!url) { say($('status'), 'Enter a URL first.', 'err'); return; }
     setBusy(true);
+    $('results').dataset.err = 'false';
+    delete $('results').dataset.refilter; // a fresh report gets the full staggered reveal again
     setState('loading');
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
@@ -1650,14 +1690,27 @@ html.cp #results[data-state="done"] #donut {
       say($('status'), 'Scan finished.', 'ok');
     } catch (e) {
       $('error-msg').textContent = e.message;
-      setState('error');
+      // Keep the previous report (and its Copy/Download buttons); the error box sits above it.
+      $('results').dataset.err = String(!!result);
+      setState(result ? 'done' : 'error');
       say($('status'), 'Scan failed.', 'err');
     }
     setBusy(false);
   }
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
-  $('filters').addEventListener('change', syncFilters);
+  $('filters').addEventListener('change', function (ev) {
+    $('results').dataset.refilter = 'true'; // re-shown items reveal without the initial wait (findings.css)
+    syncFilters();
+    reveal(ev);
+  });
+  $('filters').addEventListener('focusin', reveal);
+  // Keep scroll-padding-top equal to the sticky filter bar so keyboard focus is never left underneath it.
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () {
+      document.documentElement.style.setProperty('--filters-h', $('filters').offsetHeight + 'px');
+    }).observe($('filters'));
+  }
 
   $('verify-start').addEventListener('click', async function () {
     var host = $('host').value.trim();
@@ -1668,7 +1721,7 @@ html.cp #results[data-state="done"] #donut {
       var v = await post('/api/verify/start', { host: host });
       $('txt-name').textContent = v.txtName;
       $('txt-value').textContent = v.txtValue;
-      $('txt-exp').textContent = 'Token expires ' + v.expiresAt + '.';
+      $('txt-exp').textContent = 'Token expires ' + new Date(v.expiresAt).toLocaleString() + '.';
       txtHost = host;
       setVerify('pending');
       say($('verify-msg'), 'Waiting for the TXT record. Press Check after adding it.');
@@ -1684,6 +1737,7 @@ html.cp #results[data-state="done"] #donut {
       if (v.verified) {
         verifiedHost = txtHost = host;
         setVerify('verified');
+        busyFocus = $('deep-btn'); // the Check button is hidden now: hand focus to the next step, not to <body>
         say($('verify-msg'), 'Ownership verified for ' + v.host + '. Deep scan unlocked.', 'ok');
       } else { verifiedHost = ''; say($('verify-msg'), 'TXT record not found yet at ' + v.txtName + '. DNS can take a few minutes.', 'err'); }
     } catch (e) { verifiedHost = ''; say($('verify-msg'), e.message, 'err'); }
@@ -1693,8 +1747,11 @@ html.cp #results[data-state="done"] #donut {
   // Editing the host invalidates the local unlock (the server re-checks on every deep scan anyway).
   $('host').addEventListener('input', function () {
     var host = $('host').value.trim();
-    if (verifiedHost && host !== verifiedHost) { verifiedHost = ''; $('deep-btn').disabled = true; }
-    if (txtHost !== host) setVerify('idle'); // the shown record/badge belongs to another host
+    if (verifiedHost && host !== verifiedHost) { verifiedHost = txtHost = ''; $('deep-btn').disabled = true; }
+    if (txtHost !== host) { // the shown record/badge/message belongs to another host (or to a verification just lost)
+      setVerify('idle');
+      say($('verify-msg'), '');
+    }
   });
 
   $('deep-btn').addEventListener('click', function () {

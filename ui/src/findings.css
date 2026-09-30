@@ -89,8 +89,11 @@
   font-size: var(--fs-2);
 }
 
-@media (min-width: 641px) {
+/* sticky only where it leaves room to read (on a short viewport the bar would eat a quarter of the screen) */
+@media (min-width: 641px) and (min-height: 45rem) {
   #filters { position: sticky; top: 0; z-index: 10; }
+  /* keyboard focus / scrollIntoView must not land under the bar; app.js keeps --filters-h equal to its height */
+  html { scroll-padding-top: calc(var(--filters-h, 10rem) + var(--s2)); }
 }
 
 @media (max-width: 640px) {
@@ -106,7 +109,8 @@
     scrollbar-width: thin;
     overscroll-behavior-x: contain;
   }
-  #tabs label, #statuses label { flex: none; scroll-snap-align: start; }
+  /* scroll-margin keeps the focus ring of a chip revealed by scrollIntoView (app.js) clear of the strip edge */
+  #tabs label, #statuses label { flex: none; scroll-snap-align: start; scroll-margin-inline: 8px; }
 }
 
 /* ---------- category accordion ---------- */
@@ -159,20 +163,9 @@
   font-size: var(--fs-2);
 }
 
-/* smooth open/close where ::details-content exists; instant elsewhere */
-@supports selector(::details-content) {
-  .cat::details-content {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows var(--d-mid) var(--ease-io),
-                content-visibility var(--d-mid) allow-discrete;
-  }
-  .cat[open]::details-content { grid-template-rows: 1fr; }
-  .cat > .list { min-height: 0; overflow: hidden; }
-  @media (prefers-reduced-motion: reduce) {
-    .cat::details-content { transition: none; }
-  }
-}
+/* open/close is instant (animating the height is a layout animation); the list only fades in on open */
+@keyframes f-fade { from { opacity: 0; } }
+.cat[open] > .list { animation: f-fade var(--d-mid) var(--ease-out); }
 
 /* ---------- findings ---------- */
 .list {
@@ -372,11 +365,10 @@
 #results[data-state="done"] #empty {
   animation: f-rise var(--d-mid) var(--ease-out) backwards;
 }
-/* a filter change re-shows nodes: skip the initial 500ms wait while the user is on a filter control */
-@supports selector(:has(*)) {
-  #results[data-state="done"]:has(#filters input:focus) :is(.cat, .fnd) {
-    animation-delay: calc(min(var(--i, 0), 10) * 20ms);
-  }
+/* a filter change re-shows nodes: skip the initial wait. app.js sets data-refilter on the change event and clears
+   it on the next scan (not :focus, which Safari and Firefox on macOS do not give a radio clicked via its label) */
+#results[data-state="done"][data-refilter] :is(.cat, .fnd) {
+  animation-delay: calc(min(var(--i, 0), 10) * 20ms);
 }
 
 /* ---------- forced colors ---------- */

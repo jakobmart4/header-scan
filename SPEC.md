@@ -2,6 +2,7 @@
 
 Node >= 20, ESM (`"type":"module"`), ZERO npm deps, `node:test`. Code + comments in English. Ponytail: small, boring, no speculative features. Windows: use `py` never `python`. Never use port 34872 (Rojo) or 1000 (UA dashboard); default port 8787 (`PORT` env). Never leave a server running after checks.
 Where this spec is silent, choose the simplest option; where it speaks, obey it literally (other builders rely on it).
+SecurityHeaders.com parity round (6 new IDs, changed coop/coep/corp, `rawHeaders`): `docs/PARITY-SPEC.md`.
 
 ## 1. File layout and ownership
 
@@ -89,12 +90,12 @@ export async function scan({url, deep=false, verified=false, allowPrivate=(proce
 ### 2.6 Result JSON
 ```json
 { "url":"https://example.com/", "host":"example.com", "scannedAt":"ISO-8601", "durationMs":1234,
-  "verified":false, "deep":false,
+  "verified":false, "deep":false, "rawHeaders":[{"name":"...","value":"..."}],
   "score": { "security":{"score":87,"grade":"B"}, "quality":{"score":72,"grade":"C"},
              "categories":{"headers":{"score":80,"pass":9,"warn":2,"fail":1,"info":1,"skipped":0}, "...":{}} },
   "findings":[Finding], "errors":[{"module":"dns","message":"timeout"}] }
 ```
-`verified` is echoed from the server-side check. `score` per 4.
+`verified` is echoed from the server-side check. `score` per 4. `rawHeaders` = the page response headers as lowercase `name`/`value` pairs in arrival order (`[]` when the page fetch failed); Set-Cookie lines keep name + safe attributes only (value redacted), token-like header names are redacted, at most 80 entries, values cut to 512 chars.
 
 ## 3. Scoring (lib/score.js)
 ```js
@@ -142,7 +143,7 @@ export function getSecret() -> string                // env HEADERSCAN_SECRET el
 ## 6. Check IDs (complete; each owned by exactly ONE module)
 Columns: `id | sev | rule (P=pass W=warn F=fail I=info S=skipped)`; `c#` = checklist number (2.4). "page" = `ctx.page`. HTTPS-only rules -> `S` when `target` scheme is http unless stated. Every module always returns one finding per ID.
 
-### 6.1 headers.js (category `headers`; CORS also `headers`) - 18
+### 6.1 headers.js (category `headers`; CORS also `headers`) - 22
 ```
 hdr-hsts 4           F missing; W max-age<15552000; P otherwise. (http target: F "no HTTPS")
 hdr-hsts-subdomains 2 W missing includeSubDomains; P present; S if hsts missing
@@ -151,9 +152,9 @@ hdr-xcto 3            P value 'nosniff'; else F missing/other
 hdr-frame-protection 3 P X-Frame-Options DENY|SAMEORIGIN or CSP frame-ancestors present; else F
 hdr-referrer-policy 2 P value in {no-referrer, same-origin, strict-origin, strict-origin-when-cross-origin}; W missing or unsafe-url / no-referrer-when-downgrade / origin-when-cross-origin
 hdr-permissions-policy 2 P header present; W missing
-hdr-coop 1            P Cross-Origin-Opener-Policy present; else I
-hdr-coep 1            P Cross-Origin-Embedder-Policy present; else I
-hdr-corp 1            P Cross-Origin-Resource-Policy present; else I
+hdr-coop 1            P Cross-Origin-Opener-Policy enforcing (same-origin, same-origin-allow-popups, noopener-allow-popups); else I ("report-only, not enforced" when only the -report-only header is sent)
+hdr-coep 1            P Cross-Origin-Embedder-Policy enforcing (require-corp, credentialless); else I (report-only noted the same way)
+hdr-corp 1            P Cross-Origin-Resource-Policy same-site|same-origin|cross-origin; else I (no report-only variant exists)
 hdr-server-leak 2     W Server contains a digit-version (e.g. nginx/1.18.0); P otherwise
 hdr-powered-by 2      W X-Powered-By present (also X-AspNet-Version); P absent
 hdr-generator-leak 1  W <meta name=generator content=...> with a version number; P otherwise
@@ -162,6 +163,10 @@ hdr-compression 2     P Content-Encoding gzip|br|deflate|zstd (page fetched with
 cors-wildcard-credentials 4  refetch page with Origin: https://evil.example; F ACAO '*' with ACAC true, or reflected origin with ACAC true; P otherwise
 cors-reflected-origin 3  W ACAO echoes the evil origin without credentials; P otherwise
 cors-null-origin 3    refetch with Origin: null; W/F(F if ACAC true) ACAO 'null'; P otherwise
+hdr-xss-protection 2  P header absent or first token 0; W any other value (legacy filter can introduce XSS); evidence is the first token only
+hdr-legacy-headers 1  W X-Permitted-Cross-Domain-Policies: all; I any of Expect-CT, Public-Key-Pins(-Report-Only), Feature-Policy, X-Download-Options, P3P present (names only, values never echoed); P none
+cors-wildcard-public 2 ACAO '*' on the page or in the evil-origin probe: W when personalised (Set-Cookie, Vary Cookie/Authorization, Cache-Control private); I public wildcard; P no wildcard
+hdr-reporting 1       always I: lists Report-To, Reporting-Endpoints, NEL, CSP report-uri/report-to found plus endpoint HOSTS only (never paths); "no reporting configured (optional)" when none
 ```
 
 ### 6.2 cookies.js (category `cookies`; ALL cookies from `page.headers['set-cookie']`; evidence lists cookie NAMES only) - 8
@@ -176,7 +181,7 @@ cookie-lifetime 2         W session-like cookie with Max-Age/Expires > 400 days;
 cookie-cache-control 2    W cookie set while page Cache-Control contains 'public'; P otherwise; I no cookies
 ```
 
-### 6.3 csp.js (categories: `headers` for csp-*, `content` for mixed/sri) - 14
+### 6.3 csp.js (categories: `headers` for csp-*, `content` for mixed/sri) - 16
 CSP parsing: split on `;`, first token = directive (lowercased), `script-src` falls back to `default-src`; `'unsafe-inline'` only counts when no nonce/hash/`'strict-dynamic'` is in the same directive. Enforced header `content-security-policy` is evaluated; report-only is evaluated only for csp-report-only.
 ```
 csp-present 4              F no enforced CSP header (meta CSP counts as W); P present
@@ -190,6 +195,8 @@ csp-base-uri 2             W base-uri missing; P present; S no CSP
 csp-frame-ancestors 2      W missing (XFO alone does not satisfy); P present; S no CSP
 csp-default-src 2          W no default-src; P present; S no CSP
 csp-upgrade-insecure 1     P upgrade-insecure-requests or block-all-mixed-content present; else I; S no CSP
+csp-style-unsafe-inline 2  W effective 'unsafe-inline' in style-src-elem|style-src|default-src (first present, 'strict-dynamic' ignored); P otherwise; S no CSP
+csp-script-bypass-hosts 3  script-src-elem|script-src|default-src allowlists a host known to allow CSP bypass (`lib/data/csp-bypass-hosts.js`): W host-level hit; I path-scoped hit only; P none or 'strict-dynamic' present; S no CSP
 mixed-active 5             https page only: F http:// in script[src], iframe[src], link[rel=stylesheet][href]; P none; S http target
 mixed-passive 3            https page only: W http:// in img/audio/video/source[src|srcset]; P none; S http target
 sri-external 3             W cross-origin <script src> or <link rel=stylesheet> lacking integrity (evidence: count + first 3 hosts); P all have it or none cross-origin
@@ -321,16 +328,16 @@ exp-probe-dir-listing    3 /uploads/               contains "Index of /"
 ```
 
 ## 7. Complete ID index per module (for structured output / tests)
-- headers.js: hdr-hsts, hdr-hsts-subdomains, hdr-hsts-preload, hdr-xcto, hdr-frame-protection, hdr-referrer-policy, hdr-permissions-policy, hdr-coop, hdr-coep, hdr-corp, hdr-server-leak, hdr-powered-by, hdr-generator-leak, hdr-cache-control-html, hdr-compression, cors-wildcard-credentials, cors-reflected-origin, cors-null-origin
+- headers.js: hdr-hsts, hdr-hsts-subdomains, hdr-hsts-preload, hdr-xcto, hdr-frame-protection, hdr-referrer-policy, hdr-permissions-policy, hdr-coop, hdr-coep, hdr-corp, hdr-server-leak, hdr-powered-by, hdr-generator-leak, hdr-cache-control-html, hdr-compression, cors-wildcard-credentials, cors-reflected-origin, cors-null-origin, hdr-xss-protection, hdr-legacy-headers, cors-wildcard-public, hdr-reporting
 - cookies.js: cookie-secure, cookie-httponly, cookie-samesite, cookie-samesite-none, cookie-prefix, cookie-domain, cookie-lifetime, cookie-cache-control
-- csp.js: csp-present, csp-report-only, csp-unsafe-inline, csp-unsafe-eval, csp-wildcard, csp-data-uri, csp-object-src, csp-base-uri, csp-frame-ancestors, csp-default-src, csp-upgrade-insecure, mixed-active, mixed-passive, sri-external
+- csp.js: csp-present, csp-report-only, csp-unsafe-inline, csp-unsafe-eval, csp-wildcard, csp-data-uri, csp-object-src, csp-base-uri, csp-frame-ancestors, csp-default-src, csp-upgrade-insecure, csp-style-unsafe-inline, csp-script-bypass-hosts, mixed-active, mixed-passive, sri-external
 - tls.js: tls-https, tls-protocol, tls-legacy-protocols, tls-cert-expiry, tls-cert-host, tls-cert-chain, tls-cert-key, tls-cert-sigalg, tls-alpn-h2, tls-http-redirect, tls-redirect-permanent
 - dns.js: dns-caa, dns-dnssec, dns-ns-count, dns-ipv6, mail-mx, mail-spf-present, mail-spf-single, mail-spf-all, mail-spf-lookups, mail-dmarc-present, mail-dmarc-policy, mail-dmarc-rua, mail-mta-sts, mail-tls-rpt, mail-dkim
 - html.js: seo-title, seo-title-length, seo-meta-description, seo-meta-desc-length, seo-canonical, seo-h1, seo-heading-order, seo-lang, seo-viewport, seo-og-image, seo-og-basic, seo-twitter-card, seo-structured-data, seo-noindex, seo-spa-shell, ux-alt-text, ux-internal-links, ux-cta-above-fold, ux-breadcrumbs, ux-case-studies, ux-faq, ux-response-time, ux-maps, ux-reviews, ux-local-schema, ux-privacy-policy, ux-analytics, ux-team-photo, ux-theme-color, ux-console-errors, ux-sticky-mobile-cta
 - site.js: seo-robots-txt, ai-robots-blocks-all, ai-robots-blocks-bots, seo-robots-sensitive, seo-sitemap, ai-llms-txt, ux-404-page, ux-favicon, ux-default-hostname, seo-duplicate-titles, ux-thank-you, ux-js-bundle-size, exp-source-maps, exp-security-txt, exp-security-txt-fields, exp-error-leak
 - probes.js: exp-probes-gate + the 24 `exp-probe-*` ids in 6.8
 
-Total: 18+8+14+11+15+31+16+25 = 138 findings (113 passive, 25 deep). Categories per finding: headers.js/csp.js(csp-*)->headers; mixed-*/sri-* ->content; tls-*->tls; dns-*->dns; mail-*->mail; seo-*/ux-* as named in 6.6-6.7 (`seo-*`->seo, `ux-*`->ux, `ai-*`->ai, `exp-*`->exposure); `ux-alt-text` ux; `ux-default-hostname` ux; `seo-noindex` seo.
+Total: 22+8+16+11+15+31+16+25 = 144 findings (119 passive, 25 deep). Categories per finding: headers.js/csp.js(csp-*)->headers; mixed-*/sri-* ->content; tls-*->tls; dns-*->dns; mail-*->mail; seo-*/ux-* as named in 6.6-6.7 (`seo-*`->seo, `ux-*`->ux, `ai-*`->ai, `exp-*`->exposure); `ux-alt-text` ux; `ux-default-hostname` ux; `seo-noindex` seo.
 
 ## 8. Frontend (public/index.html, B5)
 One static file, inline `<style>`/`<script>` (see CSP hashing in section 4), no external requests, no framework, light+dark via `prefers-color-scheme`, works at 320 px, keyboard-usable, `<html lang="en">`, labelled inputs, `aria-live` region for progress. UI: URL input + "Scan" (GET /api/scan), grade badges (security + quality) with sub-score bars per category, findings grouped by category with status filter (fail/warn default open, pass collapsed), each finding shows title, evidence, fix, checklist tag. "Deep scan" panel: enter host -> POST /api/verify/start -> show TXT name+value with copy button -> "Check" (POST /api/verify/check) -> when verified enable "Run deep scan" (POST /api/scan deep). Render ALL scan data with `textContent`, never `innerHTML`. No localStorage needed.

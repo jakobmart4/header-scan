@@ -4,7 +4,8 @@
 .gauges { display: flex; justify-content: space-around; gap: var(--s3); }
 .gauge-item { display: flex; flex-direction: column; align-items: center; gap: var(--s2); min-width: 0; }
 .gauge-item .eyebrow { margin: 0; }
-#scorecard #meta { margin: var(--s4) 0 var(--s3); text-align: center; }
+#scorecard #meta { margin: var(--s4) 0 var(--s3); text-align: center; overflow-wrap: anywhere; min-width: 0; }
+#scorecard #meta .nw { white-space: nowrap; }
 #scorecard #actions { gap: var(--s2); justify-content: center; }
 #scorecard #actions .btn { flex: 1 1 9rem; }
 
@@ -72,24 +73,29 @@
 .gauge-sm {
   --num-fs: var(--fs-1);
   --ring-w: .4rem;
-  --delay: calc(250ms + min(var(--i, 0), 10) * var(--step));
   width: var(--gauge-size-sm);
   height: var(--gauge-size-sm);
 }
 .gauge-sm .gauge-num { grid-column: 1 / -1; min-width: 0; text-align: center; }
 
-/* count-up (needs registered --gn): real text stays for no-@property, counter replaces it */
-html.cp .gauge:not([data-g="skip"]) .gauge-num { font-size: 0; counter-reset: gn var(--gn); }
-html.cp .gauge:not([data-g="skip"]) .gauge-num::after {
+/* count-up (needs registered --gn): real text stays for no-@property, counter replaces it.
+   Only the two big gauges animate: registered properties cannot be composited, so each animated ring costs a
+   main-thread style/layout/paint pass per frame; the ten small rings just fade in with their row. */
+html.cp .gauge:not(.gauge-sm):not([data-g="skip"]) .gauge-num { font-size: 0; counter-reset: gn var(--gn); }
+html.cp .gauge:not(.gauge-sm):not([data-g="skip"]) .gauge-num::after {
   content: counter(gn);
+  /* reserve the widest value up front (ch is measured on this element's own font-size, not the 0 of its parent) */
+  display: inline-block;
+  min-width: 3ch;
+  text-align: right;
   font-size: var(--num-fs);
 }
 
 /* one keyframe drives ring fill and count-up so they agree; only when @property exists (html.cp) */
 @keyframes gauge-fill { from { --p: 0; --gn: 0; } }
 @keyframes gauge-pop { from { opacity: 0; transform: scale(.6); } }
-html.cp #results[data-state="done"] .gauge-ring,
-html.cp #results[data-state="done"] .gauge-num {
+html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-ring,
+html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   animation: gauge-fill var(--d-draw) var(--ease-out) var(--delay) backwards;
 }
 #results[data-state="done"] .gauge-grade {

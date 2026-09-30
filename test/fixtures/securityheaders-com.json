@@ -1,0 +1,30 @@
+{
+  "source": "securityheaders.com response as pasted by the user, 2026-09-30 (public headers, no secrets); securityheaders.com grade A+",
+  "headers": {
+    "content-type": "text/html; charset=UTF-8",
+    "server": "cloudflare",
+    "x-powered-by": "PHP/8.5.9",
+    "set-cookie": "anti_forgery_cookie=3ca967900934bcbf8d24e9d95ea5a267; expires=Wed, 30 Sep 2026 13:12:15 GMT; Max-Age=7200; path=/",
+    "access-control-allow-origin": "*",
+    "content-security-policy": "default-src 'self'; script-src 'self' 'sha256-MNB+aPkufy/7Tu0rd2beFGhj+YxaLoXBC4trZaiWpVQ=' js.stripe.com static.cloudflareinsights.com www.google.com/recaptcha/api.js www.gstatic.com/recaptcha/releases/ *.googletagmanager.com j.6sc.co; connect-src 'self' *.googletagmanager.com *.google-analytics.com *.analytics.google.com www.google.com www.gstatic.com; img-src 'self' *.google-analytics.com *.googletagmanager.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com cdnjs.cloudflare.com; font-src 'self' fonts.gstatic.com cdnjs.cloudflare.com; form-action 'self'; frame-src js.stripe.com www.google.com *.googletagmanager.com; report-uri https://scotthelme.report-uri.com/r/d/csp/enforce; report-to default",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "x-frame-options": "SAMEORIGIN",
+    "x-xss-protection": "1; mode=block; report=https://x",
+    "x-content-type-options": "nosniff",
+    "expect-ct": "max-age=0",
+    "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+    "cache-control": "public, max-age=60",
+    "cross-origin-embedder-policy-report-only": "require-corp; report-to=\"default\"",
+    "cross-origin-opener-policy-report-only": "same-origin; report-to=\"default\"",
+    "content-encoding": "gzip",
+    "date": "Wed, 30 Sep 2026 11:12:15 GMT",
+    "vary": "Accept-Encoding",
+    "report-to": "{\"group\":\"default\",\"max_age\":31536000,\"endpoints\":[{\"url\":\"https://scotthelme.report-uri.com/a/d/g\"}],\"include_subdomains\":true}",
+    "nel": "{\"report_to\":\"default\",\"max_age\":31536000,\"include_subdomains\":true}",
+    "server-timing": "cfCacheStatus;desc=\"DYNAMIC\"",
+    "x-envoy-upstream-service-time": "48",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a432caa14d1c56ed-DUB"
+  }
+}

@@ -2,11 +2,11 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var STATUSES = ['fail', 'warn', 'info', 'pass', 'skipped'];
-  var ICON = { fail: '✖ ', warn: '⚠ ', info: 'ℹ ', pass: '✔ ', skipped: '– ' };
+  var ICON = { fail: '✖', warn: '⚠', info: 'ℹ', pass: '✔', skipped: '–' };
   var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
   var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
-  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0;
+  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null;
 
   // Progressive enhancement gate: count-up via a registered custom property needs @property.
   if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
@@ -19,26 +19,43 @@
     return e;
   }
   function clear(e) { while (e.firstChild) e.removeChild(e.firstChild); }
+  function txt(s) { return document.createTextNode(s); }
+  // Status glyph for sighted users only; assistive tech reads the words that follow it.
+  function glyph(s) {
+    var g = h('span', '', ICON[s]);
+    g.setAttribute('aria-hidden', 'true');
+    return g;
+  }
   function say(el, text, tone) { el.textContent = text; el.dataset.tone = tone || 'muted'; }
   function num(el, name, v, digits) { el.style.setProperty(name, String(Number(v.toFixed(digits || 0)))); }
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
+  // Errors stay long enough to be reached with a screen reader or magnifier (WCAG 2.2.1); the text is cleared
+  // after the fade so a stale message is not left in the accessibility tree.
   function toast(text, tone) {
     var t = $('toast');
     t.textContent = text;
     t.dataset.tone = tone || 'ok';
     t.dataset.show = 'true';
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.dataset.show = 'false'; }, 2500);
+    toastTimer = setTimeout(function () {
+      t.dataset.show = 'false';
+      toastTimer = setTimeout(function () { t.textContent = ''; }, 400);
+    }, tone === 'err' ? 8000 : 2500);
   }
 
+  // Disabling the focused button drops focus to <body>: remember it and give it back when the request ends.
   function setBusy(b) {
+    var a = document.activeElement;
+    if (b) busyFocus = a && a.tagName === 'BUTTON' ? a : null;
     busy = b;
     $('app').dataset.busy = String(b);
     $('scan-btn').disabled = b;
     $('verify-start').disabled = b;
     $('verify-check').disabled = b;
     $('deep-btn').disabled = b || !verifiedHost;
+    if (!b && busyFocus && !busyFocus.disabled && (!a || a === document.body || a === busyFocus)) busyFocus.focus();
+    if (!b) busyFocus = null;
   }
   function setState(s) {
     $('results').dataset.state = s;
@@ -84,9 +101,18 @@
       fillGauge(g, s.score, p[1] + ' grade ' + s.grade, gradeBand(s.grade));
       g.querySelector('.gauge-grade').textContent = s.grade === 'N/A' ? '–' : s.grade;
     });
-    var errs = r.errors && r.errors.length ? ' • ' + r.errors.length + ' module error(s): ' +
-      r.errors.map(function (e) { return e.module + ' (' + e.message + ')'; }).join(', ') : '';
-    $('meta').textContent = r.url + ' • ' + r.scannedAt + ' • ' + r.durationMs + ' ms • ' + (r.deep ? 'deep scan' : 'passive scan') + errs;
+    // The URL and module errors may be one long token (CSS breaks them anywhere); the fixed parts never wrap inside.
+    var m = $('meta');
+    clear(m);
+    m.appendChild(txt(r.url));
+    [r.scannedAt, r.durationMs + ' ms', r.deep ? 'deep scan' : 'passive scan'].forEach(function (t) {
+      m.appendChild(txt(' • '));
+      m.appendChild(h('span', 'nw', t));
+    });
+    if (r.errors && r.errors.length) {
+      m.appendChild(txt(' • ' + r.errors.length + ' module error(s): ' +
+        r.errors.map(function (e) { return e.module + ' (' + e.message + ')'; }).join(', ')));
+    }
   }
 
   function renderDonut(findings) {
@@ -177,17 +203,22 @@
       sum.appendChild(h('span', 'cat-count', '(' + list.length + ')'));
       STATUSES.forEach(function (s) {
         if (!cnt[s]) return;
-        var chip = h('span', 'chip', ICON[s] + cnt[s]);
+        var chip = h('span', 'chip');
         chip.dataset.s = s;
+        chip.appendChild(glyph(s));
+        chip.appendChild(txt(cnt[s]));
+        chip.appendChild(h('span', 'sr', ' ' + s));
         sum.appendChild(chip);
       });
       d.appendChild(sum);
       var ul = h('ul', 'list');
       list.forEach(function (f) {
-        var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill', ICON[f.status] + f.status);
+        var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill');
         li.dataset.s = f.status; li.dataset.c = c;
         num(li, '--i', fi++);
         pill.dataset.s = f.status;
+        pill.appendChild(glyph(f.status));
+        pill.appendChild(txt(f.status));
         head.appendChild(pill);
         head.appendChild(h('h3', 'fnd-title', f.title));
         head.appendChild(h('span', 'tag', 'severity ' + f.severity + '/5'));
@@ -222,7 +253,21 @@
         (st === 'all' || (st === 'issues' ? f.status === 'fail' || f.status === 'warn' : f.status === st));
     }).length : 0;
     $('shown').textContent = n + (n === 1 ? ' finding shown' : ' findings shown');
+    $('empty').textContent = st === 'issues' ? 'No fail or warn findings.' : 'No findings match these filters.';
     $('empty').hidden = n > 0;
+    // A narrowed view (one category, or pass/info/skipped) would otherwise show collapsed headers only.
+    if (cat !== 'all' || st === 'pass' || st === 'info' || st === 'skipped') {
+      Array.prototype.forEach.call(document.querySelectorAll('#findings .cat'), function (d) { d.open = true; });
+    }
+  }
+
+  // The filter radios are visually hidden and, in the scrolling chip strips on narrow screens, sit at the strip
+  // start: the browser never scrolls to the focused/checked chip on its own, so do it here.
+  function reveal(ev) {
+    var l = ev.target.labels && ev.target.labels[0], strip = l && l.parentNode;
+    if (strip && strip.scrollWidth > strip.clientWidth) {
+      requestAnimationFrame(function () { l.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
+    }
   }
 
   function show(r) {
@@ -239,6 +284,8 @@
     var url = $('url').value.trim();
     if (!url) { say($('status'), 'Enter a URL first.', 'err'); return; }
     setBusy(true);
+    $('results').dataset.err = 'false';
+    delete $('results').dataset.refilter; // a fresh report gets the full staggered reveal again
     setState('loading');
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
@@ -249,14 +296,27 @@
       say($('status'), 'Scan finished.', 'ok');
     } catch (e) {
       $('error-msg').textContent = e.message;
-      setState('error');
+      // Keep the previous report (and its Copy/Download buttons); the error box sits above it.
+      $('results').dataset.err = String(!!result);
+      setState(result ? 'done' : 'error');
       say($('status'), 'Scan failed.', 'err');
     }
     setBusy(false);
   }
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
-  $('filters').addEventListener('change', syncFilters);
+  $('filters').addEventListener('change', function (ev) {
+    $('results').dataset.refilter = 'true'; // re-shown items reveal without the initial wait (findings.css)
+    syncFilters();
+    reveal(ev);
+  });
+  $('filters').addEventListener('focusin', reveal);
+  // Keep scroll-padding-top equal to the sticky filter bar so keyboard focus is never left underneath it.
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () {
+      document.documentElement.style.setProperty('--filters-h', $('filters').offsetHeight + 'px');
+    }).observe($('filters'));
+  }
 
   $('verify-start').addEventListener('click', async function () {
     var host = $('host').value.trim();
@@ -267,7 +327,7 @@
       var v = await post('/api/verify/start', { host: host });
       $('txt-name').textContent = v.txtName;
       $('txt-value').textContent = v.txtValue;
-      $('txt-exp').textContent = 'Token expires ' + v.expiresAt + '.';
+      $('txt-exp').textContent = 'Token expires ' + new Date(v.expiresAt).toLocaleString() + '.';
       txtHost = host;
       setVerify('pending');
       say($('verify-msg'), 'Waiting for the TXT record. Press Check after adding it.');
@@ -283,6 +343,7 @@
       if (v.verified) {
         verifiedHost = txtHost = host;
         setVerify('verified');
+        busyFocus = $('deep-btn'); // the Check button is hidden now: hand focus to the next step, not to <body>
         say($('verify-msg'), 'Ownership verified for ' + v.host + '. Deep scan unlocked.', 'ok');
       } else { verifiedHost = ''; say($('verify-msg'), 'TXT record not found yet at ' + v.txtName + '. DNS can take a few minutes.', 'err'); }
     } catch (e) { verifiedHost = ''; say($('verify-msg'), e.message, 'err'); }
@@ -292,8 +353,11 @@
   // Editing the host invalidates the local unlock (the server re-checks on every deep scan anyway).
   $('host').addEventListener('input', function () {
     var host = $('host').value.trim();
-    if (verifiedHost && host !== verifiedHost) { verifiedHost = ''; $('deep-btn').disabled = true; }
-    if (txtHost !== host) setVerify('idle'); // the shown record/badge belongs to another host
+    if (verifiedHost && host !== verifiedHost) { verifiedHost = txtHost = ''; $('deep-btn').disabled = true; }
+    if (txtHost !== host) { // the shown record/badge/message belongs to another host (or to a verification just lost)
+      setVerify('idle');
+      say($('verify-msg'), '');
+    }
   });
 
   $('deep-btn').addEventListener('click', function () {

@@ -1,10 +1,8 @@
 /* tokens.css - design tokens (editorial-light + night paper). Only this file declares @property. */
 
-/* Registered so the gauge/donut can sweep and count up. Without support the plain values still render. */
+/* Registered so the two big gauges can sweep and count up. Without support the plain values still render. */
 @property --p  { syntax: "<number>";  inherits: false; initial-value: 0; }
 @property --gn { syntax: "<integer>"; inherits: false; initial-value: 0; }
-@property --a  { syntax: "<number>";  inherits: false; initial-value: 0; }
-@property --b  { syntax: "<number>";  inherits: false; initial-value: 0; }
 
 :root {
   color-scheme: light dark;

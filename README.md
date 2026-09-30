@@ -2,7 +2,7 @@
 
 A SecurityHeaders.com-style scanner that checks much more: security headers (CSP parsed), cookies, TLS, DNS/mail (CAA, SPF, DMARC, DNSSEC), CORS, mixed content, SRI, `security.txt`, plus SEO, AI-visibility and UX-hygiene checks from a 40-item project checklist.
 
-Node >= 20, ESM, **zero npm dependencies**, one static HTML page. 138 findings in total: 113 passive, 25 active (only after ownership is verified).
+Node >= 20, ESM, **zero npm dependencies**, one static HTML page. 144 findings in total: 119 passive, 25 active (only after ownership is verified).
 
 ## Usage
 
@@ -27,7 +27,7 @@ All responses are JSON (`application/json; charset=utf-8`). Errors: `{"error":{"
 
 Error codes: `BAD_URL` 400, `BAD_REQUEST` 400, `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After`), `INTERNAL` 500, `SCAN_FAILED` 502, `BUSY` 503 (> 4 concurrent scans), `TIMEOUT` 504.
 
-Result: `{url, host, scannedAt, durationMs, verified, deep, score:{security,quality,categories}, findings:[Finding], errors:[{module,message}]}`.
+Result: `{url, host, scannedAt, durationMs, verified, deep, rawHeaders:[{name,value}], score:{security,quality,categories}, findings:[Finding], errors:[{module,message}]}`. `rawHeaders` = the page's response headers for a raw-headers table (Set-Cookie values redacted, long values cut).
 Finding: `{id, category, title, status: pass|warn|fail|info|skipped, severity: 1-5, evidence (<=300 chars), fix, ref?, checklist?}`.
 
 ## Ownership verification (for deep scans)
