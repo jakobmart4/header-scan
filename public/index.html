@@ -104,7 +104,7 @@ a{color:var(--accent)}
   var ICON = { fail: '✖ ', warn: '⚠ ', info: 'ℹ ', pass: '✔ ', skipped: '– ' };
   var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
-  var result = null, filter = 'issues', verifiedHost = '', busy = false;
+  var result = null, filter = 'issues', verifiedHost = '', autoHost = '', txtHost = '', busy = false;
 
   // Build elements only with textContent: scan data is never parsed as HTML.
   function h(tag, cls, text) {
@@ -179,15 +179,21 @@ a{color:var(--accent)}
     return f.status === filter;
   }
 
+  // Built once; a click only flips aria-pressed, so the focused button is never removed from the DOM.
+  function syncFilters() {
+    Array.prototype.forEach.call($('filters').children, function (b) { b.setAttribute('aria-pressed', String(filter === b.getAttribute('data-f'))); });
+  }
   function renderFilters() {
-    var box = $('filters'); clear(box);
+    var box = $('filters');
+    if (box.children.length) { syncFilters(); return; }
     [['issues', 'Issues (fail + warn)'], ['all', 'All'], ['fail', 'Fail'], ['warn', 'Warn'], ['pass', 'Pass'], ['info', 'Info'], ['skipped', 'Skipped']].forEach(function (p) {
       var b = h('button', '', p[1]);
       b.type = 'button';
-      b.setAttribute('aria-pressed', String(filter === p[0]));
-      b.addEventListener('click', function () { filter = p[0]; renderFilters(); renderFindings(); });
+      b.setAttribute('data-f', p[0]);
+      b.addEventListener('click', function () { filter = p[0]; syncFilters(); renderFindings(); });
       box.appendChild(b);
     });
+    syncFilters();
   }
 
   function renderFindings() {
@@ -225,7 +231,11 @@ a{color:var(--accent)}
     result = r;
     $('results').hidden = false;
     renderScores(r); renderFilters(); renderFindings();
-    $('host').value = $('host').value || r.host || '';
+    // Follow the latest scan unless the user typed their own host.
+    if (!$('host').value || $('host').value === autoHost) {
+      $('host').value = autoHost = r.host || '';
+      $('host').dispatchEvent(new Event('input'));
+    }
   }
 
   async function runScan(deep) {
@@ -247,11 +257,13 @@ a{color:var(--accent)}
     var host = $('host').value.trim();
     if (!host) { say($('verify-msg'), 'Enter the host you own.', 'err'); return; }
     setBusy(true); verifiedHost = '';
+    $('txt').hidden = true; // never leave a previous host's record on screen
     try {
       var v = await post('/api/verify/start', { host: host });
       $('txt-name').textContent = v.txtName;
       $('txt-value').textContent = v.txtValue;
       $('txt-exp').textContent = 'Token expires ' + v.expiresAt + '.';
+      txtHost = host;
       $('txt').hidden = false;
       say($('verify-msg'), 'Waiting for the TXT record. Press Check after adding it.');
     } catch (e) { say($('verify-msg'), e.message, 'err'); }
@@ -272,6 +284,7 @@ a{color:var(--accent)}
   // Editing the host invalidates the local unlock (the server re-checks on every deep scan anyway).
   $('host').addEventListener('input', function () {
     if (verifiedHost && $('host').value.trim() !== verifiedHost) { verifiedHost = ''; $('deep-btn').disabled = true; }
+    if (txtHost !== $('host').value.trim()) $('txt').hidden = true; // the shown record belongs to another host
   });
 
   $('deep-btn').addEventListener('click', function () {
