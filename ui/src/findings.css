@@ -1,0 +1,391 @@
+/* findings.css (D): filters (radios + :has), category accordion, findings list.
+   Base CSS is the final state; keyframes only define the `from` side and attach under #results[data-state="done"]. */
+
+/* ---------- status colors: [data-s] on .fnd .pill .chip -> --sc / --sb ---------- */
+:is(.fnd, .pill, .chip)[data-s="pass"]    { --sc: var(--pass); --sb: var(--pass-bg); }
+:is(.fnd, .pill, .chip)[data-s="warn"]    { --sc: var(--warn); --sb: var(--warn-bg); }
+:is(.fnd, .pill, .chip)[data-s="fail"]    { --sc: var(--fail); --sb: var(--fail-bg); }
+:is(.fnd, .pill, .chip)[data-s="info"]    { --sc: var(--info); --sb: var(--info-bg); }
+:is(.fnd, .pill, .chip)[data-s="skipped"] { --sc: var(--skip); --sb: var(--skip-bg); }
+
+.pill, .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 0 var(--s2);
+  min-height: 1.5rem;
+  border: 1px solid currentColor;
+  border: 1px solid color-mix(in srgb, var(--sc) 45%, transparent);
+  border-radius: var(--r-pill);
+  color: var(--sc);
+  background: var(--sb);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---------- filter bar ---------- */
+#filters {
+  display: grid;
+  gap: var(--s2);
+  margin: 0 0 var(--s3);
+  padding: var(--s2) 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+.chips {
+  position: relative; /* anchors the visually hidden radios */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+/* visually hidden but focusable (not display:none) */
+.rb {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: inset(50%);
+}
+.chips label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--s3);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  background: var(--surface);
+  font-size: var(--fs-2);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.chips label:active { transform: scale(.96); }
+.rb:checked + label {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent);
+  font-weight: 600;
+}
+.rb:focus-visible + label {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+#shown {
+  margin: 0;
+  font-size: var(--fs-2);
+}
+
+@media (min-width: 641px) {
+  #filters { position: sticky; top: 0; z-index: 10; }
+}
+
+@media (max-width: 640px) {
+  .chips label { min-height: 44px; padding: 0 var(--s3); }
+  /* one horizontal scroll-snap strip; padding leaves room for the focus ring */
+  #tabs, #statuses {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 5px 5px;
+    margin: -5px;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 5px;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+  #tabs label, #statuses label { flex: none; scroll-snap-align: start; }
+}
+
+/* ---------- category accordion ---------- */
+#findings { min-width: 0; }
+.cat {
+  margin: 0 0 var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.cat-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s2);
+  min-height: 44px;
+  padding: var(--s2) var(--s3);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.cat-sum::-webkit-details-marker { display: none; }
+.cat-sum::before {
+  content: "";
+  flex: none;
+  width: .5rem;
+  height: .5rem;
+  margin: 0 var(--s1);
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); /* closed: points right */
+  transition: transform var(--d-mid) var(--ease-out);
+}
+.cat[open] > .cat-sum::before { transform: rotate(45deg); } /* open: points down */
+.cat[open] > .cat-sum { border-bottom: 1px solid var(--rule); }
+.cat-sum:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+.cat-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-4);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cat-count {
+  margin-right: auto; /* pushes the chips to the right edge */
+  color: var(--muted);
+  font-size: var(--fs-2);
+}
+
+/* smooth open/close where ::details-content exists; instant elsewhere */
+@supports selector(::details-content) {
+  .cat::details-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--d-mid) var(--ease-io),
+                content-visibility var(--d-mid) allow-discrete;
+  }
+  .cat[open]::details-content { grid-template-rows: 1fr; }
+  .cat > .list { min-height: 0; overflow: hidden; }
+  @media (prefers-reduced-motion: reduce) {
+    .cat::details-content { transition: none; }
+  }
+}
+
+/* ---------- findings ---------- */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fnd {
+  position: relative;
+  padding: var(--s3) var(--s4) var(--s3) 2.75rem;
+  min-width: 0;
+}
+.fnd + .fnd { border-top: 1px solid var(--rule); }
+
+/* status icon drawn in CSS: disc (::before) + glyph (::after); decorative, the pill carries the text */
+.fnd::before, .fnd::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.fnd::before {
+  left: var(--s3);
+  top: calc(var(--s3) + .05rem);
+  width: 1.25rem;
+  height: 1.25rem;
+  box-sizing: border-box;
+  border: 2px solid var(--sc);
+  border-radius: 50%;
+  background: var(--sb);
+}
+.fnd::after {
+  left: calc(var(--s3) + .275rem);
+  top: calc(var(--s3) + .325rem);
+  width: .7rem;
+  height: .7rem;
+  --g: linear-gradient(var(--sc), var(--sc));
+}
+.fnd[data-s="pass"]::after {
+  left: calc(var(--s3) + .43rem);
+  top: calc(var(--s3) + .3rem);
+  width: .35rem;
+  height: .6rem;
+  border-right: 2px solid var(--sc);
+  border-bottom: 2px solid var(--sc);
+  transform: rotate(45deg) scale(.8);
+  transform-origin: 60% 60%;
+}
+.fnd[data-s="fail"]::after {
+  background: var(--g) center / 100% 2px no-repeat, var(--g) center / 2px 100% no-repeat;
+  transform: rotate(45deg);
+}
+.fnd[data-s="warn"]::after {
+  background: var(--g) 50% 0 / 2px 62% no-repeat, var(--g) 50% 100% / 2px 2px no-repeat;
+}
+.fnd[data-s="info"]::after {
+  background: var(--g) 50% 0 / 2px 2px no-repeat, var(--g) 50% 100% / 2px 62% no-repeat;
+}
+.fnd[data-s="skipped"]::after {
+  background: var(--g) center / 100% 2px no-repeat;
+}
+
+.fnd-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s2);
+}
+.fnd-title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-3);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.tag {
+  padding: 0 var(--s1);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-chip);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* severity dots: --n of 5 lit (::before overlay is clipped by width) */
+.sev {
+  --dot: .85rem;
+  position: relative;
+  flex: none;
+  width: calc(5 * var(--dot));
+  height: .6rem;
+  margin-left: auto;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--muted) 35%, transparent) 0 .25rem, transparent calc(.25rem + 1px)) 0 0 / var(--dot) 100% repeat-x;
+}
+.sev::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--n, 0) * var(--dot));
+  background: radial-gradient(circle at center, var(--sc) 0 .25rem, transparent calc(.25rem + 1px)) 0 0 / var(--dot) 100% repeat-x;
+}
+
+.fnd-evidence {
+  margin: var(--s2) 0 0;
+  padding: var(--s1) var(--s2);
+  border-radius: var(--r-chip);
+  background: var(--track);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.fnd-fix {
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-2);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.fnd-ref {
+  display: inline-block;
+  margin-top: var(--s1);
+  font-size: var(--fs-2);
+  overflow-wrap: anywhere;
+}
+
+#empty {
+  margin: var(--s3) 0 0;
+  padding: var(--s5) var(--s4);
+  border: 1px dashed var(--edge);
+  border-radius: var(--r-card);
+  text-align: center;
+}
+
+/* ---------- filtering (CSS only; one rule set per value) ---------- */
+@supports selector(:has(*)) {
+  #results:has(#cat-headers:checked)  .cat:not([data-c="headers"])  { display: none; }
+  #results:has(#cat-cookies:checked)  .cat:not([data-c="cookies"])  { display: none; }
+  #results:has(#cat-tls:checked)      .cat:not([data-c="tls"])      { display: none; }
+  #results:has(#cat-dns:checked)      .cat:not([data-c="dns"])      { display: none; }
+  #results:has(#cat-mail:checked)     .cat:not([data-c="mail"])     { display: none; }
+  #results:has(#cat-content:checked)  .cat:not([data-c="content"])  { display: none; }
+  #results:has(#cat-seo:checked)      .cat:not([data-c="seo"])      { display: none; }
+  #results:has(#cat-ai:checked)       .cat:not([data-c="ai"])       { display: none; }
+  #results:has(#cat-ux:checked)       .cat:not([data-c="ux"])       { display: none; }
+  #results:has(#cat-exposure:checked) .cat:not([data-c="exposure"]) { display: none; }
+
+  #results:has(#st-issues:checked)  .fnd:not([data-s="fail"]):not([data-s="warn"]) { display: none; }
+  #results:has(#st-issues:checked)  .cat:not(:has(.fnd[data-s="fail"], .fnd[data-s="warn"])) { display: none; }
+  #results:has(#st-fail:checked)    .fnd:not([data-s="fail"])    { display: none; }
+  #results:has(#st-fail:checked)    .cat:not(:has(.fnd[data-s="fail"]))    { display: none; }
+  #results:has(#st-warn:checked)    .fnd:not([data-s="warn"])    { display: none; }
+  #results:has(#st-warn:checked)    .cat:not(:has(.fnd[data-s="warn"]))    { display: none; }
+  #results:has(#st-pass:checked)    .fnd:not([data-s="pass"])    { display: none; }
+  #results:has(#st-pass:checked)    .cat:not(:has(.fnd[data-s="pass"]))    { display: none; }
+  #results:has(#st-info:checked)    .fnd:not([data-s="info"])    { display: none; }
+  #results:has(#st-info:checked)    .cat:not(:has(.fnd[data-s="info"]))    { display: none; }
+  #results:has(#st-skipped:checked) .fnd:not([data-s="skipped"]) { display: none; }
+  #results:has(#st-skipped:checked) .cat:not(:has(.fnd[data-s="skipped"])) { display: none; }
+}
+/* fallback: F mirrors the radios into #results[data-cat][data-st] */
+@supports not selector(:has(*)) {
+  #results[data-cat="headers"]  .cat:not([data-c="headers"])  { display: none; }
+  #results[data-cat="cookies"]  .cat:not([data-c="cookies"])  { display: none; }
+  #results[data-cat="tls"]      .cat:not([data-c="tls"])      { display: none; }
+  #results[data-cat="dns"]      .cat:not([data-c="dns"])      { display: none; }
+  #results[data-cat="mail"]     .cat:not([data-c="mail"])     { display: none; }
+  #results[data-cat="content"]  .cat:not([data-c="content"])  { display: none; }
+  #results[data-cat="seo"]      .cat:not([data-c="seo"])      { display: none; }
+  #results[data-cat="ai"]       .cat:not([data-c="ai"])       { display: none; }
+  #results[data-cat="ux"]       .cat:not([data-c="ux"])       { display: none; }
+  #results[data-cat="exposure"] .cat:not([data-c="exposure"]) { display: none; }
+
+  #results[data-st="issues"]  .fnd:not([data-s="fail"]):not([data-s="warn"]) { display: none; }
+  #results[data-st="fail"]    .fnd:not([data-s="fail"])    { display: none; }
+  #results[data-st="warn"]    .fnd:not([data-s="warn"])    { display: none; }
+  #results[data-st="pass"]    .fnd:not([data-s="pass"])    { display: none; }
+  #results[data-st="info"]    .fnd:not([data-s="info"])    { display: none; }
+  #results[data-st="skipped"] .fnd:not([data-s="skipped"]) { display: none; }
+}
+
+/* ---------- reveal (from-side only; replays because F re-enters "done") ---------- */
+@keyframes f-rise { from { opacity: 0; transform: translateY(8px); } }
+
+#results[data-state="done"] .cat {
+  animation: f-rise var(--d-reveal) var(--ease-out) backwards;
+  animation-delay: calc(500ms + min(var(--i, 0), 10) * 30ms);
+}
+#results[data-state="done"] .fnd {
+  animation: f-rise var(--d-reveal) var(--ease-out) backwards;
+  animation-delay: calc(620ms + min(var(--i, 0), 10) * 30ms);
+}
+#results[data-state="done"] #empty {
+  animation: f-rise var(--d-mid) var(--ease-out) backwards;
+}
+/* a filter change re-shows nodes: skip the initial 500ms wait while the user is on a filter control */
+@supports selector(:has(*)) {
+  #results[data-state="done"]:has(#filters input:focus) :is(.cat, .fnd) {
+    animation-delay: calc(min(var(--i, 0), 10) * 20ms);
+  }
+}
+
+/* ---------- forced colors ---------- */
+@media (forced-colors: active) {
+  .rb:checked + label {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    color: HighlightText;
+    background: Highlight;
+  }
+  .cat, .fnd-evidence, .pill, .chip { border: 1px solid CanvasText; }
+}

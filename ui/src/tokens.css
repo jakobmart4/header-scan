@@ -1,0 +1,99 @@
+/* tokens.css - design tokens (editorial-light + night paper). Only this file declares @property. */
+
+/* Registered so the gauge/donut can sweep and count up. Without support the plain values still render. */
+@property --p  { syntax: "<number>";  inherits: false; initial-value: 0; }
+@property --gn { syntax: "<integer>"; inherits: false; initial-value: 0; }
+@property --a  { syntax: "<number>";  inherits: false; initial-value: 0; }
+@property --b  { syntax: "<number>";  inherits: false; initial-value: 0; }
+
+:root {
+  color-scheme: light dark;
+
+  /* colour (light) */
+  --paper: #f7f4ee;
+  --surface: #fffdf9;
+  --ink: #1c1b18;
+  --muted: #5c584f;
+  --rule: #d8d2c4;
+  --edge: #857f72;
+  --track: #e6e1d5;
+  --accent: #1c3fa8;
+  --accent-ink: #fff;
+  --pass: #1a6b3c;
+  --pass-bg: #e2f1e7;
+  --warn: #8a5300;
+  --warn-bg: #f8ebd0;
+  --fail: #b1281e;
+  --fail-bg: #f9e1de;
+  --info: #3b5482;
+  --info-bg: #e5eaf4;
+  --skip: var(--muted);
+  --skip-bg: var(--track);
+
+  /* type */
+  --font-body: system-ui, "Segoe UI", sans-serif;
+  --font-display: ui-serif, "Iowan Old Style", Georgia, serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+  --fs-1: .75rem;
+  --fs-2: .875rem;
+  --fs-3: 1rem;
+  --fs-4: 1.25rem;
+  --fs-5: 1.75rem;
+  --fs-6: 2.5rem;
+
+  /* spacing, radius */
+  --s1: .25rem;
+  --s2: .5rem;
+  --s3: .75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  --s7: 3rem;
+  --s8: 4.5rem;
+  --r-card: 2px;
+  --r-chip: 4px;
+  --r-pill: 999px;
+
+  /* component sizing shared across files */
+  --heat-max: 40%;
+  --gauge-size: 8rem;
+  --gauge-size-sm: 3rem;
+  --ring-w: .9rem;
+
+  /* elevation */
+  --shadow-card: 0 1px 0 var(--rule);
+  --shadow-lift: 0 18px 40px -28px rgb(28 27 24 / .35);
+
+  /* motion */
+  --d-fast: 120ms;
+  --d-mid: 220ms;
+  --d-reveal: 300ms;
+  --d-draw: 900ms;
+  --ease-out: cubic-bezier(.2, .7, .2, 1);
+  --ease-io: cubic-bezier(.4, 0, .2, 1);
+  --step: 40ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141311;
+    --surface: #1d1c19;
+    --ink: #f0ede6;
+    --muted: #aaa69b;
+    --rule: #3a372f;
+    --edge: #8a8578;
+    --track: #2b2924;
+    --accent: #8fabf5;
+    --accent-ink: #0e1633;
+    --pass: #6ccf98;
+    --pass-bg: #15301f;
+    --warn: #efbf5c;
+    --warn-bg: #382c10;
+    --fail: #ff8c82;
+    --fail-bg: #3c1b18;
+    --info: #9db6e6;
+    --info-bg: #1a2739;
+    /* "none" is not valid inside a comma list, so a zero shadow stands in for it */
+    --shadow-lift: 0 0 0 0 transparent;
+  }
+}

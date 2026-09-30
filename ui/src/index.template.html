@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>header-scan</title>
+<!--@STYLE-->
+</head>
+<body>
+<main id="app" data-busy="false">
+<header id="masthead">
+  <h1>header-scan</h1>
+  <p class="muted">Security headers, cookies, TLS, DNS/mail, content, SEO and UX checks. Scans are passive; active probes need verified domain ownership.</p>
+</header>
+
+<form id="scan-form" class="card" novalidate>
+  <div class="field grow"><label for="url">Website URL</label><input id="url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required></div>
+  <button id="scan-btn" class="btn primary" type="submit">Scan</button>
+</form>
+<div id="loadbar" aria-hidden="true"></div>
+<p id="status" class="muted" role="status" aria-live="polite" data-tone="muted"></p>
+<noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
+
+<section id="results" data-state="idle" aria-label="Scan results" aria-busy="false">
+  <div id="skeleton" aria-hidden="true">
+    <div class="skel skel-gauges"></div><div class="skel skel-donut"></div><div class="skel skel-heat"></div><div class="skel skel-cats"></div><div class="skel skel-list"></div>
+  </div>
+  <div id="error-box" role="alert"><p id="error-msg"></p></div>
+
+  <div id="report">
+    <aside id="rail">
+      <section id="scorecard" class="card" aria-label="Grades">
+        <div class="gauges">
+          <div class="gauge-item"><h2 class="eyebrow">Security</h2>
+            <div class="gauge" id="gauge-security" data-g="skip" role="img"><div class="gauge-ring"></div><b class="gauge-grade"></b><span class="gauge-num"></span><span class="gauge-cap">/ 100</span></div></div>
+          <div class="gauge-item"><h2 class="eyebrow">Quality</h2>
+            <div class="gauge" id="gauge-quality" data-g="skip" role="img"><div class="gauge-ring"></div><b class="gauge-grade"></b><span class="gauge-num"></span><span class="gauge-cap">/ 100</span></div></div>
+        </div>
+        <p class="muted" id="meta"></p>
+        <div class="row" id="actions"><button type="button" id="copy-json" class="btn">Copy JSON report</button><button type="button" id="dl-json" class="btn">Download JSON report</button></div>
+      </section>
+
+      <section id="donut-card" class="card" aria-label="Pass, warn and fail split">
+        <h2 class="eyebrow">Findings split</h2>
+        <div class="donut" id="donut" data-empty="true" role="img"><span class="donut-total" id="donut-total">0</span><span class="donut-cap">counted</span></div>
+        <dl class="legend">
+          <div class="lg" data-s="pass"><dt><i class="sw"></i>&#10004; Pass</dt><dd id="lg-pass">0</dd></div>
+          <div class="lg" data-s="warn"><dt><i class="sw"></i>&#9888; Warn</dt><dd id="lg-warn">0</dd></div>
+          <div class="lg" data-s="fail"><dt><i class="sw"></i>&#10006; Fail</dt><dd id="lg-fail">0</dd></div>
+          <div class="lg plain" data-s="info"><dt>&#8505; Info</dt><dd id="lg-info">0</dd></div>
+          <div class="lg plain" data-s="skipped"><dt>&ndash; Skipped</dt><dd id="lg-skipped">0</dd></div>
+        </dl>
+      </section>
+
+      <section id="heat-card" class="card" aria-label="Severity heat grid">
+        <h2 class="eyebrow">Fail + warn by severity</h2>
+        <div class="heat-wrap"><table id="heat" class="heat"></table></div>
+        <p class="muted heat-legend"><span>fewer</span><i aria-hidden="true"></i><span>more</span></p>
+      </section>
+    </aside>
+
+    <div id="report-main">
+      <section id="cats-card" class="card" aria-label="Category scores">
+        <h2 class="eyebrow">Category scores</h2>
+        <ul id="cats" class="cats"></ul>
+      </section>
+
+      <div id="filters" class="filters">
+        <fieldset class="chips" id="tabs"><legend class="sr">Show category</legend>
+          <input class="rb" type="radio" name="cat" id="cat-all" value="all" checked><label for="cat-all">All</label>
+          <input class="rb" type="radio" name="cat" id="cat-headers" value="headers"><label for="cat-headers">Headers</label>
+          <input class="rb" type="radio" name="cat" id="cat-cookies" value="cookies"><label for="cat-cookies">Cookies</label>
+          <input class="rb" type="radio" name="cat" id="cat-tls" value="tls"><label for="cat-tls">TLS</label>
+          <input class="rb" type="radio" name="cat" id="cat-dns" value="dns"><label for="cat-dns">DNS</label>
+          <input class="rb" type="radio" name="cat" id="cat-mail" value="mail"><label for="cat-mail">Mail</label>
+          <input class="rb" type="radio" name="cat" id="cat-content" value="content"><label for="cat-content">Content</label>
+          <input class="rb" type="radio" name="cat" id="cat-seo" value="seo"><label for="cat-seo">SEO</label>
+          <input class="rb" type="radio" name="cat" id="cat-ai" value="ai"><label for="cat-ai">AI visibility</label>
+          <input class="rb" type="radio" name="cat" id="cat-ux" value="ux"><label for="cat-ux">UX hygiene</label>
+          <input class="rb" type="radio" name="cat" id="cat-exposure" value="exposure"><label for="cat-exposure">Exposure</label>
+        </fieldset>
+        <fieldset class="chips" id="statuses"><legend class="sr">Filter findings by status</legend>
+          <input class="rb" type="radio" name="st" id="st-issues" value="issues" checked><label for="st-issues">Issues (fail + warn)</label>
+          <input class="rb" type="radio" name="st" id="st-all" value="all"><label for="st-all">All</label>
+          <input class="rb" type="radio" name="st" id="st-fail" value="fail"><label for="st-fail">Fail</label>
+          <input class="rb" type="radio" name="st" id="st-warn" value="warn"><label for="st-warn">Warn</label>
+          <input class="rb" type="radio" name="st" id="st-pass" value="pass"><label for="st-pass">Pass</label>
+          <input class="rb" type="radio" name="st" id="st-info" value="info"><label for="st-info">Info</label>
+          <input class="rb" type="radio" name="st" id="st-skipped" value="skipped"><label for="st-skipped">Skipped</label>
+        </fieldset>
+        <p id="shown" class="muted" role="status" aria-live="polite"></p>
+      </div>
+      <div id="findings"></div>
+      <p id="empty" class="muted" hidden>No findings match these filters.</p>
+    </div>
+  </div>
+</section>
+
+<section id="deep" class="card" data-v="idle" aria-labelledby="deep-h">
+  <h2 id="deep-h" class="eyebrow">Deep scan (owner only)</h2>
+  <p class="muted">Deep scan runs read-only probes for exposed files (for example /.git/ and /.env). It only runs for domains you prove you own with a DNS TXT record.</p>
+  <ol class="steps" aria-hidden="true"><li>Get TXT record</li><li>Add it and check</li><li>Run deep scan</li></ol>
+  <div class="row">
+    <div class="field grow"><label for="host">Host to verify</label><input id="host" type="text" placeholder="example.com" autocomplete="off"></div>
+    <button type="button" id="verify-start" class="btn">Get TXT record</button>
+  </div>
+  <div id="txt">
+    <p>Add this DNS TXT record, wait for DNS to update, then press Check.</p>
+    <div class="copyrow"><span>Name:</span><code id="txt-name"></code><button type="button" class="btn" data-copy="txt-name">Copy name</button></div>
+    <div class="copyrow"><span>Value:</span><code id="txt-value"></code><button type="button" class="btn" data-copy="txt-value">Copy value</button></div>
+    <p class="muted" id="txt-exp"></p>
+    <div class="row"><button type="button" id="verify-check" class="btn">Check</button></div>
+  </div>
+  <p id="verify-badge" class="badge-ok">&#10004; Verified</p>
+  <p id="verify-msg" role="status" aria-live="polite" data-tone="muted"></p>
+  <div class="row"><button type="button" id="deep-btn" class="btn primary" disabled>Run deep scan</button></div>
+</section>
+</main>
+<div id="toast" role="status" aria-live="polite" data-show="false" data-tone="ok"></div>
+<!--@SCRIPT-->
+</body>
+</html>

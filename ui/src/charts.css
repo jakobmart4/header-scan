@@ -1,0 +1,250 @@
+/* charts.css (C): donut, legend, category bars, severity heat-grid.
+   Base rules ARE the final state; keyframes hold only the `from` side and are attached
+   under #results[data-state="done"] so no-@property / no-animation / reduced-motion show the finished picture. */
+
+@keyframes c-fade { from { opacity: 0; } }
+@keyframes c-donut { from { --a: 0; --b: 0; } }
+@keyframes c-grow { from { transform: scaleX(0); } }
+
+/* ---------- donut (pass / warn / fail split) ---------- */
+#donut {
+  --hole: var(--ring-w);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-content: center;
+  width: var(--gauge-size);
+  aspect-ratio: 1;
+  margin: var(--s3) auto 0;
+  border-radius: 50%;
+  text-align: center;
+  background: var(--track);
+  /* hard stops with 0.6% --surface gaps; --a = pass %, --b = pass+warn % (registered in tokens.css) */
+  background:
+    conic-gradient(
+      var(--pass) 0 calc(var(--a) * 1%),
+      var(--surface) 0 calc(var(--a) * 1% + .6%),
+      var(--warn) 0 calc(var(--b) * 1%),
+      var(--surface) 0 calc(var(--b) * 1% + .6%),
+      var(--fail) 0 99.7%,
+      var(--surface) 0 100%
+    );
+}
+/* hole is an opaque overlay, not a mask: --a/--b are non-inherited so a pseudo-element could not read them */
+#donut::after {
+  content: "";
+  position: absolute;
+  inset: var(--hole);
+  z-index: 0;
+  border-radius: 50%;
+  background: var(--surface);
+}
+#donut[data-empty="true"] { background: var(--track); }
+.donut-total, .donut-cap { position: relative; z-index: 1; display: block; }
+.donut-total {
+  font-family: var(--font-display);
+  font-size: var(--fs-5);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.donut-cap {
+  margin-top: .2rem;
+  font-size: var(--fs-1);
+  color: var(--muted);
+}
+
+/* ---------- legend ---------- */
+.legend { margin: var(--s3) 0 0; padding: 0; }
+.legend > .lg {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin: 0;
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  color: var(--ink);
+}
+.legend > .lg:last-child { border-bottom: 0; }
+.legend > .lg[data-s="pass"] { --c: var(--pass); }
+.legend > .lg[data-s="warn"] { --c: var(--warn); }
+.legend > .lg[data-s="fail"] { --c: var(--fail); }
+.legend dt {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0;
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--c, var(--muted));
+}
+.legend > .lg.plain dt { font-weight: 400; color: var(--muted); }
+.legend dd {
+  margin: 0;
+  font-size: var(--fs-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+/* swatch shape differs per status (circle / triangle / square), so colour is never the only cue */
+.legend .sw {
+  flex: none;
+  width: .75rem;
+  height: .75rem;
+  background: var(--c);
+}
+.legend .lg[data-s="pass"] .sw { border-radius: 50%; }
+.legend .lg[data-s="warn"] .sw { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+
+/* ---------- category rows + bars ---------- */
+#cats { list-style: none; margin: 0; padding: 0; }
+#cats > .crow {
+  display: grid;
+  grid-template-columns: var(--gauge-size-sm) minmax(0, 1fr);
+  grid-template-areas: "g n" "g b" "g t";
+  column-gap: var(--s3);
+  row-gap: .25rem;
+  align-items: center;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+/* tolerate a wrapper around name/tag */
+#cats > .crow > :not(.gauge-sm):not(.bar):not(.crow-name):not(.crow-tag) { display: contents; }
+.crow .gauge-sm { grid-area: g; align-self: center; }
+.crow-name {
+  grid-area: n;
+  min-width: 0;
+  font-size: var(--fs-3);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.crow-tag {
+  grid-area: t;
+  min-width: 0;
+  font-size: var(--fs-1);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.crow .bar {
+  grid-area: b;
+  display: flex;
+  height: .625rem;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: repeating-linear-gradient(135deg, var(--track) 0 5px, var(--rule) 5px 7px); /* hatch = nothing measured */
+  transform-origin: left center;
+}
+/* #cats id in the selector out-ranks any generic [data-s] status colouring */
+#cats .bar > .seg {
+  flex: var(--n, 0) 1 0;
+  min-width: 0;
+  display: block;
+}
+#cats .bar > .seg + .seg { border-left: 2px solid var(--surface); }
+#cats .bar > .seg[data-s="pass"] { background: var(--pass); }
+#cats .bar > .seg[data-s="warn"] {
+  background: repeating-linear-gradient(45deg, var(--warn) 0 4px, var(--surface) 4px 6px);
+}
+#cats .bar > .seg[data-s="fail"] {
+  background:
+    repeating-linear-gradient(45deg, var(--fail) 0 3px, transparent 3px 6px),
+    repeating-linear-gradient(-45deg, var(--fail) 0 3px, var(--surface) 3px 6px);
+}
+
+/* ---------- severity heat-grid ---------- */
+.heat-wrap { margin-top: var(--s3); overflow: hidden; }
+#heat {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: var(--fs-1);
+  font-variant-numeric: tabular-nums;
+}
+#heat caption { text-align: left; }
+#heat thead th {
+  padding: 0 0 .2rem;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  text-align: center;
+  color: var(--muted);
+  overflow: hidden;
+}
+#heat thead th:first-child, #heat thead td:first-child { width: 2.5rem; }
+#heat tbody th {
+  padding: 0 .2rem 0 0;
+  font-size: .6875rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--muted);
+}
+#heat td.hc {
+  --k: 0;
+  height: 1.75rem;
+  padding: 0;
+  text-align: center;
+  color: var(--ink);
+  background: var(--track);
+}
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  #heat td.hc {
+    background: color-mix(in srgb, var(--fail) calc(var(--k) * var(--heat-max)), var(--track));
+  }
+}
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-1);
+}
+.heat-legend i {
+  flex: 0 1 6rem;
+  height: .5rem;
+  outline: 1px solid var(--rule);
+  background: linear-gradient(90deg, var(--track), var(--fail));
+}
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .heat-legend i {
+    background: linear-gradient(90deg, var(--track), color-mix(in srgb, var(--fail) var(--heat-max), var(--track)));
+  }
+}
+
+/* column index for the fade stagger (td 1..10 are children 2..11, child 1 is the row th) */
+#heat td.hc:nth-child(2) { --col: 0; } #heat td.hc:nth-child(3) { --col: 1; }
+#heat td.hc:nth-child(4) { --col: 2; } #heat td.hc:nth-child(5) { --col: 3; }
+#heat td.hc:nth-child(6) { --col: 4; } #heat td.hc:nth-child(7) { --col: 5; }
+#heat td.hc:nth-child(8) { --col: 6; } #heat td.hc:nth-child(9) { --col: 7; }
+#heat td.hc:nth-child(10) { --col: 8; } #heat td.hc:nth-child(11) { --col: 9; }
+
+/* ---------- entrance choreography (from-side only, done state only) ---------- */
+#results[data-state="done"] #donut {
+  animation: c-fade var(--d-reveal) var(--ease-out) 300ms backwards;
+}
+html.cp #results[data-state="done"] #donut {
+  animation: c-donut var(--d-draw) var(--ease-out) 300ms backwards;
+}
+#results[data-state="done"] #cats > .crow {
+  animation: c-fade var(--d-reveal) var(--ease-out) calc(250ms + min(var(--i, 0), 10) * var(--step)) backwards;
+}
+#results[data-state="done"] #cats .bar {
+  animation: c-grow calc(var(--d-reveal) * 2) var(--ease-out) calc(250ms + min(var(--i, 0), 10) * var(--step)) backwards;
+}
+/* --i is set on the row; unregistered custom properties inherit, so the bar sees it */
+#results[data-state="done"] #heat td.hc {
+  animation: c-fade var(--d-reveal) var(--ease-out) calc(400ms + var(--col, 0) * 25ms) backwards;
+}
+
+/* ---------- forced colors: keep segments/cells readable, add borders ---------- */
+@media (forced-colors: active) {
+  #donut, #cats .bar > .seg, .legend .sw { forced-color-adjust: none; }
+  #donut { border: 1px solid CanvasText; }
+  #donut::after { background: Canvas; }
+  #heat td.hc { border: 1px solid CanvasText; forced-color-adjust: none; color: CanvasText; }
+  .crow .bar { border-color: CanvasText; }
+}

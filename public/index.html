@@ -6,96 +6,1398 @@
 <meta name="color-scheme" content="light dark">
 <title>header-scan</title>
 <style>
-:root{--bg:#f6f7f9;--surface:#fff;--text:#1a1d21;--muted:#5b6470;--border:#d5dae1;--accent:#1f5fbf;--accent-text:#fff;
---pass:#17693a;--warn:#8a5a00;--fail:#b3261e;--info:#3b5b8a;--skip:#5b6470;--pass-bg:#e3f4ea;--warn-bg:#fdf0d5;--fail-bg:#fbe4e2;--info-bg:#e6edf7;--skip-bg:#eceef1;}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--surface:#1b1f25;--text:#e8ebef;--muted:#9aa4b1;--border:#333a44;--accent:#6ea3f0;--accent-text:#0d1420;
---pass:#6fd39a;--warn:#f0c060;--fail:#ff8a80;--info:#8fb2e8;--skip:#9aa4b1;--pass-bg:#163325;--warn-bg:#3a2e12;--fail-bg:#3d1c1a;--info-bg:#1b2a40;--skip-bg:#262b33;}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:60rem;margin:0 auto;padding:1rem}
-h1{font-size:1.5rem;margin:0.5rem 0 0.25rem}
-h2{font-size:1.125rem;margin:1.5rem 0 0.5rem}
-h2.first{margin-top:0}
-h3{font-size:1rem;margin:0}
-p{margin:0.25rem 0}
-.muted{color:var(--muted);font-size:0.875rem}
-form,.row{display:flex;flex-wrap:wrap;gap:0.5rem;align-items:flex-end}
-label{display:block;font-size:0.875rem;font-weight:600;margin-bottom:0.25rem}
-.grow{flex:1 1 14rem;min-width:0}
-input{width:100%;padding:0.5rem 0.75rem;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px}
-button{padding:0.5rem 1rem;font:inherit;font-weight:600;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;min-height:2.5rem}
-button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
-button[aria-pressed="true"]{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
-button:disabled{opacity:0.5;cursor:not-allowed}
-:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:1rem}
-.badges{display:flex;flex-wrap:wrap;gap:1rem}
-.badge{display:flex;align-items:center;gap:0.75rem}
-.grade{min-width:4.5rem;height:4.5rem;display:flex;align-items:center;justify-content:center;font-size:2.25rem;font-weight:800;border-radius:12px;border:3px solid currentColor;padding:0 0.5rem}
-.g-A{color:var(--pass)}.g-B{color:var(--pass)}.g-C{color:var(--warn)}.g-D{color:var(--warn)}.g-E{color:var(--fail)}.g-F{color:var(--fail)}.g-N{color:var(--skip)}
-.bars{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:0.5rem 1rem;margin:0;padding:0;list-style:none}
-.bar-head{display:flex;justify-content:space-between;font-size:0.875rem}
-.bar{height:0.5rem;background:var(--skip-bg);border-radius:4px;overflow:hidden}
-.bar>span{display:block;height:100%;background:var(--accent)}
-.filters{display:flex;flex-wrap:wrap;gap:0.5rem;margin:0.5rem 0}
-details.cat{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:0.75rem}
-details.cat>summary{padding:0.75rem 1rem;cursor:pointer;font-weight:700}
-ul.list{list-style:none;margin:0;padding:0}
-ul.list>li{padding:0.75rem 1rem;border-top:1px solid var(--border)}
-.head{display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center}
-.pill{font-size:0.75rem;font-weight:700;text-transform:uppercase;padding:0.125rem 0.5rem;border-radius:999px;border:1px solid currentColor}
-.s-pass{color:var(--pass);background:var(--pass-bg)}.s-warn{color:var(--warn);background:var(--warn-bg)}.s-fail{color:var(--fail);background:var(--fail-bg)}.s-info{color:var(--info);background:var(--info-bg)}.s-skipped{color:var(--skip);background:var(--skip-bg)}
-.tag{font-size:0.75rem;color:var(--muted)}
-.fix{margin-top:0.25rem}
-code,.mono{font-family:ui-monospace,Consolas,monospace;font-size:0.875rem;word-break:break-all}
-.copyrow{display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin:0.25rem 0}
-.err{color:var(--fail);font-weight:600}
-.ok{color:var(--pass);font-weight:600}
-[hidden]{display:none!important}
-a{color:var(--accent)}
+/* tokens.css - design tokens (editorial-light + night paper). Only this file declares @property. */
+
+/* Registered so the gauge/donut can sweep and count up. Without support the plain values still render. */
+@property --p  { syntax: "<number>";  inherits: false; initial-value: 0; }
+@property --gn { syntax: "<integer>"; inherits: false; initial-value: 0; }
+@property --a  { syntax: "<number>";  inherits: false; initial-value: 0; }
+@property --b  { syntax: "<number>";  inherits: false; initial-value: 0; }
+
+:root {
+  color-scheme: light dark;
+
+  /* colour (light) */
+  --paper: #f7f4ee;
+  --surface: #fffdf9;
+  --ink: #1c1b18;
+  --muted: #5c584f;
+  --rule: #d8d2c4;
+  --edge: #857f72;
+  --track: #e6e1d5;
+  --accent: #1c3fa8;
+  --accent-ink: #fff;
+  --pass: #1a6b3c;
+  --pass-bg: #e2f1e7;
+  --warn: #8a5300;
+  --warn-bg: #f8ebd0;
+  --fail: #b1281e;
+  --fail-bg: #f9e1de;
+  --info: #3b5482;
+  --info-bg: #e5eaf4;
+  --skip: var(--muted);
+  --skip-bg: var(--track);
+
+  /* type */
+  --font-body: system-ui, "Segoe UI", sans-serif;
+  --font-display: ui-serif, "Iowan Old Style", Georgia, serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+  --fs-1: .75rem;
+  --fs-2: .875rem;
+  --fs-3: 1rem;
+  --fs-4: 1.25rem;
+  --fs-5: 1.75rem;
+  --fs-6: 2.5rem;
+
+  /* spacing, radius */
+  --s1: .25rem;
+  --s2: .5rem;
+  --s3: .75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  --s7: 3rem;
+  --s8: 4.5rem;
+  --r-card: 2px;
+  --r-chip: 4px;
+  --r-pill: 999px;
+
+  /* component sizing shared across files */
+  --heat-max: 40%;
+  --gauge-size: 8rem;
+  --gauge-size-sm: 3rem;
+  --ring-w: .9rem;
+
+  /* elevation */
+  --shadow-card: 0 1px 0 var(--rule);
+  --shadow-lift: 0 18px 40px -28px rgb(28 27 24 / .35);
+
+  /* motion */
+  --d-fast: 120ms;
+  --d-mid: 220ms;
+  --d-reveal: 300ms;
+  --d-draw: 900ms;
+  --ease-out: cubic-bezier(.2, .7, .2, 1);
+  --ease-io: cubic-bezier(.4, 0, .2, 1);
+  --step: 40ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141311;
+    --surface: #1d1c19;
+    --ink: #f0ede6;
+    --muted: #aaa69b;
+    --rule: #3a372f;
+    --edge: #8a8578;
+    --track: #2b2924;
+    --accent: #8fabf5;
+    --accent-ink: #0e1633;
+    --pass: #6ccf98;
+    --pass-bg: #15301f;
+    --warn: #efbf5c;
+    --warn-bg: #382c10;
+    --fail: #ff8c82;
+    --fail-bg: #3c1b18;
+    --info: #9db6e6;
+    --info-bg: #1a2739;
+    /* "none" is not valid inside a comma list, so a zero shadow stands in for it */
+    --shadow-lift: 0 0 0 0 transparent;
+  }
+}
+/* base.css - reset, typography, shared primitives, focus, reduced motion */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font: var(--fs-3)/1.5 var(--font-body);
+  overflow-wrap: break-word;
+  overflow-x: clip; /* safety net only; layout is built not to overflow */
+}
+
+h1, h2, h3, p, dl, dd, ul, ol, fieldset { margin: 0; }
+h1, h2, h3 { line-height: 1.2; font-weight: 600; }
+h1 { font: 400 var(--fs-6)/1.1 var(--font-display); letter-spacing: -.01em; }
+h2 { font-size: var(--fs-4); }
+h3 { font-size: var(--fs-3); }
+fieldset { min-width: 0; padding: 0; border: 0; }
+button, input { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+.sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.muted { color: var(--muted); }
+
+.eyebrow {
+  margin: 0 0 var(--s2);
+  font: 600 var(--fs-1)/1.4 var(--font-body);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+a { color: var(--accent); text-underline-offset: .2em; }
+a:hover { text-decoration-thickness: 2px; }
+
+code {
+  font: var(--fs-2)/1.4 var(--font-mono);
+  padding: .1em .35em;
+  background: var(--track);
+  border-radius: var(--r-chip);
+  overflow-wrap: anywhere;
+}
+
+/* focus: one ring everywhere (radios are handled on their labels by findings.css) */
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* surfaces */
+.card {
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* form primitives */
+.field { display: grid; gap: var(--s1); min-width: 0; }
+.field > label { font-size: var(--fs-2); font-weight: 600; }
+.grow { flex: 1 1 14rem; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s2) var(--s3); }
+.copyrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.copyrow > code { flex: 1 1 12rem; min-width: 0; }
+
+input[type="text"] {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--s2) var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-card);
+  font-size: var(--fs-3); /* 16px: no iOS zoom on focus */
+}
+input[type="text"]:focus-visible { border-color: var(--accent); }
+::placeholder { color: var(--muted); opacity: 1; }
+
+/* hover feedback is transform-only (no colour/shadow transitions) */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  min-height: 2.75rem;
+  padding: var(--s2) var(--s4);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-card);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.btn:hover:not(:disabled) { background: var(--track); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent), var(--ink) 12%); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* status lines: colour + glyph + text, never colour alone */
+#status, #verify-msg { font-size: var(--fs-2); }
+#status[data-tone="ok"], #verify-msg[data-tone="ok"] { color: var(--pass); }
+#status[data-tone="err"], #verify-msg[data-tone="err"] { color: var(--fail); }
+#status[data-tone="muted"], #verify-msg[data-tone="muted"] { color: var(--muted); }
+#status[data-tone="ok"]:not(:empty)::before, #verify-msg[data-tone="ok"]:not(:empty)::before { content: "\2714\00a0"; }
+#status[data-tone="err"]:not(:empty)::before, #verify-msg[data-tone="err"]:not(:empty)::before { content: "\2716\00a0"; }
+
+/* base only: panels.css toggles visibility */
+.badge-ok {
+  display: inline-block;
+  padding: var(--s1) var(--s3);
+  background: var(--pass-bg);
+  color: var(--pass);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-2);
+  font-weight: 600;
+}
+
+/* page entrance: keyframes hold only the `from` side, so the base CSS is the final state */
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
+#masthead { animation: page-in var(--d-reveal) var(--ease-out) backwards; }
+#scan-form { animation: page-in var(--d-reveal) var(--ease-out) 60ms backwards; }
+
+@media (forced-colors: active) {
+  .btn, input[type="text"], .badge-ok { border: 1px solid ButtonText; }
+  :focus-visible { outline-color: Highlight; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* layout.css - page frame, masthead, scan form, report grid. Never styles component internals. */
+
+#app {
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 0 var(--s4) var(--s7);
+}
+
+#masthead {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s6) 0 var(--s5);
+  margin-bottom: var(--s5);
+  border-bottom: 1px solid var(--rule);
+}
+#masthead p { max-width: 68ch; }
+
+#scan-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s3); }
+
+/* the loadbar (panels.css) sits directly under the form; #status reserves one line so it never shifts */
+#status { min-height: 1.5rem; margin: var(--s2) 0 var(--s4); }
+
+#results { margin-bottom: var(--s5); }
+
+/* report: one column on mobile (rail cards, then main); state visibility is panels.css */
+#report { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+#rail, #report-main { display: grid; gap: var(--s4); min-width: 0; align-content: start; }
+
+#scorecard { box-shadow: var(--shadow-card), var(--shadow-lift); }
+
+#cats { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3) var(--s5); margin: 0; padding: 0; list-style: none; }
+
+#deep { margin-top: var(--s6); }
+
+@media (max-width: 640px) {
+  #scan-form { flex-direction: column; align-items: stretch; }
+  #scan-form .grow { flex: 0 0 auto; }
+  #scan-form .btn { width: 100%; }
+}
+
+@media (min-width: 640px) {
+  #app { padding-inline: var(--s5); }
+  .card { padding: var(--s5); }
+  #cats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 960px) {
+  #report { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--s5); align-items: start; }
+  #rail, #report-main { gap: var(--s5); }
+}
+
+/* sticky only when the whole rail fits the viewport; otherwise its bottom cards would be unreachable */
+@media (min-width: 960px) and (min-height: 60rem) {
+  #rail { position: sticky; top: var(--s4); }
+}
+/* gauge.css (B): grade rings. Base CSS = final state; animation only under #results[data-state=done]. */
+
+/* layout inside #scorecard */
+.gauges { display: flex; justify-content: space-around; gap: var(--s3); }
+.gauge-item { display: flex; flex-direction: column; align-items: center; gap: var(--s2); min-width: 0; }
+.gauge-item .eyebrow { margin: 0; }
+#scorecard #meta { margin: var(--s4) 0 var(--s3); text-align: center; }
+#scorecard #actions { gap: var(--s2); justify-content: center; }
+#scorecard #actions .btn { flex: 1 1 9rem; }
+
+/* ring: --p / --gn are registered with inherits:false, so each element that reads them derives its own from --score */
+.gauge {
+  --c: var(--skip);
+  --delay: 100ms;
+  --num-fs: var(--fs-2);
+  position: relative;
+  flex: none;
+  width: var(--gauge-size);
+  height: var(--gauge-size);
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-content: center;
+  align-items: baseline;
+  column-gap: .25em;
+  text-align: center;
+}
+.gauge[data-g="pass"] { --c: var(--pass); }
+.gauge[data-g="warn"] { --c: var(--warn); }
+.gauge[data-g="fail"] { --c: var(--fail); }
+.gauge[data-g="skip"] { --c: var(--skip); }
+
+.gauge-ring {
+  --p: var(--score, 0);
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--track) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-w)), black calc(100% - var(--ring-w) + 1px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-w)), black calc(100% - var(--ring-w) + 1px));
+}
+.gauge[data-g="skip"] .gauge-ring { --p: 0; }
+
+.gauge-grade {
+  grid-column: 1 / -1;
+  position: relative;
+  font: 700 var(--fs-6) / 1 var(--font-display);
+  color: var(--c);
+  margin-bottom: var(--s1);
+}
+.gauge-num {
+  --gn: var(--score, 0);
+  position: relative;
+  min-width: 3ch;
+  text-align: right;
+  font-size: var(--num-fs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.gauge-cap {
+  position: relative;
+  font-size: var(--fs-1);
+  color: var(--muted);
+  text-align: left;
+}
+.gauge[data-g="skip"] .gauge-grade { display: none; }
+.gauge[data-g="skip"] .gauge-cap { display: none; }
+.gauge[data-g="skip"] .gauge-num { grid-column: 1 / -1; min-width: 0; text-align: center; color: var(--muted); }
+
+/* small category ring: ring + number only */
+.gauge-sm {
+  --num-fs: var(--fs-1);
+  --ring-w: .4rem;
+  --delay: calc(250ms + min(var(--i, 0), 10) * var(--step));
+  width: var(--gauge-size-sm);
+  height: var(--gauge-size-sm);
+}
+.gauge-sm .gauge-num { grid-column: 1 / -1; min-width: 0; text-align: center; }
+
+/* count-up (needs registered --gn): real text stays for no-@property, counter replaces it */
+html.cp .gauge:not([data-g="skip"]) .gauge-num { font-size: 0; counter-reset: gn var(--gn); }
+html.cp .gauge:not([data-g="skip"]) .gauge-num::after {
+  content: counter(gn);
+  font-size: var(--num-fs);
+}
+
+/* one keyframe drives ring fill and count-up so they agree; only when @property exists (html.cp) */
+@keyframes gauge-fill { from { --p: 0; --gn: 0; } }
+@keyframes gauge-pop { from { opacity: 0; transform: scale(.6); } }
+html.cp #results[data-state="done"] .gauge-ring,
+html.cp #results[data-state="done"] .gauge-num {
+  animation: gauge-fill var(--d-draw) var(--ease-out) var(--delay) backwards;
+}
+#results[data-state="done"] .gauge-grade {
+  animation: gauge-pop var(--d-mid) cubic-bezier(.3, 1.6, .5, 1) calc(var(--delay) + 550ms) backwards;
+}
+
+/* forced colors: no mask/gradient ring, outline + text carry the value */
+@media (forced-colors: active) {
+  .gauge { border: 2px solid CanvasText; border-radius: 50%; }
+  .gauge-ring { display: none; }
+  .gauge-grade, .gauge-num { color: CanvasText; }
+}
+/* charts.css (C): donut, legend, category bars, severity heat-grid.
+   Base rules ARE the final state; keyframes hold only the `from` side and are attached
+   under #results[data-state="done"] so no-@property / no-animation / reduced-motion show the finished picture. */
+
+@keyframes c-fade { from { opacity: 0; } }
+@keyframes c-donut { from { --a: 0; --b: 0; } }
+@keyframes c-grow { from { transform: scaleX(0); } }
+
+/* ---------- donut (pass / warn / fail split) ---------- */
+#donut {
+  --hole: var(--ring-w);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-content: center;
+  width: var(--gauge-size);
+  aspect-ratio: 1;
+  margin: var(--s3) auto 0;
+  border-radius: 50%;
+  text-align: center;
+  background: var(--track);
+  /* hard stops with 0.6% --surface gaps; --a = pass %, --b = pass+warn % (registered in tokens.css) */
+  background:
+    conic-gradient(
+      var(--pass) 0 calc(var(--a) * 1%),
+      var(--surface) 0 calc(var(--a) * 1% + .6%),
+      var(--warn) 0 calc(var(--b) * 1%),
+      var(--surface) 0 calc(var(--b) * 1% + .6%),
+      var(--fail) 0 99.7%,
+      var(--surface) 0 100%
+    );
+}
+/* hole is an opaque overlay, not a mask: --a/--b are non-inherited so a pseudo-element could not read them */
+#donut::after {
+  content: "";
+  position: absolute;
+  inset: var(--hole);
+  z-index: 0;
+  border-radius: 50%;
+  background: var(--surface);
+}
+#donut[data-empty="true"] { background: var(--track); }
+.donut-total, .donut-cap { position: relative; z-index: 1; display: block; }
+.donut-total {
+  font-family: var(--font-display);
+  font-size: var(--fs-5);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.donut-cap {
+  margin-top: .2rem;
+  font-size: var(--fs-1);
+  color: var(--muted);
+}
+
+/* ---------- legend ---------- */
+.legend { margin: var(--s3) 0 0; padding: 0; }
+.legend > .lg {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin: 0;
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  color: var(--ink);
+}
+.legend > .lg:last-child { border-bottom: 0; }
+.legend > .lg[data-s="pass"] { --c: var(--pass); }
+.legend > .lg[data-s="warn"] { --c: var(--warn); }
+.legend > .lg[data-s="fail"] { --c: var(--fail); }
+.legend dt {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0;
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--c, var(--muted));
+}
+.legend > .lg.plain dt { font-weight: 400; color: var(--muted); }
+.legend dd {
+  margin: 0;
+  font-size: var(--fs-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+/* swatch shape differs per status (circle / triangle / square), so colour is never the only cue */
+.legend .sw {
+  flex: none;
+  width: .75rem;
+  height: .75rem;
+  background: var(--c);
+}
+.legend .lg[data-s="pass"] .sw { border-radius: 50%; }
+.legend .lg[data-s="warn"] .sw { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+
+/* ---------- category rows + bars ---------- */
+#cats { list-style: none; margin: 0; padding: 0; }
+#cats > .crow {
+  display: grid;
+  grid-template-columns: var(--gauge-size-sm) minmax(0, 1fr);
+  grid-template-areas: "g n" "g b" "g t";
+  column-gap: var(--s3);
+  row-gap: .25rem;
+  align-items: center;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+/* tolerate a wrapper around name/tag */
+#cats > .crow > :not(.gauge-sm):not(.bar):not(.crow-name):not(.crow-tag) { display: contents; }
+.crow .gauge-sm { grid-area: g; align-self: center; }
+.crow-name {
+  grid-area: n;
+  min-width: 0;
+  font-size: var(--fs-3);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.crow-tag {
+  grid-area: t;
+  min-width: 0;
+  font-size: var(--fs-1);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.crow .bar {
+  grid-area: b;
+  display: flex;
+  height: .625rem;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: repeating-linear-gradient(135deg, var(--track) 0 5px, var(--rule) 5px 7px); /* hatch = nothing measured */
+  transform-origin: left center;
+}
+/* #cats id in the selector out-ranks any generic [data-s] status colouring */
+#cats .bar > .seg {
+  flex: var(--n, 0) 1 0;
+  min-width: 0;
+  display: block;
+}
+#cats .bar > .seg + .seg { border-left: 2px solid var(--surface); }
+#cats .bar > .seg[data-s="pass"] { background: var(--pass); }
+#cats .bar > .seg[data-s="warn"] {
+  background: repeating-linear-gradient(45deg, var(--warn) 0 4px, var(--surface) 4px 6px);
+}
+#cats .bar > .seg[data-s="fail"] {
+  background:
+    repeating-linear-gradient(45deg, var(--fail) 0 3px, transparent 3px 6px),
+    repeating-linear-gradient(-45deg, var(--fail) 0 3px, var(--surface) 3px 6px);
+}
+
+/* ---------- severity heat-grid ---------- */
+.heat-wrap { margin-top: var(--s3); overflow: hidden; }
+#heat {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: var(--fs-1);
+  font-variant-numeric: tabular-nums;
+}
+#heat caption { text-align: left; }
+#heat thead th {
+  padding: 0 0 .2rem;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  text-align: center;
+  color: var(--muted);
+  overflow: hidden;
+}
+#heat thead th:first-child, #heat thead td:first-child { width: 2.5rem; }
+#heat tbody th {
+  padding: 0 .2rem 0 0;
+  font-size: .6875rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--muted);
+}
+#heat td.hc {
+  --k: 0;
+  height: 1.75rem;
+  padding: 0;
+  text-align: center;
+  color: var(--ink);
+  background: var(--track);
+}
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  #heat td.hc {
+    background: color-mix(in srgb, var(--fail) calc(var(--k) * var(--heat-max)), var(--track));
+  }
+}
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-1);
+}
+.heat-legend i {
+  flex: 0 1 6rem;
+  height: .5rem;
+  outline: 1px solid var(--rule);
+  background: linear-gradient(90deg, var(--track), var(--fail));
+}
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .heat-legend i {
+    background: linear-gradient(90deg, var(--track), color-mix(in srgb, var(--fail) var(--heat-max), var(--track)));
+  }
+}
+
+/* column index for the fade stagger (td 1..10 are children 2..11, child 1 is the row th) */
+#heat td.hc:nth-child(2) { --col: 0; } #heat td.hc:nth-child(3) { --col: 1; }
+#heat td.hc:nth-child(4) { --col: 2; } #heat td.hc:nth-child(5) { --col: 3; }
+#heat td.hc:nth-child(6) { --col: 4; } #heat td.hc:nth-child(7) { --col: 5; }
+#heat td.hc:nth-child(8) { --col: 6; } #heat td.hc:nth-child(9) { --col: 7; }
+#heat td.hc:nth-child(10) { --col: 8; } #heat td.hc:nth-child(11) { --col: 9; }
+
+/* ---------- entrance choreography (from-side only, done state only) ---------- */
+#results[data-state="done"] #donut {
+  animation: c-fade var(--d-reveal) var(--ease-out) 300ms backwards;
+}
+html.cp #results[data-state="done"] #donut {
+  animation: c-donut var(--d-draw) var(--ease-out) 300ms backwards;
+}
+#results[data-state="done"] #cats > .crow {
+  animation: c-fade var(--d-reveal) var(--ease-out) calc(250ms + min(var(--i, 0), 10) * var(--step)) backwards;
+}
+#results[data-state="done"] #cats .bar {
+  animation: c-grow calc(var(--d-reveal) * 2) var(--ease-out) calc(250ms + min(var(--i, 0), 10) * var(--step)) backwards;
+}
+/* --i is set on the row; unregistered custom properties inherit, so the bar sees it */
+#results[data-state="done"] #heat td.hc {
+  animation: c-fade var(--d-reveal) var(--ease-out) calc(400ms + var(--col, 0) * 25ms) backwards;
+}
+
+/* ---------- forced colors: keep segments/cells readable, add borders ---------- */
+@media (forced-colors: active) {
+  #donut, #cats .bar > .seg, .legend .sw { forced-color-adjust: none; }
+  #donut { border: 1px solid CanvasText; }
+  #donut::after { background: Canvas; }
+  #heat td.hc { border: 1px solid CanvasText; forced-color-adjust: none; color: CanvasText; }
+  .crow .bar { border-color: CanvasText; }
+}
+/* findings.css (D): filters (radios + :has), category accordion, findings list.
+   Base CSS is the final state; keyframes only define the `from` side and attach under #results[data-state="done"]. */
+
+/* ---------- status colors: [data-s] on .fnd .pill .chip -> --sc / --sb ---------- */
+:is(.fnd, .pill, .chip)[data-s="pass"]    { --sc: var(--pass); --sb: var(--pass-bg); }
+:is(.fnd, .pill, .chip)[data-s="warn"]    { --sc: var(--warn); --sb: var(--warn-bg); }
+:is(.fnd, .pill, .chip)[data-s="fail"]    { --sc: var(--fail); --sb: var(--fail-bg); }
+:is(.fnd, .pill, .chip)[data-s="info"]    { --sc: var(--info); --sb: var(--info-bg); }
+:is(.fnd, .pill, .chip)[data-s="skipped"] { --sc: var(--skip); --sb: var(--skip-bg); }
+
+.pill, .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 0 var(--s2);
+  min-height: 1.5rem;
+  border: 1px solid currentColor;
+  border: 1px solid color-mix(in srgb, var(--sc) 45%, transparent);
+  border-radius: var(--r-pill);
+  color: var(--sc);
+  background: var(--sb);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---------- filter bar ---------- */
+#filters {
+  display: grid;
+  gap: var(--s2);
+  margin: 0 0 var(--s3);
+  padding: var(--s2) 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+.chips {
+  position: relative; /* anchors the visually hidden radios */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+/* visually hidden but focusable (not display:none) */
+.rb {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: inset(50%);
+}
+.chips label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--s3);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  background: var(--surface);
+  font-size: var(--fs-2);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.chips label:active { transform: scale(.96); }
+.rb:checked + label {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent);
+  font-weight: 600;
+}
+.rb:focus-visible + label {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+#shown {
+  margin: 0;
+  font-size: var(--fs-2);
+}
+
+@media (min-width: 641px) {
+  #filters { position: sticky; top: 0; z-index: 10; }
+}
+
+@media (max-width: 640px) {
+  .chips label { min-height: 44px; padding: 0 var(--s3); }
+  /* one horizontal scroll-snap strip; padding leaves room for the focus ring */
+  #tabs, #statuses {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 5px 5px;
+    margin: -5px;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 5px;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+  #tabs label, #statuses label { flex: none; scroll-snap-align: start; }
+}
+
+/* ---------- category accordion ---------- */
+#findings { min-width: 0; }
+.cat {
+  margin: 0 0 var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.cat-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s2);
+  min-height: 44px;
+  padding: var(--s2) var(--s3);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.cat-sum::-webkit-details-marker { display: none; }
+.cat-sum::before {
+  content: "";
+  flex: none;
+  width: .5rem;
+  height: .5rem;
+  margin: 0 var(--s1);
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); /* closed: points right */
+  transition: transform var(--d-mid) var(--ease-out);
+}
+.cat[open] > .cat-sum::before { transform: rotate(45deg); } /* open: points down */
+.cat[open] > .cat-sum { border-bottom: 1px solid var(--rule); }
+.cat-sum:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+.cat-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-4);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cat-count {
+  margin-right: auto; /* pushes the chips to the right edge */
+  color: var(--muted);
+  font-size: var(--fs-2);
+}
+
+/* smooth open/close where ::details-content exists; instant elsewhere */
+@supports selector(::details-content) {
+  .cat::details-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--d-mid) var(--ease-io),
+                content-visibility var(--d-mid) allow-discrete;
+  }
+  .cat[open]::details-content { grid-template-rows: 1fr; }
+  .cat > .list { min-height: 0; overflow: hidden; }
+  @media (prefers-reduced-motion: reduce) {
+    .cat::details-content { transition: none; }
+  }
+}
+
+/* ---------- findings ---------- */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fnd {
+  position: relative;
+  padding: var(--s3) var(--s4) var(--s3) 2.75rem;
+  min-width: 0;
+}
+.fnd + .fnd { border-top: 1px solid var(--rule); }
+
+/* status icon drawn in CSS: disc (::before) + glyph (::after); decorative, the pill carries the text */
+.fnd::before, .fnd::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.fnd::before {
+  left: var(--s3);
+  top: calc(var(--s3) + .05rem);
+  width: 1.25rem;
+  height: 1.25rem;
+  box-sizing: border-box;
+  border: 2px solid var(--sc);
+  border-radius: 50%;
+  background: var(--sb);
+}
+.fnd::after {
+  left: calc(var(--s3) + .275rem);
+  top: calc(var(--s3) + .325rem);
+  width: .7rem;
+  height: .7rem;
+  --g: linear-gradient(var(--sc), var(--sc));
+}
+.fnd[data-s="pass"]::after {
+  left: calc(var(--s3) + .43rem);
+  top: calc(var(--s3) + .3rem);
+  width: .35rem;
+  height: .6rem;
+  border-right: 2px solid var(--sc);
+  border-bottom: 2px solid var(--sc);
+  transform: rotate(45deg) scale(.8);
+  transform-origin: 60% 60%;
+}
+.fnd[data-s="fail"]::after {
+  background: var(--g) center / 100% 2px no-repeat, var(--g) center / 2px 100% no-repeat;
+  transform: rotate(45deg);
+}
+.fnd[data-s="warn"]::after {
+  background: var(--g) 50% 0 / 2px 62% no-repeat, var(--g) 50% 100% / 2px 2px no-repeat;
+}
+.fnd[data-s="info"]::after {
+  background: var(--g) 50% 0 / 2px 2px no-repeat, var(--g) 50% 100% / 2px 62% no-repeat;
+}
+.fnd[data-s="skipped"]::after {
+  background: var(--g) center / 100% 2px no-repeat;
+}
+
+.fnd-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s2);
+}
+.fnd-title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-3);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.tag {
+  padding: 0 var(--s1);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-chip);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* severity dots: --n of 5 lit (::before overlay is clipped by width) */
+.sev {
+  --dot: .85rem;
+  position: relative;
+  flex: none;
+  width: calc(5 * var(--dot));
+  height: .6rem;
+  margin-left: auto;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--muted) 35%, transparent) 0 .25rem, transparent calc(.25rem + 1px)) 0 0 / var(--dot) 100% repeat-x;
+}
+.sev::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--n, 0) * var(--dot));
+  background: radial-gradient(circle at center, var(--sc) 0 .25rem, transparent calc(.25rem + 1px)) 0 0 / var(--dot) 100% repeat-x;
+}
+
+.fnd-evidence {
+  margin: var(--s2) 0 0;
+  padding: var(--s1) var(--s2);
+  border-radius: var(--r-chip);
+  background: var(--track);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.fnd-fix {
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-2);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.fnd-ref {
+  display: inline-block;
+  margin-top: var(--s1);
+  font-size: var(--fs-2);
+  overflow-wrap: anywhere;
+}
+
+#empty {
+  margin: var(--s3) 0 0;
+  padding: var(--s5) var(--s4);
+  border: 1px dashed var(--edge);
+  border-radius: var(--r-card);
+  text-align: center;
+}
+
+/* ---------- filtering (CSS only; one rule set per value) ---------- */
+@supports selector(:has(*)) {
+  #results:has(#cat-headers:checked)  .cat:not([data-c="headers"])  { display: none; }
+  #results:has(#cat-cookies:checked)  .cat:not([data-c="cookies"])  { display: none; }
+  #results:has(#cat-tls:checked)      .cat:not([data-c="tls"])      { display: none; }
+  #results:has(#cat-dns:checked)      .cat:not([data-c="dns"])      { display: none; }
+  #results:has(#cat-mail:checked)     .cat:not([data-c="mail"])     { display: none; }
+  #results:has(#cat-content:checked)  .cat:not([data-c="content"])  { display: none; }
+  #results:has(#cat-seo:checked)      .cat:not([data-c="seo"])      { display: none; }
+  #results:has(#cat-ai:checked)       .cat:not([data-c="ai"])       { display: none; }
+  #results:has(#cat-ux:checked)       .cat:not([data-c="ux"])       { display: none; }
+  #results:has(#cat-exposure:checked) .cat:not([data-c="exposure"]) { display: none; }
+
+  #results:has(#st-issues:checked)  .fnd:not([data-s="fail"]):not([data-s="warn"]) { display: none; }
+  #results:has(#st-issues:checked)  .cat:not(:has(.fnd[data-s="fail"], .fnd[data-s="warn"])) { display: none; }
+  #results:has(#st-fail:checked)    .fnd:not([data-s="fail"])    { display: none; }
+  #results:has(#st-fail:checked)    .cat:not(:has(.fnd[data-s="fail"]))    { display: none; }
+  #results:has(#st-warn:checked)    .fnd:not([data-s="warn"])    { display: none; }
+  #results:has(#st-warn:checked)    .cat:not(:has(.fnd[data-s="warn"]))    { display: none; }
+  #results:has(#st-pass:checked)    .fnd:not([data-s="pass"])    { display: none; }
+  #results:has(#st-pass:checked)    .cat:not(:has(.fnd[data-s="pass"]))    { display: none; }
+  #results:has(#st-info:checked)    .fnd:not([data-s="info"])    { display: none; }
+  #results:has(#st-info:checked)    .cat:not(:has(.fnd[data-s="info"]))    { display: none; }
+  #results:has(#st-skipped:checked) .fnd:not([data-s="skipped"]) { display: none; }
+  #results:has(#st-skipped:checked) .cat:not(:has(.fnd[data-s="skipped"])) { display: none; }
+}
+/* fallback: F mirrors the radios into #results[data-cat][data-st] */
+@supports not selector(:has(*)) {
+  #results[data-cat="headers"]  .cat:not([data-c="headers"])  { display: none; }
+  #results[data-cat="cookies"]  .cat:not([data-c="cookies"])  { display: none; }
+  #results[data-cat="tls"]      .cat:not([data-c="tls"])      { display: none; }
+  #results[data-cat="dns"]      .cat:not([data-c="dns"])      { display: none; }
+  #results[data-cat="mail"]     .cat:not([data-c="mail"])     { display: none; }
+  #results[data-cat="content"]  .cat:not([data-c="content"])  { display: none; }
+  #results[data-cat="seo"]      .cat:not([data-c="seo"])      { display: none; }
+  #results[data-cat="ai"]       .cat:not([data-c="ai"])       { display: none; }
+  #results[data-cat="ux"]       .cat:not([data-c="ux"])       { display: none; }
+  #results[data-cat="exposure"] .cat:not([data-c="exposure"]) { display: none; }
+
+  #results[data-st="issues"]  .fnd:not([data-s="fail"]):not([data-s="warn"]) { display: none; }
+  #results[data-st="fail"]    .fnd:not([data-s="fail"])    { display: none; }
+  #results[data-st="warn"]    .fnd:not([data-s="warn"])    { display: none; }
+  #results[data-st="pass"]    .fnd:not([data-s="pass"])    { display: none; }
+  #results[data-st="info"]    .fnd:not([data-s="info"])    { display: none; }
+  #results[data-st="skipped"] .fnd:not([data-s="skipped"]) { display: none; }
+}
+
+/* ---------- reveal (from-side only; replays because F re-enters "done") ---------- */
+@keyframes f-rise { from { opacity: 0; transform: translateY(8px); } }
+
+#results[data-state="done"] .cat {
+  animation: f-rise var(--d-reveal) var(--ease-out) backwards;
+  animation-delay: calc(500ms + min(var(--i, 0), 10) * 30ms);
+}
+#results[data-state="done"] .fnd {
+  animation: f-rise var(--d-reveal) var(--ease-out) backwards;
+  animation-delay: calc(620ms + min(var(--i, 0), 10) * 30ms);
+}
+#results[data-state="done"] #empty {
+  animation: f-rise var(--d-mid) var(--ease-out) backwards;
+}
+/* a filter change re-shows nodes: skip the initial 500ms wait while the user is on a filter control */
+@supports selector(:has(*)) {
+  #results[data-state="done"]:has(#filters input:focus) :is(.cat, .fnd) {
+    animation-delay: calc(min(var(--i, 0), 10) * 20ms);
+  }
+}
+
+/* ---------- forced colors ---------- */
+@media (forced-colors: active) {
+  .rb:checked + label {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    color: HighlightText;
+    background: Highlight;
+  }
+  .cat, .fnd-evidence, .pill, .chip { border: 1px solid CanvasText; }
+}
+/* panels.css - loading, results visibility by state, error/empty, toast, deep-scan (ownership) panel.
+   Motion: transform/opacity only. Keyframes hold only the `from` side, so base CSS is the final state. */
+
+/* ---------- results visibility by state ---------- */
+#results > * { display: none; }
+#results[data-state="loading"] > #skeleton { display: grid; }
+#results[data-state="error"] > #error-box { display: flex; }
+#results[data-state="done"] > #report { display: grid; } /* same value as layout.css */
+
+/* ---------- indeterminate load bar (3px always reserved) ---------- */
+#loadbar { position: relative; height: 3px; overflow: hidden; }
+#loadbar::after {
+  content: "";
+  position: absolute; inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--accent);
+  opacity: 0;
+  transform: translateX(-100%);
+}
+#app[data-busy="true"] #loadbar { background: var(--track); }
+#app[data-busy="true"] #loadbar::after { opacity: 1; animation: lb-sweep 1.4s linear infinite; }
+@keyframes lb-sweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* ---------- skeleton: same grid and approximate box sizes as the report (no layout shift) ---------- */
+#skeleton { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+.skel {
+  position: relative; overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+}
+/* content hints (static): bars for lists, discs for gauges/donut */
+.skel::before { content: ""; position: absolute; inset: var(--s4); background: repeating-linear-gradient(to bottom, var(--track) 0 .75rem, transparent 0 1.5rem); }
+.skel::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--ink) 9%, transparent) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: skel-sweep 1.6s var(--ease-io) infinite;
+}
+@keyframes skel-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.skel-gauges { min-height: 19rem; }
+.skel-donut  { min-height: 20rem; }
+.skel-heat   { min-height: 14rem; }
+.skel-cats   { min-height: 38rem; }
+.skel-list   { min-height: 24rem; }
+.skel-gauges::before {
+  inset: var(--s8) var(--s4) auto;
+  height: 8rem;
+  background:
+    radial-gradient(circle closest-side, var(--track) 97%, transparent) 12% 0 / 8rem 8rem no-repeat,
+    radial-gradient(circle closest-side, var(--track) 97%, transparent) 88% 0 / 8rem 8rem no-repeat;
+}
+.skel-donut::before {
+  inset: var(--s8) var(--s4) auto;
+  height: 8rem;
+  background: radial-gradient(circle closest-side, var(--track) 97%, transparent) 50% 0 / 8rem 8rem no-repeat;
+}
+@media (min-width: 640px) { .skel-cats { min-height: 22rem; } }
+@media (min-width: 960px) {
+  #skeleton { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--s5); align-items: start; }
+  .skel-gauges, .skel-donut, .skel-heat { grid-column: 1; }
+  .skel-cats, .skel-list { grid-column: 2; }
+  .skel-cats { grid-row: 1 / span 2; }
+  .skel-list { grid-row: 3; }
+}
+
+/* ---------- error + empty ---------- */
+#error-box {
+  align-items: flex-start; gap: var(--s3);
+  padding: var(--s4);
+  background: var(--fail-bg); color: var(--fail);
+  border: 1px solid var(--fail); border-radius: var(--r-card);
+  animation: state-in var(--d-reveal) var(--ease-out) backwards;
+}
+#error-box::before { content: "\2716"; content: "\2716" / ""; flex: none; font-weight: 700; }
+#error-msg { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+@keyframes state-in { from { opacity: 0; transform: translateY(8px); } }
+
+#empty {
+  padding: var(--s5) var(--s4);
+  text-align: center;
+  border: 1px dashed var(--edge); border-radius: var(--r-card);
+}
+#empty:not([hidden]) { animation: state-in var(--d-mid) var(--ease-out) backwards; }
+#empty::before { content: "\2205"; content: "\2205" / ""; display: block; font: 400 var(--fs-5)/1.2 var(--font-display); color: var(--muted); }
+
+/* ---------- toast ---------- */
+#toast {
+  position: fixed; z-index: 50;
+  left: 0; right: 0; bottom: max(var(--s4), env(safe-area-inset-bottom));
+  margin-inline: auto; width: max-content; max-width: calc(100% - 2 * var(--s4));
+  padding: var(--s2) var(--s4);
+  border: 1px solid var(--pass); border-radius: var(--r-card);
+  background: var(--pass-bg); color: var(--pass);
+  box-shadow: var(--shadow-lift);
+  font-size: var(--fs-2); font-weight: 600;
+  opacity: 0; transform: translateY(.5rem); pointer-events: none;
+  transition: opacity var(--d-mid) var(--ease-out), transform var(--d-mid) var(--ease-out);
+}
+#toast[data-tone="err"] { border-color: var(--fail); background: var(--fail-bg); color: var(--fail); }
+#toast[data-show="true"] { opacity: 1; transform: none; }
+#toast:not(:empty)::before { content: "\2714\00a0"; }
+#toast[data-tone="err"]:not(:empty)::before { content: "\2716\00a0"; }
+
+/* ---------- deep scan / ownership verification ---------- */
+#deep { position: relative; display: grid; gap: var(--s3); }
+#deep > * { min-width: 0; }
+#deep .eyebrow { margin: 0; }
+#deep::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--rule); }
+#deep[data-v="verified"]::before { background: var(--pass); }
+
+/* stepper (decorative, aria-hidden): 1 get TXT, 2 add + check, 3 run */
+#deep .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; counter-reset: step; }
+#deep .steps li {
+  position: relative; counter-increment: step;
+  padding: 2.25rem var(--s2) 0 0;
+  font-size: var(--fs-1); line-height: 1.3; color: var(--muted);
+}
+#deep .steps li::before {
+  content: counter(step);
+  position: absolute; top: 0; left: 0;
+  display: grid; place-items: center;
+  width: 1.75rem; height: 1.75rem;
+  background: var(--surface); color: var(--muted);
+  border: 2px solid var(--edge); border-radius: 50%;
+  font: 600 var(--fs-1)/1 var(--font-body);
+}
+/* connector: track is the li background, fill is ::after scaling in (transform only) */
+#deep .steps li:not(:last-child) {
+  background: linear-gradient(var(--rule), var(--rule)) 2.1rem .8125rem / calc(100% - 2.45rem) 2px no-repeat;
+}
+#deep .steps li:not(:last-child)::after {
+  content: "";
+  position: absolute; top: .8125rem; left: 2.1rem; right: .35rem; height: 2px;
+  background: var(--accent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform var(--d-draw) var(--ease-io);
+}
+/* active */
+#deep[data-v="idle"] .steps li:nth-child(1),
+#deep[data-v="pending"] .steps li:nth-child(2),
+#deep[data-v="verified"] .steps li:nth-child(3) { color: var(--ink); font-weight: 600; }
+#deep[data-v="idle"] .steps li:nth-child(1)::before,
+#deep[data-v="pending"] .steps li:nth-child(2)::before,
+#deep[data-v="verified"] .steps li:nth-child(3)::before { color: var(--accent); border-color: var(--accent); }
+/* done */
+#deep[data-v="pending"] .steps li:nth-child(1),
+#deep[data-v="verified"] .steps li:nth-child(-n+2) { color: var(--ink); }
+#deep[data-v="pending"] .steps li:nth-child(1)::before,
+#deep[data-v="verified"] .steps li:nth-child(-n+2)::before {
+  content: "\2713"; content: "\2713" / "";
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+  animation: step-pop var(--d-mid) var(--ease-out) backwards;
+}
+#deep[data-v="pending"] .steps li:nth-child(1)::after,
+#deep[data-v="verified"] .steps li:nth-child(-n+2)::after { transform: none; }
+@keyframes step-pop { from { transform: scale(.6); opacity: 0; } }
+
+/* TXT record block: hidden unless pending; reveal is opacity/translate only (no height animation) */
+#txt {
+  display: none; gap: var(--s3);
+  padding: var(--s4);
+  background: color-mix(in srgb, var(--track) 35%, var(--surface));
+  border: 1px solid var(--rule); border-radius: var(--r-card);
+}
+#txt > p { margin: 0; }
+#deep[data-v="pending"] #txt { display: grid; animation: state-in var(--d-reveal) var(--ease-out) backwards; }
+#txt .copyrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s1) var(--s2); }
+#txt .copyrow > span { grid-column: 1 / -1; font-size: var(--fs-1); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#txt .copyrow > code {
+  min-width: 0; min-height: 2.75rem;
+  display: flex; align-items: center;
+  padding: var(--s2) var(--s3);
+  background: var(--track); color: var(--ink);
+  border: 1px dashed var(--edge);
+  font-size: var(--fs-2); line-height: 1.4;
+  overflow-wrap: anywhere; word-break: break-all;
+}
+@supports selector(:has(*)) {
+  #txt .copyrow:has(.btn:is(:hover, :focus-visible)) > code { border-style: solid; border-color: var(--accent); }
+}
+@media (min-width: 640px) {
+  #txt .copyrow { grid-template-columns: 4rem minmax(0, 1fr) auto; }
+  #txt .copyrow > span { grid-column: auto; }
+}
+
+/* verified badge with a check drawn in CSS (ring pops, tick scales in); the text glyph is hidden via ::first-letter */
+#verify-badge { display: none; }
+#deep[data-v="verified"] #verify-badge { display: block; justify-self: start; position: relative; padding-left: calc(var(--s3) + 1.6rem); }
+#deep[data-v="verified"] #verify-badge::first-letter { font-size: 0; }
+#deep[data-v="verified"] #verify-badge::before,
+#deep[data-v="verified"] #verify-badge::after { content: ""; position: absolute; }
+#deep[data-v="verified"] #verify-badge::before {
+  left: var(--s3); top: 50%; width: 1.15rem; height: 1.15rem; margin-top: -.575rem;
+  background: var(--pass); border-radius: 50%;
+  animation: vb-ring var(--d-reveal) var(--ease-out) backwards;
+}
+#deep[data-v="verified"] #verify-badge::after {
+  left: calc(var(--s3) + .4rem); top: 50%; width: .3rem; height: .6rem; margin-top: -.4rem;
+  border: solid var(--pass-bg); border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  animation: vb-tick var(--d-mid) var(--ease-out) 180ms backwards;
+}
+@keyframes vb-ring { from { transform: scale(.4); opacity: 0; } }
+@keyframes vb-tick { from { transform: rotate(45deg) scale(0); opacity: 0; } }
+
+#verify-msg { min-height: 1.4rem; }
+
+/* deep-scan button: padlock drawn with gradients (locked until ownership is verified) */
+#deep-btn::before {
+  content: ""; flex: none; width: 1.1em; height: 1.1em;
+  background:
+    linear-gradient(currentColor, currentColor) 50% 100% / .9em .5em no-repeat,
+    radial-gradient(circle at 50% .42em, transparent .18em, currentColor .19em .29em, transparent .3em);
+}
+#deep[data-v="verified"] #deep-btn::before {
+  background:
+    linear-gradient(currentColor, currentColor) 50% 100% / .9em .5em no-repeat,
+    radial-gradient(circle at 50% .22em, transparent .13em, currentColor .14em .26em, transparent .27em);
+  animation: step-pop var(--d-mid) var(--ease-out) backwards;
+}
+
+/* ---------- forced colors ---------- */
+@media (forced-colors: active) {
+  .skel, #error-box, #toast, #txt, #empty { border: 1px solid CanvasText; }
+  #loadbar::after, #deep::before { background: Highlight; forced-color-adjust: none; }
+  #deep .steps li::before { border-color: CanvasText; }
+  #deep[data-v="verified"] #verify-badge::first-letter { font-size: inherit; }
+  #deep[data-v="verified"] #verify-badge::before, #deep[data-v="verified"] #verify-badge::after { display: none; }
+  #deep[data-v="verified"] #verify-badge { padding-left: var(--s3); }
+}
+
+/* ---------- reduced motion: loading loops become static ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #app[data-busy="true"] #loadbar::after {
+    width: 100%; transform: none;
+    background: repeating-linear-gradient(90deg, var(--accent) 0 .5rem, transparent 0 1rem);
+  }
+  .skel::after { display: none; }
+}
 </style>
 </head>
 <body>
-<main>
-<h1>header-scan</h1>
-<p class="muted">Security headers, cookies, TLS, DNS/mail, content, SEO and UX checks. Scans are passive; active probes need verified domain ownership.</p>
+<main id="app" data-busy="false">
+<header id="masthead">
+  <h1>header-scan</h1>
+  <p class="muted">Security headers, cookies, TLS, DNS/mail, content, SEO and UX checks. Scans are passive; active probes need verified domain ownership.</p>
+</header>
 
-<form id="scan-form" class="card">
-  <div class="grow"><label for="url">Website URL</label><input id="url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required></div>
-  <button id="scan-btn" class="primary" type="submit">Scan</button>
+<form id="scan-form" class="card" novalidate>
+  <div class="field grow"><label for="url">Website URL</label><input id="url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="example.com" required></div>
+  <button id="scan-btn" class="btn primary" type="submit">Scan</button>
 </form>
-<p id="status" class="muted" role="status" aria-live="polite"></p>
+<div id="loadbar" aria-hidden="true"></div>
+<p id="status" class="muted" role="status" aria-live="polite" data-tone="muted"></p>
+<noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
-<section id="results" hidden aria-label="Scan results">
-  <div class="card">
-    <div class="badges" id="badges"></div>
-    <p class="muted" id="meta"></p>
-    <div class="row"><button type="button" id="copy-json">Copy JSON report</button><button type="button" id="dl-json">Download JSON report</button></div>
+<section id="results" data-state="idle" aria-label="Scan results" aria-busy="false">
+  <div id="skeleton" aria-hidden="true">
+    <div class="skel skel-gauges"></div><div class="skel skel-donut"></div><div class="skel skel-heat"></div><div class="skel skel-cats"></div><div class="skel skel-list"></div>
   </div>
-  <div class="card"><h2 class="first">Category scores</h2><ul class="bars" id="bars"></ul></div>
-  <h2>Findings</h2>
-  <div class="filters" id="filters" role="group" aria-label="Filter findings by status"></div>
-  <div id="findings"></div>
+  <div id="error-box" role="alert"><p id="error-msg"></p></div>
+
+  <div id="report">
+    <aside id="rail">
+      <section id="scorecard" class="card" aria-label="Grades">
+        <div class="gauges">
+          <div class="gauge-item"><h2 class="eyebrow">Security</h2>
+            <div class="gauge" id="gauge-security" data-g="skip" role="img"><div class="gauge-ring"></div><b class="gauge-grade"></b><span class="gauge-num"></span><span class="gauge-cap">/ 100</span></div></div>
+          <div class="gauge-item"><h2 class="eyebrow">Quality</h2>
+            <div class="gauge" id="gauge-quality" data-g="skip" role="img"><div class="gauge-ring"></div><b class="gauge-grade"></b><span class="gauge-num"></span><span class="gauge-cap">/ 100</span></div></div>
+        </div>
+        <p class="muted" id="meta"></p>
+        <div class="row" id="actions"><button type="button" id="copy-json" class="btn">Copy JSON report</button><button type="button" id="dl-json" class="btn">Download JSON report</button></div>
+      </section>
+
+      <section id="donut-card" class="card" aria-label="Pass, warn and fail split">
+        <h2 class="eyebrow">Findings split</h2>
+        <div class="donut" id="donut" data-empty="true" role="img"><span class="donut-total" id="donut-total">0</span><span class="donut-cap">counted</span></div>
+        <dl class="legend">
+          <div class="lg" data-s="pass"><dt><i class="sw"></i>&#10004; Pass</dt><dd id="lg-pass">0</dd></div>
+          <div class="lg" data-s="warn"><dt><i class="sw"></i>&#9888; Warn</dt><dd id="lg-warn">0</dd></div>
+          <div class="lg" data-s="fail"><dt><i class="sw"></i>&#10006; Fail</dt><dd id="lg-fail">0</dd></div>
+          <div class="lg plain" data-s="info"><dt>&#8505; Info</dt><dd id="lg-info">0</dd></div>
+          <div class="lg plain" data-s="skipped"><dt>&ndash; Skipped</dt><dd id="lg-skipped">0</dd></div>
+        </dl>
+      </section>
+
+      <section id="heat-card" class="card" aria-label="Severity heat grid">
+        <h2 class="eyebrow">Fail + warn by severity</h2>
+        <div class="heat-wrap"><table id="heat" class="heat"></table></div>
+        <p class="muted heat-legend"><span>fewer</span><i aria-hidden="true"></i><span>more</span></p>
+      </section>
+    </aside>
+
+    <div id="report-main">
+      <section id="cats-card" class="card" aria-label="Category scores">
+        <h2 class="eyebrow">Category scores</h2>
+        <ul id="cats" class="cats"></ul>
+      </section>
+
+      <div id="filters" class="filters">
+        <fieldset class="chips" id="tabs"><legend class="sr">Show category</legend>
+          <input class="rb" type="radio" name="cat" id="cat-all" value="all" checked><label for="cat-all">All</label>
+          <input class="rb" type="radio" name="cat" id="cat-headers" value="headers"><label for="cat-headers">Headers</label>
+          <input class="rb" type="radio" name="cat" id="cat-cookies" value="cookies"><label for="cat-cookies">Cookies</label>
+          <input class="rb" type="radio" name="cat" id="cat-tls" value="tls"><label for="cat-tls">TLS</label>
+          <input class="rb" type="radio" name="cat" id="cat-dns" value="dns"><label for="cat-dns">DNS</label>
+          <input class="rb" type="radio" name="cat" id="cat-mail" value="mail"><label for="cat-mail">Mail</label>
+          <input class="rb" type="radio" name="cat" id="cat-content" value="content"><label for="cat-content">Content</label>
+          <input class="rb" type="radio" name="cat" id="cat-seo" value="seo"><label for="cat-seo">SEO</label>
+          <input class="rb" type="radio" name="cat" id="cat-ai" value="ai"><label for="cat-ai">AI visibility</label>
+          <input class="rb" type="radio" name="cat" id="cat-ux" value="ux"><label for="cat-ux">UX hygiene</label>
+          <input class="rb" type="radio" name="cat" id="cat-exposure" value="exposure"><label for="cat-exposure">Exposure</label>
+        </fieldset>
+        <fieldset class="chips" id="statuses"><legend class="sr">Filter findings by status</legend>
+          <input class="rb" type="radio" name="st" id="st-issues" value="issues" checked><label for="st-issues">Issues (fail + warn)</label>
+          <input class="rb" type="radio" name="st" id="st-all" value="all"><label for="st-all">All</label>
+          <input class="rb" type="radio" name="st" id="st-fail" value="fail"><label for="st-fail">Fail</label>
+          <input class="rb" type="radio" name="st" id="st-warn" value="warn"><label for="st-warn">Warn</label>
+          <input class="rb" type="radio" name="st" id="st-pass" value="pass"><label for="st-pass">Pass</label>
+          <input class="rb" type="radio" name="st" id="st-info" value="info"><label for="st-info">Info</label>
+          <input class="rb" type="radio" name="st" id="st-skipped" value="skipped"><label for="st-skipped">Skipped</label>
+        </fieldset>
+        <p id="shown" class="muted" role="status" aria-live="polite"></p>
+      </div>
+      <div id="findings"></div>
+      <p id="empty" class="muted" hidden>No findings match these filters.</p>
+    </div>
+  </div>
 </section>
 
-<section class="card" id="deep" aria-labelledby="deep-h">
-  <h2 id="deep-h" class="first">Deep scan (owner only)</h2>
+<section id="deep" class="card" data-v="idle" aria-labelledby="deep-h">
+  <h2 id="deep-h" class="eyebrow">Deep scan (owner only)</h2>
   <p class="muted">Deep scan runs read-only probes for exposed files (for example /.git/ and /.env). It only runs for domains you prove you own with a DNS TXT record.</p>
+  <ol class="steps" aria-hidden="true"><li>Get TXT record</li><li>Add it and check</li><li>Run deep scan</li></ol>
   <div class="row">
-    <div class="grow"><label for="host">Host to verify</label><input id="host" type="text" placeholder="example.com" autocomplete="off"></div>
-    <button type="button" id="verify-start">Get TXT record</button>
+    <div class="field grow"><label for="host">Host to verify</label><input id="host" type="text" placeholder="example.com" autocomplete="off"></div>
+    <button type="button" id="verify-start" class="btn">Get TXT record</button>
   </div>
-  <div id="txt" hidden>
+  <div id="txt">
     <p>Add this DNS TXT record, wait for DNS to update, then press Check.</p>
-    <div class="copyrow"><span>Name:</span><code id="txt-name"></code><button type="button" data-copy="txt-name">Copy name</button></div>
-    <div class="copyrow"><span>Value:</span><code id="txt-value"></code><button type="button" data-copy="txt-value">Copy value</button></div>
+    <div class="copyrow"><span>Name:</span><code id="txt-name"></code><button type="button" class="btn" data-copy="txt-name">Copy name</button></div>
+    <div class="copyrow"><span>Value:</span><code id="txt-value"></code><button type="button" class="btn" data-copy="txt-value">Copy value</button></div>
     <p class="muted" id="txt-exp"></p>
-    <div class="row"><button type="button" id="verify-check">Check</button></div>
+    <div class="row"><button type="button" id="verify-check" class="btn">Check</button></div>
   </div>
-  <p id="verify-msg" role="status" aria-live="polite"></p>
-  <div class="row"><button type="button" id="deep-btn" class="primary" disabled>Run deep scan</button></div>
+  <p id="verify-badge" class="badge-ok">&#10004; Verified</p>
+  <p id="verify-msg" role="status" aria-live="polite" data-tone="muted"></p>
+  <div class="row"><button type="button" id="deep-btn" class="btn primary" disabled>Run deep scan</button></div>
 </section>
 </main>
+<div id="toast" role="status" aria-live="polite" data-show="false" data-tone="ok"></div>
 <script>
 (function () {
   'use strict';
@@ -104,9 +1406,13 @@ a{color:var(--accent)}
   var ICON = { fail: '✖ ', warn: '⚠ ', info: 'ℹ ', pass: '✔ ', skipped: '– ' };
   var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
-  var result = null, filter = 'issues', verifiedHost = '', autoHost = '', txtHost = '', busy = false;
+  var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
+  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0;
 
-  // Build elements only with textContent: scan data is never parsed as HTML.
+  // Progressive enhancement gate: count-up via a registered custom property needs @property.
+  if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
+
+  // Scan data is untrusted: elements are built only with createElement + textContent.
   function h(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -114,15 +1420,32 @@ a{color:var(--accent)}
     return e;
   }
   function clear(e) { while (e.firstChild) e.removeChild(e.firstChild); }
-  function say(el, text, cls) { el.textContent = text; el.className = cls || 'muted'; }
+  function say(el, text, tone) { el.textContent = text; el.dataset.tone = tone || 'muted'; }
+  function num(el, name, v, digits) { el.style.setProperty(name, String(Number(v.toFixed(digits || 0)))); }
+  function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+  function toast(text, tone) {
+    var t = $('toast');
+    t.textContent = text;
+    t.dataset.tone = tone || 'ok';
+    t.dataset.show = 'true';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.dataset.show = 'false'; }, 2500);
+  }
 
   function setBusy(b) {
     busy = b;
+    $('app').dataset.busy = String(b);
     $('scan-btn').disabled = b;
     $('verify-start').disabled = b;
     $('verify-check').disabled = b;
     $('deep-btn').disabled = b || !verifiedHost;
   }
+  function setState(s) {
+    $('results').dataset.state = s;
+    $('results').setAttribute('aria-busy', String(s === 'loading'));
+  }
+  function setVerify(v) { $('deep').dataset.v = v; }
 
   async function api(path, opts) {
     var res, data;
@@ -135,102 +1458,177 @@ a{color:var(--accent)}
     return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
 
-  function gradeClass(g) { return 'g-' + (g === 'N/A' ? 'N' : String(g).charAt(0)); }
+  // Grade band: A+/A/B pass, C/D warn, E/F fail, N/A skip.
+  function gradeBand(g) {
+    if (g === 'N/A') return 'skip';
+    var c = String(g).charAt(0);
+    return c === 'A' || c === 'B' ? 'pass' : c === 'C' || c === 'D' ? 'warn' : 'fail';
+  }
+  function scoreBand(s) { return s === null ? 'skip' : s >= 80 ? 'pass' : s >= 55 ? 'warn' : 'fail'; }
 
-  function badge(label, s) {
-    var b = h('div', 'badge');
-    var g = h('div', 'grade ' + gradeClass(s.grade), s.grade);
-    g.setAttribute('role', 'img');
-    g.setAttribute('aria-label', label + ' grade ' + s.grade);
-    var t = h('div');
-    t.appendChild(h('h2', '', label)).style.margin = '0';
-    t.appendChild(h('p', 'muted', s.score === null ? 'Nothing measurable' : s.score + ' / 100'));
-    b.appendChild(g); b.appendChild(t);
-    return b;
+  function fillGauge(g, s, label, band) {
+    g.dataset.g = band;
+    num(g, '--score', s === null ? 0 : clamp(s, 0, 100));
+    g.setAttribute('aria-label', label + (s === null ? ': nothing measurable' : ', ' + s + ' of 100'));
+    g.querySelector('.gauge-num').textContent = s === null ? 'n/a' : s;
   }
 
-  function renderScores(r) {
-    var b = $('badges'); clear(b);
-    b.appendChild(badge('Security', r.score.security));
-    b.appendChild(badge('Quality', r.score.quality));
-    say($('meta'), r.url + ' • ' + r.scannedAt + ' • ' + r.durationMs + ' ms • ' +
-      (r.deep ? 'deep scan' : 'passive scan') + (r.errors && r.errors.length ? ' • ' + r.errors.length + ' module error(s): ' +
-      r.errors.map(function (e) { return e.module + ' (' + e.message + ')'; }).join(', ') : ''));
-    var bars = $('bars'); clear(bars);
+  function counts(findings) {
+    var c = { pass: 0, warn: 0, fail: 0, info: 0, skipped: 0 };
+    findings.forEach(function (f) { c[f.status]++; });
+    return c;
+  }
+
+  function renderGauges(r) {
+    [['security', 'Security'], ['quality', 'Quality']].forEach(function (p) {
+      var s = r.score[p[0]], g = $('gauge-' + p[0]);
+      fillGauge(g, s.score, p[1] + ' grade ' + s.grade, gradeBand(s.grade));
+      g.querySelector('.gauge-grade').textContent = s.grade === 'N/A' ? '–' : s.grade;
+    });
+    var errs = r.errors && r.errors.length ? ' • ' + r.errors.length + ' module error(s): ' +
+      r.errors.map(function (e) { return e.module + ' (' + e.message + ')'; }).join(', ') : '';
+    $('meta').textContent = r.url + ' • ' + r.scannedAt + ' • ' + r.durationMs + ' ms • ' + (r.deep ? 'deep scan' : 'passive scan') + errs;
+  }
+
+  function renderDonut(findings) {
+    var c = counts(findings), total = c.pass + c.warn + c.fail, d = $('donut');
+    STATUSES.forEach(function (s) { $('lg-' + s).textContent = c[s]; });
+    $('donut-total').textContent = total;
+    d.dataset.empty = String(total === 0);
+    num(d, '--a', total ? c.pass / total * 100 : 0, 1);
+    num(d, '--b', total ? (c.pass + c.warn) / total * 100 : 0, 1);
+    d.setAttribute('aria-label', c.pass + ' pass, ' + c.warn + ' warn, ' + c.fail + ' fail');
+  }
+
+  function renderHeat(findings) {
+    var t = $('heat'), grid = {}, max = 0;
+    clear(t);
+    findings.forEach(function (f) {
+      if (f.status !== 'fail' && f.status !== 'warn') return;
+      var k = f.severity + ':' + f.category;
+      grid[k] = (grid[k] || 0) + 1;
+      if (grid[k] > max) max = grid[k];
+    });
+    t.appendChild(h('caption', 'sr', 'Number of fail and warn findings by severity and category'));
+    var hr = h('tr');
+    hr.appendChild(h('td'));
+    CATS.forEach(function (c) {
+      var th = h('th', '', CAT_CODE[c]);
+      th.scope = 'col'; th.title = CAT_NAME[c]; th.setAttribute('aria-label', CAT_NAME[c]);
+      hr.appendChild(th);
+    });
+    t.appendChild(h('thead')).appendChild(hr);
+    var body = h('tbody');
+    for (var sev = 5; sev >= 1; sev--) {
+      var tr = h('tr'), rh = h('th', '', 'Sev ' + sev);
+      rh.scope = 'row';
+      tr.appendChild(rh);
+      CATS.forEach(function (c) {
+        var n = grid[sev + ':' + c] || 0, td = h('td', 'hc', n || '·');
+        num(td, '--k', max ? n / max : 0, 2);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+    t.appendChild(body);
+  }
+
+  function renderCats(r) {
+    var ul = $('cats'), i = 0;
+    clear(ul);
     CATS.forEach(function (c) {
       var s = r.score.categories[c];
       if (!s) return;
-      var li = h('li');
-      var head = h('div', 'bar-head');
-      head.appendChild(h('span', '', CAT_NAME[c]));
-      head.appendChild(h('span', '', s.score === null ? 'n/a' : s.score + '%'));
-      var bar = h('div', 'bar'); bar.setAttribute('aria-hidden', 'true');
-      var fill = h('span'); fill.style.width = (s.score === null ? 0 : s.score) + '%';
-      bar.appendChild(fill);
-      li.appendChild(head); li.appendChild(bar);
-      li.appendChild(h('span', 'tag', s.fail + ' fail, ' + s.warn + ' warn, ' + s.pass + ' pass, ' + s.info + ' info, ' + s.skipped + ' skipped'));
-      bars.appendChild(li);
+      var band = scoreBand(s.score), li = h('li', 'crow');
+      li.dataset.g = band;
+      num(li, '--i', i++);
+      var g = h('div', 'gauge gauge-sm');
+      g.setAttribute('role', 'img');
+      g.appendChild(h('div', 'gauge-ring'));
+      g.appendChild(h('span', 'gauge-num'));
+      fillGauge(g, s.score, CAT_NAME[c] + ' score', band);
+      li.appendChild(g);
+      li.appendChild(h('span', 'crow-name', CAT_NAME[c]));
+      li.appendChild(h('span', 'crow-tag', s.fail + ' fail, ' + s.warn + ' warn, ' + s.pass + ' pass, ' + s.info + ' info, ' + s.skipped + ' skipped'));
+      var bar = h('div', 'bar');
+      bar.setAttribute('aria-hidden', 'true');
+      ['pass', 'warn', 'fail'].forEach(function (st) {
+        if (!s[st]) return;
+        var seg = h('i', 'seg');
+        seg.dataset.s = st;
+        num(seg, '--n', s[st]);
+        bar.appendChild(seg);
+      });
+      li.appendChild(bar);
+      ul.appendChild(li);
     });
   }
 
-  function matches(f) {
-    if (filter === 'all') return true;
-    if (filter === 'issues') return f.status === 'fail' || f.status === 'warn';
-    return f.status === filter;
-  }
-
-  // Built once; a click only flips aria-pressed, so the focused button is never removed from the DOM.
-  function syncFilters() {
-    Array.prototype.forEach.call($('filters').children, function (b) { b.setAttribute('aria-pressed', String(filter === b.getAttribute('data-f'))); });
-  }
-  function renderFilters() {
-    var box = $('filters');
-    if (box.children.length) { syncFilters(); return; }
-    [['issues', 'Issues (fail + warn)'], ['all', 'All'], ['fail', 'Fail'], ['warn', 'Warn'], ['pass', 'Pass'], ['info', 'Info'], ['skipped', 'Skipped']].forEach(function (p) {
-      var b = h('button', '', p[1]);
-      b.type = 'button';
-      b.setAttribute('data-f', p[0]);
-      b.addEventListener('click', function () { filter = p[0]; syncFilters(); renderFindings(); });
-      box.appendChild(b);
-    });
-    syncFilters();
-  }
-
-  function renderFindings() {
-    var box = $('findings'); clear(box);
-    var shown = 0;
+  function renderFindings(r) {
+    var box = $('findings'), ci = 0, fi = 0;
+    clear(box);
     CATS.forEach(function (c) {
-      var list = result.findings.filter(function (f) { return f.category === c && matches(f); });
+      var list = r.findings.filter(function (f) { return f.category === c; });
       if (!list.length) return;
-      shown += list.length;
-      var d = h('details', 'cat'); d.open = true;
-      d.appendChild(h('summary', '', CAT_NAME[c] + ' (' + list.length + ')'));
+      var d = h('details', 'cat'), sum = h('summary', 'cat-sum'), cnt = counts(list);
+      d.dataset.c = c;
+      d.open = cnt.fail + cnt.warn > 0;
+      num(d, '--i', ci++);
+      sum.appendChild(h('span', 'cat-name', CAT_NAME[c]));
+      sum.appendChild(h('span', 'cat-count', '(' + list.length + ')'));
+      STATUSES.forEach(function (s) {
+        if (!cnt[s]) return;
+        var chip = h('span', 'chip', ICON[s] + cnt[s]);
+        chip.dataset.s = s;
+        sum.appendChild(chip);
+      });
+      d.appendChild(sum);
       var ul = h('ul', 'list');
       list.forEach(function (f) {
-        var li = h('li');
-        var head = h('div', 'head');
-        head.appendChild(h('span', 'pill s-' + f.status, ICON[f.status] + f.status));
-        head.appendChild(h('h3', '', f.title));
+        var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill', ICON[f.status] + f.status);
+        li.dataset.s = f.status; li.dataset.c = c;
+        num(li, '--i', fi++);
+        pill.dataset.s = f.status;
+        head.appendChild(pill);
+        head.appendChild(h('h3', 'fnd-title', f.title));
         head.appendChild(h('span', 'tag', 'severity ' + f.severity + '/5'));
         if (f.checklist) head.appendChild(h('span', 'tag', 'checklist #' + f.checklist));
+        var sev = h('i', 'sev');
+        sev.setAttribute('aria-hidden', 'true');
+        num(sev, '--n', clamp(Number(f.severity) || 0, 0, 5));
+        head.appendChild(sev);
         li.appendChild(head);
-        if (f.evidence) li.appendChild(h('p', 'muted', f.evidence));
-        if (f.fix) li.appendChild(h('p', 'fix', 'Fix: ' + f.fix));
+        if (f.evidence) li.appendChild(h('p', 'fnd-evidence muted', f.evidence));
+        if (f.fix) li.appendChild(h('p', 'fnd-fix', 'Fix: ' + f.fix));
         if (typeof f.ref === 'string' && /^https?:\/\//i.test(f.ref)) {
-          var a = h('a', '', 'Reference'); a.href = f.ref; a.rel = 'noopener noreferrer'; a.target = '_blank';
+          var a = h('a', 'fnd-ref', 'Reference');
+          a.href = f.ref; a.rel = 'noopener noreferrer'; a.target = '_blank';
           li.appendChild(a);
         }
         ul.appendChild(li);
       });
-      d.appendChild(ul); box.appendChild(d);
+      d.appendChild(ul);
+      box.appendChild(d);
     });
-    if (!shown) box.appendChild(h('p', 'muted', filter === 'issues' ? 'No failures or warnings. Nice.' : 'No findings with this status.'));
+  }
+
+  // Filtering itself is CSS (:has, or [data-cat]/[data-st] fallback); this mirrors it for the counter.
+  function syncFilters() {
+    var cat = document.querySelector('input[name=cat]:checked').value;
+    var st = document.querySelector('input[name=st]:checked').value;
+    var res = $('results');
+    res.dataset.cat = cat; res.dataset.st = st;
+    var n = result ? result.findings.filter(function (f) {
+      return (cat === 'all' || f.category === cat) &&
+        (st === 'all' || (st === 'issues' ? f.status === 'fail' || f.status === 'warn' : f.status === st));
+    }).length : 0;
+    $('shown').textContent = n + (n === 1 ? ' finding shown' : ' findings shown');
+    $('empty').hidden = n > 0;
   }
 
   function show(r) {
     result = r;
-    $('results').hidden = false;
-    renderScores(r); renderFilters(); renderFindings();
+    renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
     // Follow the latest scan unless the user typed their own host.
     if (!$('host').value || $('host').value === autoHost) {
       $('host').value = autoHost = r.host || '';
@@ -242,29 +1640,37 @@ a{color:var(--accent)}
     var url = $('url').value.trim();
     if (!url) { say($('status'), 'Enter a URL first.', 'err'); return; }
     setBusy(true);
+    setState('loading');
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
       show(r);
+      void $('results').offsetWidth; // reflow so the reveal animations restart on every scan
+      setState('done');
       say($('status'), 'Scan finished.', 'ok');
-    } catch (e) { say($('status'), e.message, 'err'); }
+    } catch (e) {
+      $('error-msg').textContent = e.message;
+      setState('error');
+      say($('status'), 'Scan failed.', 'err');
+    }
     setBusy(false);
   }
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
+  $('filters').addEventListener('change', syncFilters);
 
   $('verify-start').addEventListener('click', async function () {
     var host = $('host').value.trim();
     if (!host) { say($('verify-msg'), 'Enter the host you own.', 'err'); return; }
     setBusy(true); verifiedHost = '';
-    $('txt').hidden = true; // never leave a previous host's record on screen
+    setVerify('idle'); // never leave a previous host's record on screen
     try {
       var v = await post('/api/verify/start', { host: host });
       $('txt-name').textContent = v.txtName;
       $('txt-value').textContent = v.txtValue;
       $('txt-exp').textContent = 'Token expires ' + v.expiresAt + '.';
       txtHost = host;
-      $('txt').hidden = false;
+      setVerify('pending');
       say($('verify-msg'), 'Waiting for the TXT record. Press Check after adding it.');
     } catch (e) { say($('verify-msg'), e.message, 'err'); }
     setBusy(false);
@@ -275,16 +1681,20 @@ a{color:var(--accent)}
     setBusy(true);
     try {
       var v = await post('/api/verify/check', { host: host });
-      if (v.verified) { verifiedHost = host; say($('verify-msg'), 'Ownership verified for ' + v.host + '. Deep scan unlocked.', 'ok'); }
-      else { verifiedHost = ''; say($('verify-msg'), 'TXT record not found yet at ' + v.txtName + '. DNS can take a few minutes.', 'err'); }
+      if (v.verified) {
+        verifiedHost = txtHost = host;
+        setVerify('verified');
+        say($('verify-msg'), 'Ownership verified for ' + v.host + '. Deep scan unlocked.', 'ok');
+      } else { verifiedHost = ''; say($('verify-msg'), 'TXT record not found yet at ' + v.txtName + '. DNS can take a few minutes.', 'err'); }
     } catch (e) { verifiedHost = ''; say($('verify-msg'), e.message, 'err'); }
     setBusy(false);
   });
 
   // Editing the host invalidates the local unlock (the server re-checks on every deep scan anyway).
   $('host').addEventListener('input', function () {
-    if (verifiedHost && $('host').value.trim() !== verifiedHost) { verifiedHost = ''; $('deep-btn').disabled = true; }
-    if (txtHost !== $('host').value.trim()) $('txt').hidden = true; // the shown record belongs to another host
+    var host = $('host').value.trim();
+    if (verifiedHost && host !== verifiedHost) { verifiedHost = ''; $('deep-btn').disabled = true; }
+    if (txtHost !== host) setVerify('idle'); // the shown record/badge belongs to another host
   });
 
   $('deep-btn').addEventListener('click', function () {
@@ -294,8 +1704,8 @@ a{color:var(--accent)}
   });
 
   async function copy(text, done) {
-    try { await navigator.clipboard.writeText(text); say($('status'), done, 'ok'); }
-    catch (e) { say($('status'), 'Copy failed: select the text and copy it manually.', 'err'); }
+    try { await navigator.clipboard.writeText(text); toast(done, 'ok'); }
+    catch (e) { toast('Copy failed: select the text and copy it manually.', 'err'); }
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (b) {
     b.addEventListener('click', function () { copy($(b.getAttribute('data-copy')).textContent, 'Copied.'); });
@@ -310,6 +1720,8 @@ a{color:var(--accent)}
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
+
+  syncFilters();
 })();
 </script>
 </body>

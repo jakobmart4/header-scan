@@ -1,0 +1,104 @@
+/* gauge.css (B): grade rings. Base CSS = final state; animation only under #results[data-state=done]. */
+
+/* layout inside #scorecard */
+.gauges { display: flex; justify-content: space-around; gap: var(--s3); }
+.gauge-item { display: flex; flex-direction: column; align-items: center; gap: var(--s2); min-width: 0; }
+.gauge-item .eyebrow { margin: 0; }
+#scorecard #meta { margin: var(--s4) 0 var(--s3); text-align: center; }
+#scorecard #actions { gap: var(--s2); justify-content: center; }
+#scorecard #actions .btn { flex: 1 1 9rem; }
+
+/* ring: --p / --gn are registered with inherits:false, so each element that reads them derives its own from --score */
+.gauge {
+  --c: var(--skip);
+  --delay: 100ms;
+  --num-fs: var(--fs-2);
+  position: relative;
+  flex: none;
+  width: var(--gauge-size);
+  height: var(--gauge-size);
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-content: center;
+  align-items: baseline;
+  column-gap: .25em;
+  text-align: center;
+}
+.gauge[data-g="pass"] { --c: var(--pass); }
+.gauge[data-g="warn"] { --c: var(--warn); }
+.gauge[data-g="fail"] { --c: var(--fail); }
+.gauge[data-g="skip"] { --c: var(--skip); }
+
+.gauge-ring {
+  --p: var(--score, 0);
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--track) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-w)), black calc(100% - var(--ring-w) + 1px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-w)), black calc(100% - var(--ring-w) + 1px));
+}
+.gauge[data-g="skip"] .gauge-ring { --p: 0; }
+
+.gauge-grade {
+  grid-column: 1 / -1;
+  position: relative;
+  font: 700 var(--fs-6) / 1 var(--font-display);
+  color: var(--c);
+  margin-bottom: var(--s1);
+}
+.gauge-num {
+  --gn: var(--score, 0);
+  position: relative;
+  min-width: 3ch;
+  text-align: right;
+  font-size: var(--num-fs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.gauge-cap {
+  position: relative;
+  font-size: var(--fs-1);
+  color: var(--muted);
+  text-align: left;
+}
+.gauge[data-g="skip"] .gauge-grade { display: none; }
+.gauge[data-g="skip"] .gauge-cap { display: none; }
+.gauge[data-g="skip"] .gauge-num { grid-column: 1 / -1; min-width: 0; text-align: center; color: var(--muted); }
+
+/* small category ring: ring + number only */
+.gauge-sm {
+  --num-fs: var(--fs-1);
+  --ring-w: .4rem;
+  --delay: calc(250ms + min(var(--i, 0), 10) * var(--step));
+  width: var(--gauge-size-sm);
+  height: var(--gauge-size-sm);
+}
+.gauge-sm .gauge-num { grid-column: 1 / -1; min-width: 0; text-align: center; }
+
+/* count-up (needs registered --gn): real text stays for no-@property, counter replaces it */
+html.cp .gauge:not([data-g="skip"]) .gauge-num { font-size: 0; counter-reset: gn var(--gn); }
+html.cp .gauge:not([data-g="skip"]) .gauge-num::after {
+  content: counter(gn);
+  font-size: var(--num-fs);
+}
+
+/* one keyframe drives ring fill and count-up so they agree; only when @property exists (html.cp) */
+@keyframes gauge-fill { from { --p: 0; --gn: 0; } }
+@keyframes gauge-pop { from { opacity: 0; transform: scale(.6); } }
+html.cp #results[data-state="done"] .gauge-ring,
+html.cp #results[data-state="done"] .gauge-num {
+  animation: gauge-fill var(--d-draw) var(--ease-out) var(--delay) backwards;
+}
+#results[data-state="done"] .gauge-grade {
+  animation: gauge-pop var(--d-mid) cubic-bezier(.3, 1.6, .5, 1) calc(var(--delay) + 550ms) backwards;
+}
+
+/* forced colors: no mask/gradient ring, outline + text carry the value */
+@media (forced-colors: active) {
+  .gauge { border: 2px solid CanvasText; border-radius: 50%; }
+  .gauge-ring { display: none; }
+  .gauge-grade, .gauge-num { color: CanvasText; }
+}

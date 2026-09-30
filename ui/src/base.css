@@ -1,0 +1,140 @@
+/* base.css - reset, typography, shared primitives, focus, reduced motion */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font: var(--fs-3)/1.5 var(--font-body);
+  overflow-wrap: break-word;
+  overflow-x: clip; /* safety net only; layout is built not to overflow */
+}
+
+h1, h2, h3, p, dl, dd, ul, ol, fieldset { margin: 0; }
+h1, h2, h3 { line-height: 1.2; font-weight: 600; }
+h1 { font: 400 var(--fs-6)/1.1 var(--font-display); letter-spacing: -.01em; }
+h2 { font-size: var(--fs-4); }
+h3 { font-size: var(--fs-3); }
+fieldset { min-width: 0; padding: 0; border: 0; }
+button, input { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+.sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.muted { color: var(--muted); }
+
+.eyebrow {
+  margin: 0 0 var(--s2);
+  font: 600 var(--fs-1)/1.4 var(--font-body);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+a { color: var(--accent); text-underline-offset: .2em; }
+a:hover { text-decoration-thickness: 2px; }
+
+code {
+  font: var(--fs-2)/1.4 var(--font-mono);
+  padding: .1em .35em;
+  background: var(--track);
+  border-radius: var(--r-chip);
+  overflow-wrap: anywhere;
+}
+
+/* focus: one ring everywhere (radios are handled on their labels by findings.css) */
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* surfaces */
+.card {
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* form primitives */
+.field { display: grid; gap: var(--s1); min-width: 0; }
+.field > label { font-size: var(--fs-2); font-weight: 600; }
+.grow { flex: 1 1 14rem; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s2) var(--s3); }
+.copyrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.copyrow > code { flex: 1 1 12rem; min-width: 0; }
+
+input[type="text"] {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--s2) var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-card);
+  font-size: var(--fs-3); /* 16px: no iOS zoom on focus */
+}
+input[type="text"]:focus-visible { border-color: var(--accent); }
+::placeholder { color: var(--muted); opacity: 1; }
+
+/* hover feedback is transform-only (no colour/shadow transitions) */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  min-height: 2.75rem;
+  padding: var(--s2) var(--s4);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-card);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.btn:hover:not(:disabled) { background: var(--track); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent), var(--ink) 12%); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* status lines: colour + glyph + text, never colour alone */
+#status, #verify-msg { font-size: var(--fs-2); }
+#status[data-tone="ok"], #verify-msg[data-tone="ok"] { color: var(--pass); }
+#status[data-tone="err"], #verify-msg[data-tone="err"] { color: var(--fail); }
+#status[data-tone="muted"], #verify-msg[data-tone="muted"] { color: var(--muted); }
+#status[data-tone="ok"]:not(:empty)::before, #verify-msg[data-tone="ok"]:not(:empty)::before { content: "\2714\00a0"; }
+#status[data-tone="err"]:not(:empty)::before, #verify-msg[data-tone="err"]:not(:empty)::before { content: "\2716\00a0"; }
+
+/* base only: panels.css toggles visibility */
+.badge-ok {
+  display: inline-block;
+  padding: var(--s1) var(--s3);
+  background: var(--pass-bg);
+  color: var(--pass);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-2);
+  font-weight: 600;
+}
+
+/* page entrance: keyframes hold only the `from` side, so the base CSS is the final state */
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
+#masthead { animation: page-in var(--d-reveal) var(--ease-out) backwards; }
+#scan-form { animation: page-in var(--d-reveal) var(--ease-out) 60ms backwards; }
+
+@media (forced-colors: active) {
+  .btn, input[type="text"], .badge-ok { border: 1px solid ButtonText; }
+  :focus-visible { outline-color: Highlight; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
