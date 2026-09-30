@@ -57,7 +57,9 @@ describe('scan() self-test', () => {
     assert.deepEqual(fails.filter((f) => !httpsOnly.has(f.id)).map((f) => f.id), []);
     const f = by(rGood);
     for (const id of ['csp-present', 'hdr-xcto', 'seo-title', 'seo-h1', 'seo-lang', 'ux-404-page', 'seo-robots-txt', 'seo-sitemap']) assert.equal(f[id].status, 'pass', id);
-    // security grade excluding the two structural http findings (SPEC section 9 wants >= B; see README/return notes)
+    // the plain-http fixture really grades D (tls-https is a severity-5 fail); SPEC section 9 states this and the >= B rule without the http-only findings
+    assert.equal(rGood.score.security.grade, 'D');
+    assert.deepEqual(fails.map((x) => x.id).sort(), ['hdr-hsts', 'tls-https']);
     const sec = rGood.findings.filter((x) => !httpsOnly.has(x.id) && x.category !== 'tls');
     const counted = sec.filter((x) => ['headers', 'cookies', 'content', 'exposure'].includes(x.category) && ['pass', 'warn', 'fail'].includes(x.status));
     const w = counted.reduce((a, x) => a + x.severity, 0);

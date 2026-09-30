@@ -51,6 +51,10 @@ export function createServer(deps = {}) {
   const resolveTxt = deps.resolveTxt || realResolveTxt;
   const bindHost = deps.host || process.env.HOST || '127.0.0.1';
   const trustProxy = process.env.HEADERSCAN_TRUST_PROXY === '1';
+  // Behind the Cloudflare Pages proxy: /api/* (except health) needs the shared key; the real client IP arrives in x-headerscan-client.
+  const proxyKey = process.env.HEADERSCAN_PROXY_KEY || '';
+  const sha = (v) => crypto.createHash('sha256').update(String(v)).digest();
+  const proxied = (req) => crypto.timingSafeEqual(sha(req.headers['x-headerscan-key'] || ''), sha(proxyKey));
   const index = loadIndex();
   const ver = version();
   let active = 0;
@@ -64,6 +68,10 @@ export function createServer(deps = {}) {
   prune.unref();
 
   function clientIp(req) {
+    if (proxyKey && proxied(req)) {
+      const c = String(req.headers['x-headerscan-client'] || '').trim();
+      if (c) return c;
+    }
     if (trustProxy) {
       const xff = String(req.headers['x-forwarded-for'] || '').split(',').pop().trim(); // rightmost = added by our proxy
       if (xff) return xff;
@@ -128,6 +136,7 @@ export function createServer(deps = {}) {
   async function route(req, res, u) {
     const p = u.pathname;
     const ip = clientIp(req);
+    if (proxyKey && p.startsWith('/api/') && p !== '/api/health' && !proxied(req)) throw new ApiError(403, 'FORBIDDEN', 'use the public site');
     if (p === '/' || p === '/index.html') {
       if (req.method !== 'GET' && req.method !== 'HEAD') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'method not allowed', { Allow: 'GET, HEAD' });
       if (!index) throw new ApiError(404, 'NOT_FOUND', 'not found');

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: header-scan-backend
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: HEADERSCAN_PROXY_KEY
+        sync: false   # set in the dashboard; same value as PROXY_KEY in Cloudflare
+      - key: HEADERSCAN_SECRET
+        generateValue: true

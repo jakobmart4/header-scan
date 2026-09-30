@@ -41,10 +41,15 @@ Active probes are only run against a domain you have proven you control.
 
 The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt))[:32]`: bound to the exact host (`example.com` does not verify `www.example.com`), valid 24 h, tamper-evident, compared in constant time. The secret comes from `HEADERSCAN_SECRET` or is random per process (tokens then die on restart). DNS errors always mean "not verified". Shared hosting domains (`*.vercel.app`, `*.netlify.app`, `*.github.io`, ...) and IP literals are refused, so deep scans are impossible there.
 
+**What verification does and does not prove.** The TXT record proves control of the DNS *name*, not consent of whoever is asking, and not control of the server the name points at:
+- The token is per host, not per requester, and DNS TXT is public. While the record exists (up to 24 h), anyone can run deep scans of that host and read the findings (2 per minute per IP).
+- An attacker who owns `evil.example` can publish the TXT there and point its A record at somebody else's public IP; the scanner then probes that server's default vhost. Impact is bounded: 24 fixed read-only GET paths, no redirects, <= 2 requests/s, results only say "signature matched".
+- Accepted for a self-hosted tool; if it is exposed publicly, put authentication in front of `/api/scan` and set `HEADERSCAN_SECRET` (otherwise tokens are random per process and multi-instance setups cannot verify).
+
 ## Safety model
 
 - **Passive by default.** Normal scans only do what a browser would: fetch the page, `robots.txt`, `sitemap.xml`, a few same-origin links and up to 3 scripts, one TLS handshake, DNS lookups.
-- **Active probes** (24 fixed paths such as `/.git/HEAD`, `/.env`, backups): only when ownership is verified. GET only, fixed allowlist (never user-supplied paths), no redirects followed, <= 2 requests/s, stop on 429 or repeated 5xx. A baseline request to a random path is compared first, so SPA catch-alls and soft 404s never produce false positives. A hit reports only `HTTP <status>, signature '<id>' matched`; file contents are discarded immediately and never logged or returned.
+- **Active probes** (24 fixed paths such as `/.git/HEAD`, `/.env`, backups): only when ownership is verified. GET only, fixed allowlist (never user-supplied paths), no redirects followed, <= 2 requests/s (probes run only after all passive modules have finished, so nothing else hits the target meanwhile), stop on 429 or repeated 5xx. A baseline request to a random path is compared first, so SPA catch-alls and soft 404s never produce false positives. A hit reports only `HTTP <status>, signature '<id>' matched`; file contents are discarded immediately and never logged or returned.
 - **SSRF protection.** Only http/https on ports 80/443; no userinfo; IP literals in decimal/hex/octal form are normalized and checked. Every A/AAAA answer is checked after DNS resolution (loopback, private, link-local incl. `169.254.169.254`, CGNAT, multicast, reserved, IPv4-mapped/NAT64/6to4 IPv6) and **any** blocked answer rejects the host. The connection is pinned to the checked IP (no second lookup, so no DNS rebinding); the original hostname is kept for `Host` and TLS SNI. Every redirect hop is re-validated (max 5, loops detected).
 - **Limits.** Request body 4 KiB, page 1 MiB, other text 256 KiB, probe body 64 KiB, 10 s per request, 45 s per scan, 60 requests per scan (100 for deep), <= 10 crawled pages, <= 3 scripts, max 4 concurrent scans.
 - **Rate limit.** In-memory, per client IP (`X-Forwarded-For` ignored unless `HEADERSCAN_TRUST_PROXY=1`): scans 6/min, deep scans 2/min, verify 20/min.
@@ -53,7 +58,7 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 
 ## Checklist mapping
 
-`c#` = line number of the item in the 40-item checklist (1-20 first list, 21-40 second list); the finding carries it in `checklist`.
+`c#` = line number of the item in the 40-item checklist (1-20 first list, 21-40 second list); the finding carries the first number of its row in `checklist`. Ids that own two items (`seo-meta-description` 6+32, `seo-og-image` 7+33, `ux-alt-text` 17+36, `seo-h1` 9+10, `seo-spa-shell` 2+4, `ux-404-page` 3+21, `seo-duplicate-titles` 5+31) emit only the first; the second is covered by the same id.
 
 | c# | IDs | c# | IDs |
 |---|---|---|---|
@@ -81,6 +86,8 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 ## Limitations
 
 - No headless browser: console errors and sticky mobile CTA are always `skipped`; SPA content that only exists after JavaScript runs is judged on the raw HTML.
+- CAA, SPF, MX and DMARC are looked up at the host and then its parent domains (a `www` host inherits the apex records); IP-literal targets skip all DNS/mail checks.
+- Bundle checks read only the tail of each script (Range request); a script over 1 MiB from a server that ignores Range gets an `info` instead of a source-map verdict.
 - DNSSEC is best effort (DoH to a fixed host); SPF lookup counting is approximate; DKIM selectors cannot be enumerated, so it is informational.
 - Rate limiting is in-memory and resets on restart.
 - Heuristic checks (CTA above the fold, team photo, reviews) are labelled as such in their evidence.

@@ -1,0 +1,4 @@
+name = "header-scan"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"
+# Secrets (not stored here): wrangler pages secret put BACKEND_URL / PROXY_KEY
