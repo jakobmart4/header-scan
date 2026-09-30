@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://header-scan.jakobmart4.workers.dev/sitemap.xml

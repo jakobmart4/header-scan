@@ -1,0 +1,5 @@
+# header-scan
+
+> Website scanner that grades security headers (parsed CSP), cookies, TLS, DNS/mail, SEO, AI visibility and UX hygiene. Passive by default; active probes only for domains whose owner proves control via a DNS TXT record.
+
+- [Scanner](https://header-scan.jakobmart4.workers.dev/): enter a URL, get a graded report with fixes
