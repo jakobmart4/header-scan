@@ -101,6 +101,20 @@
       fillGauge(g, s.score, p[1] + ' grade ' + s.grade, gradeBand(s.grade));
       g.querySelector('.gauge-grade').textContent = s.grade === 'N/A' ? '–' : s.grade;
     });
+    // Why the letter is lower than the percentage suggests (see lib/score.js caps). Titles come from our own findings.
+    var note = $('cap-note'), caps = [];
+    [['security', 'Security'], ['quality', 'Quality']].forEach(function (p) {
+      var s = r.score[p[0]];
+      if (s.cappedBy && s.cappedBy.length) {
+        var t = s.cappedBy.map(function (id) {
+          var f = r.findings.filter(function (x) { return x.id === id; })[0];
+          return f ? f.title : id;
+        });
+        caps.push(p[1] + ' grade capped at ' + s.grade + ' by: ' + t.join(', '));
+      }
+    });
+    note.hidden = !caps.length;
+    note.textContent = caps.join('. ');
     // The URL and module errors may be one long token (CSS breaks them anywhere); the fixed parts never wrap inside.
     var m = $('meta');
     clear(m);

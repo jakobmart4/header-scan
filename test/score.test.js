@@ -78,3 +78,17 @@ describe('grades and caps', () => {
     assert.equal(score([...many(200, 'pass', 3, 'seo'), ...many(4, 'fail', 1, 'seo')]).quality.grade, 'D');
   });
 });
+
+import { test as t2 } from 'node:test';
+import assert2 from 'node:assert/strict';
+import { score as score2, finding as finding2 } from '../lib/score.js';
+t2('cappedBy names the ids behind the binding cap', () => {
+  const pass = Array.from({ length: 80 }, (_, i) => finding2('p' + i, 'headers', 't', 'pass', 1));
+  const s = score2([...pass, finding2('tls-a', 'tls', 't', 'fail', 4), finding2('tls-b', 'tls', 't', 'fail', 4)]).security;
+  assert2.equal(s.score >= 90, true);
+  assert2.equal(s.grade, 'C');
+  assert2.deepEqual(s.cappedBy, ['tls-a', 'tls-b']);
+  const sev5 = score2([...pass, finding2('bad', 'headers', 't', 'fail', 5), finding2('tls-a', 'tls', 't', 'fail', 4)]).security;
+  assert2.deepEqual([sev5.grade, sev5.cappedBy], ['D', ['bad']]);
+  assert2.equal('cappedBy' in score2(pass).security, false);
+});

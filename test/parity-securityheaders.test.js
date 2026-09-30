@@ -98,7 +98,7 @@ describe('securityheaders.com fixture', () => {
   test('score: security 84 / C (capped by the cookie-secure fail), headers 88, cookies unchanged', async () => {
     await load();
     const s = score(all);
-    assert.deepEqual(s.security, { score: 84, grade: 'C' });
+    assert.deepEqual(s.security, { score: 84, grade: 'C', cappedBy: ['cookie-secure'] });
     assert.deepEqual(s.categories.headers, { score: 88, pass: 21, warn: 8, fail: 0, info: 6, skipped: 0 });
     assert.deepEqual(s.categories.cookies, { score: 58, pass: 3, warn: 3, fail: 1, info: 1, skipped: 0 });
   });

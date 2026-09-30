@@ -249,3 +249,6 @@
 .raw thead th { font-family: var(--font-body); color: var(--muted); font-weight: 600; }
 .raw .rn { white-space: nowrap; font-weight: 600; }
 .raw .rv { word-break: break-word; }
+
+/* grade cap explanation under the gauges */
+.cap-note { margin: var(--s2) 0 0; padding: var(--s2); border-left: 3px solid var(--warn, currentColor); background: color-mix(in srgb, var(--surface), var(--ink) 4%); font-size: var(--fs-2); overflow-wrap: anywhere; }
