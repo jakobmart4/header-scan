@@ -1,0 +1,151 @@
+/* minimalist: warm-monochrome "workspace document". Bone canvas, white sheets with 1px hairlines, near-zero shadows, black ink as the only accent.
+   Type is sans-first (serif only for the h1), thin rings, accordions stripped to rules with +/-, status shown as quiet uppercase pastel tags.
+   Colour is scarce: grey scale everywhere, the pastel status trio appears only where status is meant (glyph + word + number stay text). */
+
+:root {
+  --paper: #f7f6f3;
+  --surface: #ffffff;
+  --ink: #1a1a19;
+  --muted: #66645f;
+  --rule: #e6e5e1;
+  --edge: #8a8883;
+  --track: #ebeae6;
+  --accent: #111111;
+  --accent-ink: #ffffff;
+  --pass: #346538;
+  --pass-bg: #edf3ec;
+  --warn: #8a5b00;
+  --warn-bg: #fbf3db;
+  --fail: #9f2f2d;
+  --fail-bg: #fdebec;
+  --info: #1f6c9f;
+  --info-bg: #e1f3fe;
+
+  --font-body: "SF Pro Display", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-display: "SF Pro Display", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Newsreader", "Iowan Old Style", ui-serif, Georgia, serif;
+  --font-mono: "Geist Mono", "SF Mono", ui-monospace, Consolas, monospace;
+
+  --r-card: 8px;
+  --r-chip: 4px;
+  --ring-w: .4rem;
+  --gauge-size-sm: 2.75rem;
+  --shadow-card: 0 0 0 0 transparent;
+  --shadow-lift: 0 2px 8px rgb(0 0 0 / .04);
+  --step: 60ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #191919;
+    --surface: #202020;
+    --ink: #ececea;
+    --muted: #a3a29d;
+    --rule: #333331;
+    --edge: #8c8b86;
+    --track: #2c2c2a;
+    --accent: #ececea;
+    --accent-ink: #151515;
+    --pass: #86d19f;
+    --pass-bg: #1d2b22;
+    --warn: #e3b45f;
+    --warn-bg: #322a16;
+    --fail: #f2958f;
+    --fail-bg: #38201f;
+    --info: #82bde6;
+    --info-bg: #1b2a36;
+    --shadow-lift: 0 0 0 0 transparent;
+  }
+}
+
+/* ---------- type ---------- */
+body { line-height: 1.6; }
+h1 { font: 400 2.25rem/1.1 var(--font-serif); letter-spacing: -.03em; }
+h2 { font-size: var(--fs-3); letter-spacing: -.01em; }
+.eyebrow { font-weight: 500; font-size: .6875rem; letter-spacing: .1em; }
+code { font-size: .8125rem; }
+
+/* ---------- frame: macro whitespace ---------- */
+#app { padding-bottom: var(--s8); }
+#masthead { padding: var(--s7) 0 var(--s5); margin-bottom: var(--s6); }
+#masthead p { max-width: 52ch; }
+#status { margin-bottom: var(--s5); }
+#results { margin-bottom: var(--s6); }
+#deep { margin-top: var(--s7); }
+#report, #rail, #report-main { gap: var(--s5); }
+.card { padding: 1.25rem; }
+@media (min-width: 640px) {
+  h1 { font-size: 3.25rem; }
+  #masthead { padding: var(--s8) 0 var(--s6); }
+  .card { padding: var(--s6); }
+}
+@media (min-width: 960px) {
+  #report { gap: var(--s6); }
+  #rail, #report-main { gap: var(--s6); }
+}
+
+/* ---------- controls: flat, 6px, black primary ---------- */
+input[type="text"] { border-radius: 6px; }
+.btn { border-radius: 6px; font-weight: 500; transition: transform var(--d-fast) var(--ease-out); }
+.btn:hover:not(:disabled) { background: var(--track); transform: none; }
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 82%, var(--paper)); }
+.badge-ok { border-radius: var(--r-chip); text-transform: uppercase; letter-spacing: .05em; font-size: .75rem; }
+
+/* ---------- gauges: thin rings, sans grade ---------- */
+.gauge-grade { font: 600 2.25rem/1 var(--font-display); letter-spacing: -.04em; }
+.gauge-sm { --ring-w: .25rem; }
+.gauge-num { font-weight: 500; }
+
+/* ---------- charts ---------- */
+#donut { --hole: .7rem; }
+.donut-total { font: 600 var(--fs-5)/1 var(--font-display); letter-spacing: -.03em; }
+.legend dt, .legend dd { font-weight: 500; }
+#cats > .crow { padding: var(--s3) 0; }
+.crow-name { font-weight: 500; font-size: var(--fs-2); letter-spacing: -.005em; }
+.crow .bar { height: .4rem; border-radius: 2px; border: 0; }
+#heat td.hc { border-radius: 2px; }
+#heat thead th:first-child, #heat thead td:first-child { width: 2.25rem; }
+
+/* ---------- status tags: quiet uppercase pastels ---------- */
+.pill, .chip {
+  border: 1px solid transparent;
+  font-size: .6875rem;
+  font-weight: 500;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.tag { background: var(--paper); border-radius: var(--r-chip); font-size: .6875rem; }
+
+/* ---------- filters ---------- */
+.chips label { border-radius: 6px; font-weight: 400; }
+.rb:checked + label { font-weight: 500; }
+
+/* ---------- findings: stripped accordion, + / - toggle, hairlines only ---------- */
+.cat { margin: 0; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; background: transparent; }
+.cat[open] > .cat-sum { border-bottom: 0; }
+.cat-sum { padding: var(--s3) var(--s1); }
+.cat-sum::before {
+  content: "+"; content: "+" / "";
+  width: 1rem; height: auto; margin: 0 var(--s2) 0 0;
+  border: 0; transform: none; transition: none;
+  font: 400 1.25rem/1 var(--font-mono); color: var(--ink); text-align: center;
+}
+.cat[open] > .cat-sum::before { content: "\2212"; content: "\2212" / ""; transform: none; }
+.cat-name { font: 500 var(--fs-3)/1.2 var(--font-display); letter-spacing: -.01em; }
+.fnd + .fnd { border-top-style: dashed; }
+.fnd-title { font-weight: 500; }
+.fnd-evidence { background: var(--paper); border: 1px solid var(--rule); }
+#empty { border: 1px dashed var(--rule); }
+#empty::before { font-family: var(--font-display); }
+
+/* ---------- panels ---------- */
+#toast { border-radius: 6px; }
+#deep::before { display: none; }
+#deep .steps li::before { border-radius: var(--r-chip); }
+#txt { background: var(--paper); }
+#txt .copyrow > code { border-radius: var(--r-chip); }
+
+@media (forced-colors: active) {
+  #deep::before { display: block; }
+}

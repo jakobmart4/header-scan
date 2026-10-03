@@ -113,6 +113,7 @@
     --shadow-lift: 0 0 0 0 transparent;
   }
 }
+
 /* base.css - reset, typography, shared primitives, focus, reduced motion */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -253,6 +254,7 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
     scroll-behavior: auto !important;
   }
 }
+
 /* layout.css - page frame, masthead, scan form, report grid. Never styles component internals. */
 
 #app {
@@ -306,6 +308,7 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
   #report { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--s5); align-items: start; }
   #rail, #report-main { gap: var(--s5); }
 }
+
 /* gauge.css (B): grade rings. Base CSS = final state; animation only under #results[data-state=done]. */
 
 /* layout inside #scorecard */
@@ -416,6 +419,7 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   .gauge-ring { display: none; }
   .gauge-grade, .gauge-num { color: CanvasText; }
 }
+
 /* charts.css (C): donut, legend, category bars, severity heat-grid.
    Base rules ARE the final state; keyframes hold only the `from` side and are attached
    under #results[data-state="done"] so no-@property / no-animation / reduced-motion show the finished picture. */
@@ -663,6 +667,7 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   #heat td.hc { border: 1px solid CanvasText; forced-color-adjust: none; color: CanvasText; }
   .crow .bar { border-color: CanvasText; }
 }
+
 /* findings.css (D): filters (radios + :has), category accordion, findings list.
    Base CSS is the final state; keyframes only define the `from` side and attach under #results[data-state="done"]. */
 
@@ -1046,6 +1051,7 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
   }
   .cat, .fnd-evidence, .pill, .chip { border: 1px solid CanvasText; }
 }
+
 /* panels.css - loading, results visibility by state, error/empty, toast, deep-scan (ownership) panel.
    Motion: transform/opacity only. Keyframes hold only the `from` side, so base CSS is the final state. */
 
@@ -1300,265 +1306,166 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
 
 /* grade cap explanation under the gauges */
 .cap-note { margin: var(--s2) 0 0; padding: var(--s2); border-left: 3px solid var(--warn, currentColor); background: color-mix(in srgb, var(--surface), var(--ink) 4%); font-size: var(--fs-2); overflow-wrap: anywhere; }
-/* highend: "Soft Structuralism" - cool silver paper (light) / OLED near-black (dark), one indigo accent.
-   Every card is a double-bezel: the card is the inner core, a spread box-shadow ring is the outer tray (no DOM change);
-   pill controls with a nested arrow disc, wide tight-tracked grotesk, tinted tiles, heavy-spring cubic-bezier motion. */
+
+/* taste: "cold lab ledger". Cool zinc paper + one petrol-teal accent, geometric sans (no serif), heavy tight display type, soft 16px tiles.
+   Asymmetry: boxed rail vs open ledger main (staggered 2rem lower), big Security ring vs small Quality ring, indented lede, short accent rule.
+   Dials (skill baseline 8/6/4): variance 8 kept, motion 5 (report already choreographs ~1.6s; extra motion hurts reading data), density 5 (data page). */
 
 :root {
-  --paper: #e9ebf0;
-  --surface: #ffffff;
-  --tile: #f1f3f8;
-  --shell: #dde1ea;
-  --shell-line: rgb(15 23 42 / .08);
-  --hi: rgb(255 255 255 / .9);
-  --ink: #0b1020;
-  --muted: #4b5365;
-  --rule: #dde1ea;
-  --edge: #747d92;
-  --track: #e2e5ed;
-  --accent: #4338ca;
-  --accent-ink: #ffffff;
-  --pass: #0b6a43;   --pass-bg: #dcf3e7;
-  --warn: #8a4b00;   --warn-bg: #fbebcf;
-  --fail: #b3261e;   --fail-bg: #fde4e1;
-  --info: #3a4f8a;   --info-bg: #e3e8f6;
-  --glow-a: color-mix(in srgb, #4338ca 9%, transparent);
-  --glow-b: rgb(168 85 247 / .07);
+  /* colour (light): cool zinc, no beige, no pure black/white */
+  --paper: #e8ecef;
+  --surface: #f9fbfc;
+  --ink: #10151a;
+  --muted: #47525c;
+  --rule: #c8d1d8;
+  --edge: #77838d;
+  --track: #d9e0e5;
+  --wash: #dceef1;
+  --accent: #00697a;
+  --accent-ink: #f9fbfc;
+  --pass: #1f6b2c;
+  --pass-bg: #dfeedc;
+  --warn: #8a5300;
+  --warn-bg: #f7e9cf;
+  --fail: #b3261e;
+  --fail-bg: #fbe1dd;
+  --info: #3b5a8f;
+  --info-bg: #e2e9f4;
 
-  --font-body: "Segoe UI Variable Text", "SF Pro Text", system-ui, "Segoe UI", sans-serif;
-  --font-display: "Segoe UI Variable Display", "SF Pro Display", "Avenir Next", system-ui, "Segoe UI", sans-serif;
-  --font-mono: "Cascadia Code", "SF Mono", ui-monospace, Consolas, monospace;
+  /* type: system stacks only; display is a heavy tight sans, numbers are mono */
+  --font-body: ui-sans-serif, "Segoe UI Variable Text", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-display: ui-sans-serif, "Segoe UI Variable Display", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
 
-  --s5: 1.75rem;
-  --s6: 2.5rem;
-  --s7: 4rem;
-  --s8: 6rem;
-  --r-card: 1.5rem;
-  --r-chip: .625rem;
-  --gauge-size: 8.5rem;
-  --ring-w: .6rem;
+  /* shape rule: containers and tiles 16px, inner blocks (code, evidence, tags, status stamps) 8px, controls pill */
+  --r-card: 16px;
+  --r-chip: 8px;
+  --ring-w: .65rem;
 
-  --shadow-card: inset 0 1px 0 var(--hi), 0 0 0 6px var(--shell), 0 0 0 7px var(--shell-line);
-  --shadow-lift: 0 34px 60px -34px rgb(30 35 90 / .32);
+  /* shadows tinted to the slate/teal hue, never black */
+  --shadow-card: 0 1px 2px rgb(16 36 48 / .07), 0 12px 28px -18px rgb(16 36 48 / .28);
+  --shadow-lift: 0 26px 50px -32px rgb(0 82 98 / .5);
 
-  --d-fast: 300ms;
-  --d-mid: 420ms;
-  --d-reveal: 560ms;
-  --d-draw: 1100ms;
-  --ease-out: cubic-bezier(.32, .72, 0, 1);
-  --ease-io: cubic-bezier(.65, 0, .35, 1);
-  --step: 45ms;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #050608;
-    --surface: #14171f;
-    --tile: #1a1e28;
-    --shell: #0d0f15;
-    --shell-line: rgb(255 255 255 / .09);
-    --hi: rgb(255 255 255 / .07);
-    --ink: #eef0f6;
-    --muted: #9aa2b5;
-    --rule: #242936;
-    --edge: #7c859a;
-    --track: #1f2330;
-    --accent: #a5b4fc;
-    --accent-ink: #0c1030;
-    --pass: #5fd49a;   --pass-bg: #0f2a1d;
-    --warn: #f2c35c;   --warn-bg: #30250c;
-    --fail: #ff8f86;   --fail-bg: #3a1816;
-    --info: #a3b8ec;   --info-bg: #18213a;
-    --glow-a: color-mix(in srgb, #6366f1 20%, transparent);
-    --glow-b: rgb(168 85 247 / .12);
-    --shadow-lift: 0 34px 60px -34px rgb(0 0 0 / .95);
+    --paper: #0b0f12;
+    --surface: #131a1f;
+    --ink: #e9eef1;
+    --muted: #9aa6b0;
+    --rule: #26313a;
+    --edge: #7a8792;
+    --track: #1d262d;
+    --wash: #0f2a30;
+    --accent: #55d0e4;
+    --accent-ink: #03222a;
+    --pass: #86d47a;
+    --pass-bg: #17301a;
+    --warn: #efbf5c;
+    --warn-bg: #35290e;
+    --fail: #ff8f85;
+    --fail-bg: #3a1a17;
+    --info: #9db8ea;
+    --info-bg: #1a2640;
+    --shadow-card: 0 1px 0 var(--rule);
+    --shadow-lift: 0 0 0 0 transparent;
   }
 }
 
-/* ---------- page + type ---------- */
-body {
-  font: var(--fs-3)/1.55 var(--font-body);
-  background:
-    radial-gradient(70rem 30rem at 10% -8rem, var(--glow-a), transparent 70%),
-    radial-gradient(48rem 26rem at 100% 6rem, var(--glow-b), transparent 70%),
-    var(--paper);
-}
-h2, h3 { letter-spacing: -.015em; }
+/* ---------- page frame ---------- */
+@keyframes t-rise { from { opacity: 0; transform: translateY(12px); } }
 
-#masthead {
-  gap: var(--s3);
-  padding: var(--s7) 0 var(--s5);
-  margin-bottom: var(--s5);
-  border-bottom: 0;
+#masthead { padding: var(--s7) 0 var(--s5); border-bottom: 0; gap: var(--s3); }
+#masthead::after { content: ""; justify-self: start; width: 3.5rem; height: .3rem; border-radius: 999px; background: var(--accent); }
+h1 {
+  font: 800 clamp(2.5rem, 7vw, 4.25rem)/.95 var(--font-display);
+  letter-spacing: -.05em;
+  animation: t-rise 520ms var(--ease-out) backwards;
 }
-#masthead::before {
-  content: "Passive security scanner"; content: "Passive security scanner" / "";
-  justify-self: start;
-  padding: .3rem .8rem;
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--shell-line);
-  color: var(--muted);
-  font: 600 .6875rem/1.4 var(--font-body);
-  letter-spacing: .2em;
-  text-transform: uppercase;
-}
-#masthead h1 {
-  font: 700 clamp(2.5rem, 10vw, 4.75rem)/.98 var(--font-display);
-  letter-spacing: -.045em;
-}
-#masthead p { max-width: 46ch; font-size: 1.0625rem; }
+#masthead p { max-width: 46ch; }
+@media (min-width: 640px) { #masthead p { margin-left: clamp(0rem, 8vw, 7rem); } }
 
 .eyebrow {
-  display: inline-block;
-  margin: 0 0 var(--s4);
-  padding: .3rem .75rem;
-  border-radius: var(--r-pill);
-  background: var(--tile);
-  font-size: .6875rem;
-  letter-spacing: .18em;
-  color: var(--muted);
-}
-#deep .eyebrow { justify-self: start; }
-
-/* ---------- double-bezel surfaces ---------- */
-.card { border: 0; padding: var(--s4); }
-@media (min-width: 640px) { .card { padding: var(--s5); } }
-#scorecard {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 55%);
+  font: 700 var(--fs-3)/1.3 var(--font-body);
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--ink);
 }
 
-/* ---------- controls: pills, nested arrow disc, spring press ---------- */
-.btn {
-  min-height: 3rem;
-  padding: var(--s2) var(--s5);
-  border-radius: var(--r-pill);
-  transition: transform var(--d-fast) var(--ease-out);
-}
-.btn:hover:not(:disabled) { transform: translateY(-2px); }
-.btn:active:not(:disabled) { transform: scale(.97); }
-.btn.primary { box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), 0 14px 22px -14px var(--accent); }
-#scan-btn {
-  justify-content: space-between;
-  gap: var(--s4);
-  min-width: 9.5rem;
-  padding: .375rem .375rem .375rem var(--s5);
-}
-#scan-btn::after {
-  content: "\2197"; content: "\2197" / "";
-  display: grid; place-items: center;
-  width: 2.25rem; height: 2.25rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent-ink) 18%, transparent);
-  font-size: 1.05rem; line-height: 1;
-  transition: transform var(--d-mid) var(--ease-out);
-}
-#scan-btn:hover:not(:disabled)::after { transform: translate(2px, -2px) scale(1.08); }
+/* ---------- controls: pill ---------- */
+.btn { border-radius: var(--r-pill); padding-inline: var(--s5); }
+.btn:active:not(:disabled) { transform: scale(.98); }
+input[type="text"] { border-radius: var(--r-pill); padding-inline: var(--s4); }
+#scan-form { padding: var(--s3); gap: var(--s3); }
+#toast { border-radius: var(--r-pill); }
 
-input[type="text"] {
-  min-height: 3rem;
-  padding: var(--s2) var(--s4);
-  border-radius: var(--r-pill);
-  background: var(--tile);
-}
-.field > label { padding-left: var(--s3); letter-spacing: .01em; }
-#scan-form { padding: var(--s4); }
-@media (min-width: 640px) { #scan-form { padding: var(--s4) var(--s4) var(--s4) var(--s5); } }
-#status { margin: var(--s3) 0 var(--s5); }
-#loadbar { border-radius: var(--r-pill); }
-#loadbar::after { border-radius: var(--r-pill); }
+/* ---------- rail: boxed tiles, one tinted ---------- */
+#scorecard { --surface: var(--wash); }
+#deep { background: var(--wash); }
+#deep::before { inset: var(--s4) auto var(--s4) 0; border-radius: 0 4px 4px 0; }
 
-/* ---------- gauges + donut ---------- */
-.gauge {
-  border-radius: 50%;
-  background: radial-gradient(closest-side, var(--surface) 72%, var(--tile));
-  box-shadow: 0 0 0 1px var(--shell-line);
-}
-.gauge-grade { font: 700 2.75rem/1 var(--font-display); letter-spacing: -.05em; }
-.gauge-num { font-weight: 650; }
-#donut { --hole: .95rem; box-shadow: 0 0 0 1px var(--shell-line); }
-.donut-total { font-size: 1.875rem; letter-spacing: -.04em; }
-#scorecard #meta { margin: var(--s5) 0 var(--s3); }
-.cap-note { border-radius: .75rem; }
+.gauges { justify-content: space-between; align-items: flex-end; }
+.gauge-item .eyebrow { order: 2; }
+.gauge-item:first-child .gauge { --gauge-size: 8.25rem; }
+.gauge-item:last-child .gauge { --gauge-size: 6.25rem; }
+.gauge-item:last-child .gauge-grade { font-size: var(--fs-5); }
+.gauge-grade { font-weight: 800; letter-spacing: -.04em; }
+.gauge-num, .legend dd, .donut-total, .cat-count { font-family: var(--font-mono); }
+.donut-total { font-weight: 700; }
 
-/* ---------- legend, category tiles, heat ---------- */
-.legend > .lg { padding: .45rem 0; }
-#cats { gap: .625rem; }
-#cats > .crow {
-  padding: var(--s3) var(--s4);
-  border-bottom: 0;
-  border-radius: 1.25rem;
-  background: var(--tile);
-}
-.crow-name { font-family: var(--font-display); letter-spacing: -.015em; }
-.crow .bar { height: .5rem; border: 0; border-radius: var(--r-pill); }
 #heat { border-spacing: 3px; }
-#heat td.hc { border-radius: .4rem; }
-.heat-legend i { border-radius: var(--r-pill); outline: 0; }
+#heat td.hc { border-radius: 5px; font-family: var(--font-mono); }
 
-/* ---------- filters: floating tray ---------- */
-#filters {
-  gap: var(--s3);
-  margin: 0 0 var(--s4);
-  padding: var(--s3) var(--s4);
-  border: 0;
-  border-radius: 1.5rem;
-  background: var(--shell);
-  box-shadow: 0 0 0 1px var(--shell-line), 0 22px 30px -24px rgb(30 35 90 / .35);
+/* ---------- main: open ledger, tiles on paper ---------- */
+#cats-card { padding: 0; background: none; border: 0; box-shadow: none; }
+#cats-card > .eyebrow { margin-bottom: var(--s3); }
+#cats { gap: var(--s3); }
+#cats > .crow {
+  padding: var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
 }
-@media (min-width: 641px) and (min-height: 45rem) { #filters { top: var(--s3); } }
-.chips label { min-height: 2.25rem; padding: 0 var(--s4); }
-@media (max-width: 640px) { .chips label { min-height: 44px; } }
-.chips label:active { transform: scale(.95); }
-#shown { padding-left: var(--s1); }
+.crow .bar { height: .5rem; border-radius: 999px; }
+.crow-name { font-weight: 700; letter-spacing: -.01em; }
 
-/* ---------- findings ---------- */
-.cat {
-  margin: 0 0 var(--s4);
-  border: 0;
-  border-radius: 1.25rem;
-  box-shadow: inset 0 1px 0 var(--hi), 0 0 0 4px var(--shell), 0 0 0 5px var(--shell-line);
-}
-.cat-sum { min-height: 3.5rem; padding: var(--s3) var(--s4); border-radius: 1.25rem; }
-.cat[open] > .cat-sum { border-radius: 1.25rem 1.25rem 0 0; }
-.cat-sum:hover { background: var(--tile); }
-.cat-name { font: 650 1.1875rem/1.2 var(--font-display); letter-spacing: -.025em; }
-.fnd-title { letter-spacing: -.01em; }
-.tag { border-color: transparent; border-radius: var(--r-pill); background: var(--tile); padding: 0 var(--s2); }
-.fnd-evidence { border-radius: .75rem; padding: var(--s2) var(--s3); }
-#empty { border-radius: var(--r-card); }
+.cat { margin: 0 0 var(--s6); border: 0; border-radius: 0; background: none; box-shadow: none; }
+.cat-sum { padding: var(--s3) 0; border-top: 2px solid var(--ink); }
+.cat[open] > .cat-sum { border-bottom: 0; }
+.cat-sum::before { border-color: var(--accent); margin-left: 0; }
+.cat-sum:focus-visible { outline-offset: 2px; }
+.cat-name { font-size: var(--fs-4); font-weight: 800; letter-spacing: -.02em; }
+.list { display: grid; gap: var(--s2); padding: var(--s1) 0 0; }
+.fnd { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+.fnd-title { font-weight: 700; letter-spacing: -.01em; }
+.pill, .chip { border-radius: var(--r-chip); letter-spacing: .02em; }
+.tag { font-family: var(--font-mono); }
 
-/* ---------- panels ---------- */
-#error-box, .skel { border-radius: var(--r-card); }
-#toast { border-radius: var(--r-pill); padding: var(--s2) var(--s5); }
-#deep { margin-top: var(--s7); }
-#deep::before { inset: 0 var(--s6) auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
-#txt { border-radius: 1.125rem; background: var(--tile); border-color: transparent; }
-#txt .copyrow > code { border-radius: .875rem; }
-.badge-ok, #deep[data-v="verified"] #verify-badge { border-radius: var(--r-pill); }
+#filters { border-bottom: 0; padding-block: var(--s3); }
+.chips label { font-weight: 500; }
 
-/* ---------- bento rail on tablet: scorecard spans, donut + heat sit side by side ---------- */
-@media (min-width: 640px) and (max-width: 959.98px) {
-  #rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #scorecard { grid-column: 1 / -1; }
+/* ---------- asymmetric offset: main column sits 2rem lower than the rail ---------- */
+@media (min-width: 960px) {
+  #report-main { margin-top: var(--s6); }
+  .skel-cats, .skel-list { margin-top: var(--s6); }
 }
 
-/* ---------- motion: heavier fade-up, staggered cards (opacity/transform only) ---------- */
-@keyframes page-in { from { opacity: 0; transform: translateY(18px); } }
-@keyframes f-rise  { from { opacity: 0; transform: translateY(18px); } }
-@keyframes state-in { from { opacity: 0; transform: translateY(14px); } }
-#results[data-state="done"] #rail > .card,
-#results[data-state="done"] #cats-card {
-  animation: f-rise var(--d-reveal) var(--ease-out) backwards;
-}
-#results[data-state="done"] #donut-card { animation-delay: 90ms; }
-#results[data-state="done"] #heat-card { animation-delay: 180ms; }
-#results[data-state="done"] #cats-card { animation-delay: 60ms; }
+/* ---------- motion: transform/opacity only, from-side keyframes, done state only ---------- */
+#results[data-state="done"] #scorecard { animation: t-rise var(--d-reveal) var(--ease-out) backwards; }
+#results[data-state="done"] #donut-card { animation: t-rise var(--d-reveal) var(--ease-out) 80ms backwards; }
+#results[data-state="done"] #heat-card { animation: t-rise var(--d-reveal) var(--ease-out) 160ms backwards; }
 
+/* ---------- forced colors: restore the borders removed above ---------- */
 @media (forced-colors: active) {
-  .card, .cat, #filters, .gauge, #masthead::before { border: 1px solid CanvasText; }
-  #scan-btn::after { border: 1px solid ButtonText; }
+  .cat-sum { border-top-color: CanvasText; }
+  #cats > .crow, .fnd { border: 1px solid CanvasText; }
+  #masthead::after { background: Highlight; forced-color-adjust: none; }
+  #deep::before { background: Highlight; }
 }
+
 </style>
 </head>
 <body>
@@ -2099,6 +2006,8 @@ input[type="text"] {
 
   syncFilters();
 })();
-</script>
+
+</script><script>(function(){var S={"url":"https://demo.example/","host":"demo.example","scannedAt":"2026-10-03T22:51:55.289Z","durationMs":184,"verified":false,"deep":false,"rawHeaders":[{"name":"content-type","value":"text/html; charset=utf-8"},{"name":"server","value":"nginx/1.18.0"},{"name":"x-powered-by","value":"Express"},{"name":"set-cookie","value":"sessionid=<redacted>; Path=/"},{"name":"date","value":"Sat, 03 Oct 2026 22:51:55 GMT"},{"name":"connection","value":"close"},{"name":"transfer-encoding","value":"chunked"}],"score":{"security":{"score":44,"grade":"E"},"quality":{"score":55,"grade":"D"},"categories":{"headers":{"score":31,"pass":4,"warn":6,"fail":6,"info":6,"skipped":13},"cookies":{"score":70,"pass":4,"warn":1,"fail":1,"info":1,"skipped":1},"tls":{"score":0,"pass":0,"warn":0,"fail":1,"info":1,"skipped":9},"dns":{"score":null,"pass":0,"warn":0,"fail":0,"info":0,"skipped":4},"mail":{"score":null,"pass":0,"warn":0,"fail":0,"info":0,"skipped":11},"content":{"score":50,"pass":0,"warn":1,"fail":0,"info":0,"skipped":2},"seo":{"score":52,"pass":6,"warn":6,"fail":5,"info":0,"skipped":2},"ai":{"score":81,"pass":1,"warn":2,"fail":0,"info":0,"skipped":0},"ux":{"score":50,"pass":3,"warn":3,"fail":2,"info":11,"skipped":2},"exposure":{"score":100,"pass":2,"warn":0,"fail":0,"info":1,"skipped":1}}},"findings":[{"id":"cors-null-origin","category":"headers","title":"CORS null origin","status":"fail","severity":3,"evidence":"ACAO: null, credentials allowed","fix":"Do not allow the null origin."},{"id":"cors-wildcard-credentials","category":"headers","title":"CORS credentials with wildcard/reflected origin","status":"fail","severity":4,"evidence":"ACAO: https://evil.example, credentials allowed","fix":"Never allow credentials for reflected origins; use an explicit allowlist."},{"id":"csp-present","category":"headers","title":"Content-Security-Policy","status":"fail","severity":4,"evidence":"no CSP","fix":"Send a Content-Security-Policy header, e.g. default-src 'self'."},{"id":"hdr-frame-protection","category":"headers","title":"Clickjacking protection","status":"fail","severity":3,"evidence":"no X-Frame-Options or frame-ancestors","fix":"Send CSP frame-ancestors 'self' (or X-Frame-Options: SAMEORIGIN)."},{"id":"hdr-hsts","category":"headers","title":"HSTS","status":"fail","severity":4,"evidence":"no HTTPS","fix":"Serve the site over HTTPS and send Strict-Transport-Security."},{"id":"hdr-xcto","category":"headers","title":"X-Content-Type-Options","status":"fail","severity":3,"evidence":"header missing","fix":"Send X-Content-Type-Options: nosniff."},{"id":"cors-reflected-origin","category":"headers","title":"CORS reflected origin","status":"warn","severity":3,"evidence":"arbitrary Origin echoed in ACAO","fix":"Validate Origin against an allowlist instead of echoing it."},{"id":"hdr-cache-control-html","category":"headers","title":"Cache-Control on HTML","status":"warn","severity":2,"evidence":"Set-Cookie without no-store/private","fix":"Send Cache-Control: private or no-store on pages that set cookies."},{"id":"hdr-permissions-policy","category":"headers","title":"Permissions-Policy","status":"warn","severity":2,"evidence":"header missing","fix":"Send a Permissions-Policy disabling unused features (camera, microphone, geolocation)."},{"id":"hdr-powered-by","category":"headers","title":"X-Powered-By leak","status":"warn","severity":2,"evidence":"x-powered-by: Express","fix":"Remove X-Powered-By / X-AspNet-Version headers."},{"id":"hdr-referrer-policy","category":"headers","title":"Referrer-Policy","status":"warn","severity":2,"evidence":"header missing","fix":"Send Referrer-Policy: strict-origin-when-cross-origin."},{"id":"hdr-server-leak","category":"headers","title":"Server version leak","status":"warn","severity":2,"evidence":"Server: nginx/1.18.0","fix":"Hide the version in the Server header."},{"id":"csp-report-only","category":"headers","title":"CSP report-only","status":"info","severity":1,"evidence":"no report-only policy","fix":""},{"id":"hdr-coep","category":"headers","title":"COEP","status":"info","severity":1,"evidence":"header absent (optional hardening)","fix":"Send Cross-Origin-Embedder-Policy: require-corp once third-party embeds send CORP/CORS (credentialless is easier)."},{"id":"hdr-coop","category":"headers","title":"COOP","status":"info","severity":1,"evidence":"header absent (optional hardening)","fix":"Watch the report-only reports, then send Cross-Origin-Opener-Policy: same-origin (same-origin-allow-popups if you use OAuth/payment popups)."},{"id":"hdr-corp","category":"headers","title":"CORP","status":"info","severity":1,"evidence":"header absent (optional hardening)","fix":"Send Cross-Origin-Resource-Policy: same-site (cross-origin only for assets meant to be embedded)."},{"id":"hdr-hsts-preload","category":"headers","title":"HSTS preload","status":"info","severity":1,"evidence":"http target","fix":""},{"id":"hdr-reporting","category":"headers","title":"Reporting endpoints","status":"info","severity":1,"evidence":"no reporting configured (optional)","fix":"Optional: add Reporting-Endpoints and CSP report-to to receive violation reports."},{"id":"cors-wildcard-public","category":"headers","title":"CORS wildcard on public content","status":"pass","severity":2,"evidence":"ACAO: https://evil.example","fix":""},{"id":"hdr-generator-leak","category":"headers","title":"Generator meta version","status":"pass","severity":1,"evidence":"no versioned generator tag","fix":""},{"id":"hdr-legacy-headers","category":"headers","title":"Legacy headers","status":"pass","severity":1,"evidence":"none present","fix":""},{"id":"hdr-xss-protection","category":"headers","title":"X-XSS-Protection","status":"pass","severity":2,"evidence":"absent","fix":""},{"id":"csp-base-uri","category":"headers","title":"CSP base-uri","status":"skipped","severity":2,"evidence":"no CSP","fix":""},{"id":"csp-data-uri","category":"headers","title":"CSP data: sources","status":"skipped","severity":2,"evidence":"no CSP","fix":""},{"id":"csp-default-src","category":"headers","title":"CSP default-src","status":"skipped","severity":2,"evidence":"no CSP","fix":""},{"id":"csp-frame-ancestors","category":"headers","title":"CSP frame-ancestors","status":"skipped","severity":2,"evidence":"no CSP","fix":""},{"id":"csp-object-src","category":"headers","title":"CSP object-src","status":"skipped","severity":3,"evidence":"no CSP","fix":""},{"id":"csp-script-bypass-hosts","category":"headers","title":"CSP script allowlist bypass hosts","status":"skipped","severity":3,"evidence":"no CSP","fix":""},{"id":"csp-style-unsafe-inline","category":"headers","title":"CSP style 'unsafe-inline'","status":"skipped","severity":2,"evidence":"no CSP","fix":""},{"id":"csp-unsafe-eval","category":"headers","title":"CSP 'unsafe-eval'","status":"skipped","severity":3,"evidence":"no CSP","fix":""},{"id":"csp-unsafe-inline","category":"headers","title":"CSP 'unsafe-inline'","status":"skipped","severity":4,"evidence":"no CSP","fix":""},{"id":"csp-upgrade-insecure","category":"headers","title":"CSP upgrade-insecure-requests","status":"skipped","severity":1,"evidence":"no CSP","fix":""},{"id":"csp-wildcard","category":"headers","title":"CSP wildcard sources","status":"skipped","severity":3,"evidence":"no CSP","fix":""},{"id":"hdr-compression","category":"headers","title":"Compression","status":"skipped","severity":2,"evidence":"small body, no compression","fix":""},{"id":"hdr-hsts-subdomains","category":"headers","title":"HSTS includeSubDomains","status":"skipped","severity":2,"evidence":"http target","fix":""},{"id":"cookie-httponly","category":"cookies","title":"Cookie HttpOnly flag","status":"fail","severity":3,"evidence":"session-like without HttpOnly: sessionid","fix":"Add HttpOnly to session and auth cookies."},{"id":"cookie-samesite","category":"cookies","title":"Cookie SameSite","status":"warn","severity":3,"evidence":"without SameSite: sessionid","fix":"Set SameSite=Lax (or Strict) explicitly."},{"id":"cookie-prefix","category":"cookies","title":"Cookie name prefixes","status":"info","severity":1,"evidence":"no __Host-/__Secure- cookies (optional hardening)","fix":""},{"id":"cookie-cache-control","category":"cookies","title":"Cookies on publicly cacheable page","status":"pass","severity":2,"evidence":"not public","fix":""},{"id":"cookie-domain","category":"cookies","title":"Cookie Domain scope","status":"pass","severity":2,"evidence":"no Domain on session cookies","fix":""},{"id":"cookie-lifetime","category":"cookies","title":"Session cookie lifetime","status":"pass","severity":2,"evidence":"ok","fix":""},{"id":"cookie-samesite-none","category":"cookies","title":"SameSite=None requires Secure","status":"pass","severity":3,"evidence":"ok","fix":""},{"id":"cookie-secure","category":"cookies","title":"Cookie Secure flag","status":"skipped","severity":4,"evidence":"http page, not evaluated","fix":""},{"id":"tls-https","category":"tls","title":"HTTPS available","status":"fail","severity":5,"evidence":"HTTPS not reachable (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":"Serve the site over HTTPS with a valid certificate."},{"id":"tls-http-redirect","category":"tls","title":"HTTP redirects to HTTPS","status":"info","severity":3,"evidence":"no HTTP listener reachable on port 80","fix":""},{"id":"tls-alpn-h2","category":"tls","title":"HTTP/2 negotiated","status":"skipped","severity":1,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-cert-chain","category":"tls","title":"Certificate chain trusted","status":"skipped","severity":4,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-cert-expiry","category":"tls","title":"Certificate not expiring soon","status":"skipped","severity":4,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-cert-host","category":"tls","title":"Certificate matches hostname","status":"skipped","severity":5,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-cert-key","category":"tls","title":"Certificate key size","status":"skipped","severity":2,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-cert-sigalg","category":"tls","title":"Certificate signature algorithm","status":"skipped","severity":2,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-legacy-protocols","category":"tls","title":"Legacy TLS 1.0/1.1 rejected","status":"skipped","severity":4,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-protocol","category":"tls","title":"Negotiated TLS version is modern","status":"skipped","severity":4,"evidence":"no HTTPS (error: ERR_SSL_WRONG_VERSION_NUMBER)","fix":""},{"id":"tls-redirect-permanent","category":"tls","title":"HTTPS redirect is permanent","status":"skipped","severity":1,"evidence":"no HTTP->HTTPS redirect","fix":""},{"id":"dns-caa","category":"dns","title":"CAA records restrict certificate issuance","status":"skipped","severity":2,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"dns-dnssec","category":"dns","title":"DNSSEC enabled","status":"skipped","severity":2,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"dns-ipv6","category":"dns","title":"IPv6 (AAAA) record","status":"skipped","severity":1,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"dns-ns-count","category":"dns","title":"At least two nameservers","status":"skipped","severity":2,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-dkim","category":"mail","title":"DKIM selector found","status":"skipped","severity":1,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-dmarc-policy","category":"mail","title":"DMARC policy enforced","status":"skipped","severity":4,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-dmarc-present","category":"mail","title":"DMARC record present","status":"skipped","severity":4,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-dmarc-rua","category":"mail","title":"DMARC aggregate reports (rua)","status":"skipped","severity":1,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-mta-sts","category":"mail","title":"MTA-STS policy","status":"skipped","severity":1,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-mx","category":"mail","title":"MX records","status":"skipped","severity":1,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-spf-all","category":"mail","title":"SPF ends with a strict all","status":"skipped","severity":4,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-spf-lookups","category":"mail","title":"SPF DNS lookups within limit","status":"skipped","severity":3,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-spf-present","category":"mail","title":"SPF record present","status":"skipped","severity":4,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-spf-single","category":"mail","title":"Single SPF record","status":"skipped","severity":4,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"mail-tls-rpt","category":"mail","title":"TLS-RPT reporting","status":"skipped","severity":1,"evidence":"IP address: no DNS/mail checks","fix":""},{"id":"sri-external","category":"content","title":"Subresource Integrity","status":"warn","severity":3,"evidence":"2 cross-origin resource(s) without integrity; hosts: insecure.example.net, cdn.example.net","fix":"Add integrity (and crossorigin) attributes to third-party scripts and stylesheets."},{"id":"mixed-active","category":"content","title":"Mixed active content","status":"skipped","severity":5,"evidence":"http target","fix":""},{"id":"mixed-passive","category":"content","title":"Mixed passive content","status":"skipped","severity":3,"evidence":"http target","fix":""},{"id":"seo-lang","category":"seo","title":"<html lang> is valid","status":"fail","severity":3,"evidence":"<html lang> missing","fix":"Set <html lang=\"en\"> (or the page language).","checklist":16},{"id":"seo-meta-description","category":"seo","title":"Meta description present","status":"fail","severity":3,"evidence":"meta description missing or empty","fix":"Add <meta name=\"description\" content=\"...\"> summarising the page.","checklist":6},{"id":"seo-og-image","category":"seo","title":"og:image present","status":"fail","severity":2,"evidence":"og:image missing","fix":"Add <meta property=\"og:image\"> with an absolute image URL.","checklist":7},{"id":"seo-title","category":"seo","title":"Page has a <title>","status":"fail","severity":3,"evidence":"no <title> found","fix":"Add a unique, descriptive <title> in <head>.","checklist":31},{"id":"seo-viewport","category":"seo","title":"Viewport meta tag present","status":"fail","severity":3,"evidence":"viewport meta missing","fix":"Add <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">."},{"id":"seo-canonical","category":"seo","title":"Canonical URL is absolute and same-host","status":"warn","severity":2,"evidence":"no canonical link","fix":"Add an absolute <link rel=\"canonical\"> pointing at this site.","checklist":11},{"id":"seo-h1","category":"seo","title":"Exactly one <h1>","status":"warn","severity":3,"evidence":"2 <h1> elements","fix":"Use a single <h1> per page.","checklist":9},{"id":"seo-og-basic","category":"seo","title":"og:title and og:description present","status":"warn","severity":1,"evidence":"missing og:title, og:description","fix":"Add og:title and og:description meta tags."},{"id":"seo-sitemap","category":"seo","title":"sitemap.xml is present and valid","status":"warn","severity":3,"evidence":"/sitemap.xml is not XML","fix":"Publish /sitemap.xml and list it in robots.txt.","checklist":15},{"id":"seo-structured-data","category":"seo","title":"Valid JSON-LD structured data","status":"warn","severity":2,"evidence":"no JSON-LD with @type","fix":"Add JSON-LD structured data (Organization, LocalBusiness, ...).","checklist":8},{"id":"seo-twitter-card","category":"seo","title":"twitter:card present","status":"warn","severity":1,"evidence":"twitter:card missing","fix":"Add <meta name=\"twitter:card\" content=\"summary_large_image\">."},{"id":"seo-duplicate-titles","category":"seo","title":"Titles and descriptions are unique across pages","status":"pass","severity":3,"evidence":"4 pages, all unique","fix":"","checklist":5},{"id":"seo-heading-order","category":"seo","title":"Heading levels do not skip","status":"pass","severity":1,"evidence":"2 headings","fix":""},{"id":"seo-noindex","category":"seo","title":"Page is not noindexed","status":"pass","severity":4,"evidence":"indexable","fix":""},{"id":"seo-robots-sensitive","category":"seo","title":"robots.txt does not advertise sensitive paths","status":"pass","severity":1,"evidence":"none","fix":""},{"id":"seo-robots-txt","category":"seo","title":"robots.txt exists and is valid","status":"pass","severity":3,"evidence":"robots.txt found with User-agent rules","fix":"","checklist":30},{"id":"seo-spa-shell","category":"seo","title":"Raw HTML has real content (no empty SPA shell)","status":"pass","severity":4,"evidence":"43 chars of visible text","fix":"","checklist":2},{"id":"seo-meta-desc-length","category":"seo","title":"Meta description is 70-160 characters","status":"skipped","severity":1,"evidence":"no meta description","fix":"","checklist":6},{"id":"seo-title-length","category":"seo","title":"Title length is 10-60 characters","status":"skipped","severity":1,"evidence":"no title","fix":"","checklist":31},{"id":"ai-llms-txt","category":"ai","title":"llms.txt present (optional standard)","status":"warn","severity":1,"evidence":"HTTP 200 (HTML or too short)","fix":"Optionally add /llms.txt describing the site for LLMs.","checklist":12},{"id":"ai-robots-blocks-bots","category":"ai","title":"AI crawlers are not blocked (may be intentional)","status":"warn","severity":2,"evidence":"disallowed: GPTBot","fix":"Allow AI crawlers in robots.txt if you want to be visible in AI search.","checklist":13},{"id":"ai-robots-blocks-all","category":"ai","title":"robots.txt does not block all crawlers","status":"pass","severity":5,"evidence":"not blocked","fix":""},{"id":"ux-404-page","category":"ux","title":"Custom 404 page returns a real 404","status":"fail","severity":3,"evidence":"random path returns HTTP 200 (soft 404)","fix":"Return HTTP 404 for unknown URLs.","checklist":3},{"id":"ux-alt-text","category":"ux","title":"Images have alt text","status":"fail","severity":3,"evidence":"1 of 1 images missing alt","fix":"Add alt text (alt=\"\" for decorative images).","checklist":17},{"id":"ux-cta-above-fold","category":"ux","title":"Call to action near the top (heuristic)","status":"warn","severity":1,"evidence":"no CTA-like link/button in first 3000 chars of body (heuristic)","fix":"Put a clear call-to-action near the top of the page.","checklist":22},{"id":"ux-favicon","category":"ux","title":"Favicon present","status":"warn","severity":2,"evidence":"no <link rel=icon> and no /favicon.ico","fix":"Add a favicon.","checklist":14},{"id":"ux-privacy-policy","category":"ux","title":"Privacy policy link works","status":"warn","severity":2,"evidence":"no privacy policy link","fix":"Publish a privacy policy and link it from every page.","checklist":38},{"id":"ux-analytics","category":"ux","title":"Analytics present","status":"info","severity":1,"evidence":"no analytics detected","fix":"","checklist":39},{"id":"ux-breadcrumbs","category":"ux","title":"Breadcrumbs","status":"info","severity":1,"evidence":"no breadcrumbs","fix":"","checklist":25},{"id":"ux-case-studies","category":"ux","title":"Case studies / portfolio link","status":"info","severity":1,"evidence":"no case study / portfolio link","fix":"","checklist":26},{"id":"ux-faq","category":"ux","title":"FAQ content","status":"info","severity":1,"evidence":"no FAQ content","fix":"","checklist":27},{"id":"ux-local-schema","category":"ux","title":"LocalBusiness schema is complete","status":"info","severity":1,"evidence":"no LocalBusiness schema","fix":"","checklist":37},{"id":"ux-maps","category":"ux","title":"Map / location embed or link","status":"info","severity":1,"evidence":"no map found","fix":"","checklist":34},{"id":"ux-response-time","category":"ux","title":"Response-time promise","status":"info","severity":1,"evidence":"no response-time promise","fix":"","checklist":28},{"id":"ux-reviews","category":"ux","title":"Reviews / ratings markup or widget","status":"info","severity":1,"evidence":"no reviews found","fix":"","checklist":35},{"id":"ux-team-photo","category":"ux","title":"Team / about photo (low confidence)","status":"info","severity":1,"evidence":"no team-like image found (low confidence)","fix":"","checklist":40},{"id":"ux-thank-you","category":"ux","title":"Thank-you page exists","status":"info","severity":1,"evidence":"no thank-you page and no form","fix":"","checklist":24},{"id":"ux-theme-color","category":"ux","title":"theme-color meta tag","status":"info","severity":1,"evidence":"theme-color missing","fix":""},{"id":"ux-default-hostname","category":"ux","title":"Site is not on a default hosting hostname","status":"pass","severity":2,"evidence":"127.0.0.1","fix":"","checklist":1},{"id":"ux-internal-links","category":"ux","title":"Internal links present","status":"pass","severity":2,"evidence":"3 internal links","fix":"","checklist":23},{"id":"ux-js-bundle-size","category":"ux","title":"JavaScript bundles are small and compressed","status":"pass","severity":2,"evidence":"1 script(s), 0 KB total","fix":"","checklist":20},{"id":"ux-console-errors","category":"ux","title":"No console errors","status":"skipped","severity":1,"evidence":"needs a headless browser (not in v1)","fix":"","checklist":19},{"id":"ux-sticky-mobile-cta","category":"ux","title":"Sticky mobile CTA","status":"skipped","severity":1,"evidence":"needs a headless browser (not in v1)","fix":"","checklist":29},{"id":"exp-security-txt","category":"exposure","title":"security.txt (RFC 9116) present","status":"info","severity":2,"evidence":"no security.txt","fix":"Publish /.well-known/security.txt with a Contact and an Expires field."},{"id":"exp-error-leak","category":"exposure","title":"404 page does not leak stack traces or paths","status":"pass","severity":3,"evidence":"no stack/path patterns","fix":""},{"id":"exp-source-maps","category":"exposure","title":"Source maps are not public","status":"pass","severity":3,"evidence":"none referenced or reachable","fix":"","checklist":18},{"id":"exp-security-txt-fields","category":"exposure","title":"security.txt has Contact and a future Expires","status":"skipped","severity":2,"evidence":"no security.txt","fix":""}],"errors":[]};var f=window.fetch;window.fetch=function(u,o){return String(u).indexOf('/api/scan')===0?Promise.resolve(new Response(JSON.stringify(S),{status:200,headers:{'content-type':'application/json'}})):f.apply(this,arguments)};
+addEventListener('DOMContentLoaded',function(){setTimeout(function(){var i=document.getElementById('url');i.value='demo.example';document.getElementById('scan-form').dispatchEvent(new Event('submit',{cancelable:true}))},50)})})();</script>
 </body>
 </html>
