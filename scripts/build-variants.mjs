@@ -10,17 +10,22 @@ const rd = (...p) => readFileSync(join(root, ...p), 'utf8').replace(/\r\n?/g, '\
 const BASE = ['tokens.css', 'base.css', 'layout.css', 'gauge.css', 'charts.css', 'findings.css', 'panels.css'];
 const sample = JSON.stringify(JSON.parse(rd('design', 'sample.json')));
 const vdir = join(root, 'ui', 'variants');
-const variants = ['current', 'editorial', ...readdirSync(vdir).filter((f) => f.endsWith('.css')).map((f) => f.slice(0, -4)).sort()];
+const variants = ['current', 'editorial', ...readdirSync(vdir).filter((f) => f.endsWith('.css')).map((f) => f.slice(0, -4)).sort(), ...(readdirSync(vdir).some((f) => f.startsWith('x-')) ? ['x-all'] : [])];
+const layers = readdirSync(vdir).filter((f) => f.startsWith('x-') && f.endsWith('.css')).map((f) => f.slice(0, -4));
 mkdirSync(join(root, 'design', 'preview'), { recursive: true });
 
 const stub = `<script>(function(){var S=${sample};var f=window.fetch;window.fetch=function(u,o){return String(u).indexOf('/api/scan')===0?Promise.resolve(new Response(JSON.stringify(S),{status:200,headers:{'content-type':'application/json'}})):f.apply(this,arguments)};
 addEventListener('DOMContentLoaded',function(){setTimeout(function(){var i=document.getElementById('url');i.value='demo.example';document.getElementById('scan-form').dispatchEvent(new Event('submit',{cancelable:true}))},50)})})();</script>`;
 
 for (const v of variants) {
-  const css = BASE.map((f) => rd('ui', 'src', f)).concat(v === 'editorial' ? [] : v === 'current' ? [rd('ui', 'src', 'skin.css')] : [rd('ui', 'variants', v + '.css')]).join('\n');
+  const layerOf = v === 'x-all' ? layers : v.startsWith('x-') ? [v] : [];
+  const lay = (ext) => layerOf.filter((n) => existsSync(join(vdir, n + ext))).map((n) => rd('ui', 'variants', n + ext));
+  const skin = v === 'editorial' ? [] : v.startsWith('x-') || v === 'current' ? [rd('ui', 'src', 'skin.css')] : [rd('ui', 'variants', v + '.css')];
+  const css = BASE.map((f) => rd('ui', 'src', f)).concat(skin, lay('.css')).join('\n');
+  const extraJs = lay('.js').map((j) => '<script>\n' + j + '\n</script>').join('\n');
   const html = rd('ui', 'src', 'index.template.html')
     .split('<!--@STYLE-->').join('<style>\n' + css + '\n</style>')
-    .split('<!--@SCRIPT-->').join('<script>\n' + rd('ui', 'src', 'app.js') + '\n</script>' + stub);
+    .split('<!--@SCRIPT-->').join('<script>\n' + rd('ui', 'src', 'app.js') + '\n</script>' + extraJs + stub);
   writeFileSync(join(root, 'design', 'preview', v + '.html'), html);
 }
 
