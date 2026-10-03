@@ -257,3 +257,148 @@ input[type="text"] {
   .card, .cat, #filters, .gauge, #masthead::before { border: 1px solid CanvasText; }
   #scan-btn::after { border: 1px solid ButtonText; }
 }
+
+/* =====================================================================================================
+   Refinements (audit fixes). Kept last so they win over the rules above at equal specificity.
+   ===================================================================================================== */
+
+/* ---- tokens: lighter ring on narrow rails, stronger heat in light, visible bezel tray in dark ---- */
+:root { --heat-max: 58%; --donut-size: 8.5rem; }
+@media (prefers-color-scheme: dark) {
+  :root { --heat-max: 40%; --shell: #171b26; --shell-line: rgb(255 255 255 / .12); }
+}
+/* the rail is only ~236px wide inside the card between 960 and ~1140px, and 256px at 320px */
+@media (min-width: 960px) and (max-width: 1139.98px) { :root { --gauge-size: 7.5rem; } }
+@media (max-width: 359.98px) { :root { --gauge-size: 7.5rem; } }
+#donut { width: var(--donut-size); }
+
+/* ---- rhythm: card rings are 7px per side, so gaps need to be wider than the 16px base ---- */
+#report, #rail, #report-main, #skeleton { gap: var(--s5); }
+.cat { margin-bottom: 1.5rem; overflow: clip; }
+#filters { margin: 0; }
+#loadbar { margin-top: calc(var(--s2) + 4px); }
+#status { margin: var(--s2) 0 var(--s5); }
+#results[data-err="true"] > #error-box { margin-bottom: var(--s5); }
+@media (min-width: 960px) { #masthead { padding-top: var(--s6); } }
+
+/* ---- eyebrows: plain labels inside cards, the pill stays on the masthead ---- */
+.card .eyebrow { padding: 0; background: none; }
+#scorecard #meta { font-size: var(--fs-2); text-wrap: balance; }
+#scorecard #actions .btn { flex: 1 1 11rem; }
+.cap-note { border-left: 0; box-shadow: inset 3px 0 0 var(--warn); }
+.btn.primary:disabled { box-shadow: none; }
+#raw > summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- wide layouts: sticky scorecard, wider rail on small desktops ---- */
+@media (min-width: 960px) {
+  #report, #skeleton { grid-template-columns: minmax(20rem, 4fr) minmax(0, 8fr); }
+  #report { align-items: stretch; }
+  /* flex column (not grid): the sticky scorecard's containing block is the whole stretched rail */
+  #rail { display: flex; flex-direction: column; }
+}
+@media (min-width: 960px) and (min-height: 45rem) {
+  #scorecard { position: sticky; top: var(--s3); z-index: 2; }
+}
+
+/* ---- tablet bento: give the heat grid the wider column ---- */
+@media (min-width: 640px) and (max-width: 959.98px) {
+  #rail { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  #heat td.hc { height: 2.5rem; } /* the card is stretched to the donut's height; taller cells fill it */
+}
+
+/* ---- heat grid: codes must not wrap or clip ---- */
+#heat { border-spacing: 2px; }
+#heat thead th { font-size: .625rem; letter-spacing: 0; overflow-wrap: normal; }
+#heat thead th:first-child, #heat thead td:first-child { width: 2rem; }
+@media (max-width: 359.98px) { #heat { border-spacing: 1px; } }
+
+/* ---- category rows ---- */
+.crow .bar { height: .75rem; box-shadow: inset 0 0 0 1px var(--edge); }
+#cats .bar > .seg[data-s="warn"] {
+  background: repeating-linear-gradient(45deg, var(--warn) 0 5px, var(--surface) 5px 8px);
+}
+#cats .bar > .seg[data-s="fail"] {
+  background:
+    repeating-linear-gradient(45deg, var(--fail) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(-45deg, var(--fail) 0 4px, var(--surface) 4px 8px);
+}
+@supports selector(:has(*)) { #cats-card:has(#cats:empty) { display: none; } }
+
+/* ---- filter tray: one compact row per group, scrolling sideways instead of wrapping ---- */
+#tabs, #statuses {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 5px 1.75rem 5px 5px;
+  margin: -5px;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 5px 1.75rem;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 1.75rem), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 1.75rem), transparent);
+}
+#tabs::-webkit-scrollbar, #statuses::-webkit-scrollbar { display: none; }
+#tabs label, #statuses label { flex: none; scroll-snap-align: start; scroll-margin-inline: 8px; }
+@media (min-width: 641px) {
+  #filters { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  #tabs { grid-column: 1 / -1; }
+  #shown { white-space: nowrap; }
+}
+
+/* ---- findings: status as a left edge instead of a disc, quiet rows for non-issues ---- */
+.fnd { padding-left: var(--s4); box-shadow: inset 3px 0 0 var(--sc); }
+.fnd::before, .fnd::after { content: none; display: none; }
+.fnd-title { font-weight: 600; }
+.fnd[data-s="fail"] .fnd-title { font-weight: 700; }
+.fnd:is([data-s="pass"], [data-s="skipped"]) .fnd-title { font-weight: 500; }
+.fnd-fix { color: var(--muted); }
+.fnd:is([data-s="pass"], [data-s="info"], [data-s="skipped"]) .fnd-evidence {
+  padding: 0; background: none; color: var(--muted);
+}
+#empty { background: var(--tile); border-style: solid; border-color: transparent; }
+
+/* ---- panels ---- */
+.skel { border: 0; box-shadow: var(--shadow-card); background: var(--surface); }
+/* heights measured from the real cards (375: 379/416/283/1033; 768: 325/440/440/570; 1200: 424/440/315/570) */
+.skel-gauges { min-height: 24rem; }
+.skel-donut  { min-height: 26rem; }
+.skel-heat   { min-height: 17.75rem; }
+.skel-cats   { min-height: 66rem; }
+.skel-gauges::before { height: var(--gauge-size); }
+.skel-gauges::before {
+  background:
+    radial-gradient(circle closest-side, var(--track) 97%, transparent) 0 0 / var(--gauge-size) var(--gauge-size) no-repeat,
+    radial-gradient(circle closest-side, var(--track) 97%, transparent) 100% 0 / var(--gauge-size) var(--gauge-size) no-repeat;
+}
+@media (max-width: 359.98px) { .skel-cats { min-height: 76rem; } }
+@media (min-width: 640px) and (max-width: 959.98px) {
+  #skeleton { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .skel-gauges, .skel-cats, .skel-list { grid-column: 1 / -1; }
+  .skel-gauges { min-height: 20.25rem; }
+  .skel-donut, .skel-heat { min-height: 27.5rem; }
+  .skel-cats { min-height: 36rem; }
+  .skel-gauges::before {
+    background:
+      radial-gradient(circle closest-side, var(--track) 97%, transparent) 25% 0 / var(--gauge-size) var(--gauge-size) no-repeat,
+      radial-gradient(circle closest-side, var(--track) 97%, transparent) 75% 0 / var(--gauge-size) var(--gauge-size) no-repeat;
+  }
+}
+@media (min-width: 960px) {
+  .skel-gauges { min-height: 26rem; }
+  .skel-donut  { min-height: 27.5rem; }
+  .skel-heat   { min-height: 19.5rem; }
+  .skel-cats   { min-height: 38rem; }
+}
+@media (max-width: 640px) {
+  #txt .copyrow { grid-template-columns: minmax(0, 1fr); row-gap: var(--s2); }
+  #txt .copyrow .btn { justify-self: start; }
+  .raw .rn { white-space: normal; width: 36%; }
+  .raw th, .raw td { font-size: var(--fs-1); }
+}
+
+@media (forced-colors: active) {
+  .fnd { border-left: 3px solid CanvasText; }
+  .cap-note { border-left: 3px solid CanvasText; }
+  .crow .bar { box-shadow: none; }
+  #tabs, #statuses { -webkit-mask-image: none; mask-image: none; }
+}
