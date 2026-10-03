@@ -54,7 +54,7 @@
 
       <section id="donut-card" class="card" aria-label="Pass, warn and fail split">
         <h2 class="eyebrow">Findings split</h2>
-        <div class="donut" id="donut" data-empty="true" role="img"><span class="donut-total" id="donut-total">0</span><span class="donut-cap">counted</span></div>
+        <div class="donut" id="donut" data-empty="true" role="img"><span class="donut-total" id="donut-total">0</span><span class="donut-cap" id="donut-cap">checks</span></div>
         <dl class="legend">
           <div class="lg" data-s="pass"><dt><i class="sw"></i>&#10004; Pass</dt><dd id="lg-pass">0</dd></div>
           <div class="lg" data-s="warn"><dt><i class="sw"></i>&#9888; Warn</dt><dd id="lg-warn">0</dd></div>
@@ -104,7 +104,7 @@
         <p id="shown" class="muted" role="status" aria-live="polite"></p>
       </div>
       <div id="findings"></div>
-      <p id="empty" class="muted" hidden>No findings match these filters.</p>
+      <p id="empty" class="muted" hidden><span id="empty-msg">No findings match these filters.</span> <button type="button" id="reset-filters" class="btn">Show all findings</button></p>
       <section id="raw-card" class="card" aria-labelledby="raw-h" hidden>
         <details id="raw">
           <summary><span id="raw-h" class="eyebrow">Raw response headers</span> <span id="raw-count" class="muted"></span></summary>

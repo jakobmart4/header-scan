@@ -402,3 +402,6 @@ input[type="text"] {
   .crow .bar { box-shadow: none; }
   #tabs, #statuses { -webkit-mask-image: none; mask-image: none; }
 }
+
+/* empty-state recovery action (reset-filters button) */
+#empty .btn { display: flex; width: fit-content; margin: var(--s3) auto 0; }

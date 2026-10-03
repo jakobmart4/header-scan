@@ -133,6 +133,7 @@
     var c = counts(findings), total = c.pass + c.warn + c.fail, d = $('donut');
     STATUSES.forEach(function (s) { $('lg-' + s).textContent = c[s]; });
     $('donut-total').textContent = total;
+    $('donut-cap').textContent = 'of ' + findings.length; // the donut counts pass+warn+fail only; the legend lists all five statuses
     d.dataset.empty = String(total === 0);
     num(d, '--a', total ? c.pass / total * 100 : 0, 1);
     num(d, '--b', total ? (c.pass + c.warn) / total * 100 : 0, 1);
@@ -188,7 +189,7 @@
       fillGauge(g, s.score, CAT_NAME[c] + ' score', band);
       li.appendChild(g);
       li.appendChild(h('span', 'crow-name', CAT_NAME[c]));
-      li.appendChild(h('span', 'crow-tag', s.fail + ' fail, ' + s.warn + ' warn, ' + s.pass + ' pass, ' + s.info + ' info, ' + s.skipped + ' skipped'));
+      li.appendChild(h('span', 'crow-tag', ['fail', 'warn', 'pass', 'info', 'skipped'].filter(function (k) { return s[k]; }).map(function (k) { return s[k] + ' ' + k; }).join(', ') || 'no checks'));
       var bar = h('div', 'bar');
       bar.setAttribute('aria-hidden', 'true');
       ['pass', 'warn', 'fail'].forEach(function (st) {
@@ -267,7 +268,8 @@
         (st === 'all' || (st === 'issues' ? f.status === 'fail' || f.status === 'warn' : f.status === st));
     }).length : 0;
     $('shown').textContent = n + (n === 1 ? ' finding shown' : ' findings shown');
-    $('empty').textContent = st === 'issues' ? 'No fail or warn findings.' : 'No findings match these filters.';
+    $('empty-msg').textContent = st === 'issues' && cat === 'all' ? 'No fail or warn findings.' : 'No findings match these filters.';
+    $('reset-filters').hidden = cat === 'all' && st === 'all';
     $('empty').hidden = n > 0;
     // A narrowed view (one category, or pass/info/skipped) would otherwise show collapsed headers only.
     if (cat !== 'all' || st === 'pass' || st === 'info' || st === 'skipped') {
@@ -341,6 +343,12 @@
     reveal(ev);
   });
   $('filters').addEventListener('focusin', reveal);
+  $('reset-filters').addEventListener('click', function () {
+    $('cat-all').checked = true;
+    $('st-all').checked = true;
+    $('st-all').dispatchEvent(new Event('change', { bubbles: true }));
+    $('st-all').focus();
+  });
   // Keep scroll-padding-top equal to the sticky filter bar so keyboard focus is never left underneath it.
   if (window.ResizeObserver) {
     new ResizeObserver(function () {
