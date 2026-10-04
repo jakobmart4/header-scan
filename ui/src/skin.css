@@ -405,3 +405,8 @@ input[type="text"] {
 
 /* empty-state recovery action (reset-filters button) */
 #empty .btn { display: flex; width: fit-content; margin: var(--s3) auto 0; }
+
+/* site footer: privacy link (links must exist on the page: ux-privacy-policy check) */
+#site-foot { margin: var(--s6) 0 var(--s5); text-align: center; font-size: var(--fs-2); }
+#site-foot a { padding: var(--s2); }
+@media (max-width: 640px) { #site-foot { margin-bottom: 6rem; } } /* clear the docked tab bar */

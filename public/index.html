@@ -1711,6 +1711,11 @@ input[type="text"] {
 
 /* empty-state recovery action (reset-filters button) */
 #empty .btn { display: flex; width: fit-content; margin: var(--s3) auto 0; }
+
+/* site footer: privacy link (links must exist on the page: ux-privacy-policy check) */
+#site-foot { margin: var(--s6) 0 var(--s5); text-align: center; font-size: var(--fs-2); }
+#site-foot a { padding: var(--s2); }
+@media (max-width: 640px) { #site-foot { margin-bottom: 6rem; } } /* clear the docked tab bar */
 /* skin-charts: chart interaction + polish layered on the highend skin.
    Owns: donut (legend highlight, textured arcs, depth, tick bezel), heat grid (crosshair, legend), category rows
    (segment draw, hover numerals), severity stack. Base = final state; keyframes hold only the from-side;
@@ -3289,6 +3294,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   <p id="verify-msg" role="status" aria-live="polite" data-tone="muted"></p>
   <div class="row"><button type="button" id="deep-btn" class="btn primary" disabled>Run deep scan</button></div>
 </section>
+<footer id="site-foot" class="muted"><a href="/privacy">Privacy</a></footer>
 </main>
 <div id="toast" role="status" aria-live="polite" data-show="false" data-tone="ok"></div>
 <script>

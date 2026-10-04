@@ -17,6 +17,7 @@ DEPLOYMENT (live, the user's own infrastructure): UI+proxy Worker ${LIVE} -> Ren
 ANOTHER WORKFLOW is running concurrently and owns: lib/checks/html.js, test/ux-applicability.test.js, test/fixtures/ux/*, public/og.*, ui/src/index.template.html (og tags), docs/ux-*. Do NOT touch those. Do not commit (the lead commits). Never use port 34872 (Rojo); never leave servers/processes/browser tabs open; no secrets in any output or file.
 LIMITS for anything touching the LIVE deployment: black-box, read-only style requests only, at most ~80 requests in total, >= 1 s apart, no load/DoS tests, no attempts to bypass the proxy key, no scanning of third-party hosts except what a scan request legitimately targets (use https://example.com). Code/comments English; final reply English, brief.`
 
+const NOEDGE = "\n\nBROWSER RULE (user instruction): do NOT use Microsoft Edge in any way: never start msedge.exe, never use a CDP/remote-debugging connection to Edge, never launch Playwright/Puppeteer/Selenium or any browser binary yourself. If a browser is truly needed use only the built-in Browser pane tools (mcp__Claude_Browser__*) with your own tab; otherwise report what could not be checked. Kill any server you start by PID when done."
 const FIND = { type: 'object', properties: { findings: { type: 'array', items: { type: 'object', properties: { area: { type: 'string' }, severity: { type: 'string' }, problem: { type: 'string' }, evidence: { type: 'string' }, fix: { type: 'string' } }, required: ['area', 'problem'] } }, notes: { type: 'string' } }, required: ['findings'] }
 
 const AUDITORS = [
@@ -27,12 +28,12 @@ const AUDITORS = [
 
 phase('Audit')
 const audits = await parallel(AUDITORS.map(a => () =>
-  agent(`${COMMON}\n\nTASK (${a.k}): ${a.t}`, { label: `audit:${a.k}`, phase: 'Audit', schema: FIND })))
+  agent(`${COMMON}${NOEDGE}\n\nTASK (${a.k}): ${a.t}`, { label: `audit:${a.k}`, phase: 'Audit', schema: FIND })))
 const all = audits.filter(Boolean).flatMap(r => r.findings)
 log(`audit findings: ${all.length}`)
 
 phase('Fix')
-const fixed = all.length === 0 ? null : await agent(`${COMMON}
+const fixed = all.length === 0 ? null : await agent(`${COMMON}${NOEDGE}
 
 Findings from the three auditors (the tls-real auditor may already have fixed lib/checks/tls.js — re-check before touching it):\n${JSON.stringify(all, null, 1)}\n
 Verify each is real before changing anything; skip false ones with a reason; fix in worker/index.js, server.js, lib/ (NOT lib/checks/html.js), wrangler.toml, _headers generation (scripts/build-pages.mjs), README/DEPLOY.md; add a regression test per code fix; keep the whole suite green; do not deploy or change anything in the live Cloudflare/Render accounts — list what needs a manual dashboard change as a TODO for the user. Return fixed/skipped/todo-for-user lists and final test counts.`,

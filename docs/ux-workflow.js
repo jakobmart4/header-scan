@@ -26,6 +26,8 @@ const ANALYSTS = [
   { k: 'best-practice', t: `Research (WebSearch/WebFetch, cite URLs) when each of these practices is actually required or useful, to define applicability: privacy policy (GDPR Art. 13/ePrivacy: needed when personal data or non-essential cookies/analytics are used — NOT merely because a <form> exists), thank-you/confirmation page (only for lead/contact/newsletter POST forms, not search/app forms), internal links, CTA above the fold, FAQ with 5 items (+ FAQPage schema), breadcrumbs, custom 404 (Google soft-404 guidance), response-time promise, local schema/maps/reviews/team photo (only for local businesses). Write ${ROOT}\\docs\\ux-research.md (<=100 lines) with a concise applicability rule + what evidence on the page proves applicability, per check. Also read the user's checklist via memory file C:\\Users\\PC\\.claude\\projects\\C--Skills\\memory\\web-projekti-kontrollnimekiri.md.` },
   { k: 'share-image', t: `Decide how to produce the site's share image (1200x630) without npm dependencies. Currently public/og.svg exists but Facebook/X/LinkedIn do not render SVG og:image. Options to test in practice: (1) render an HTML page 1200x630 in a real browser and save a screenshot to disk — the Claude-in-Chrome tools (mcp__claude-in-chrome__*, load via ToolSearch; the user's Brave is connected; screenshot action has save_to_disk) and the built-in browser (mcp__Claude_Browser__*); (2) a pure-node PNG writer (zlib) with a small embedded bitmap font. Try (1) first: actually produce a file, check its real pixel size and format (PNG/JPEG magic bytes, width x height from the header) and view it. Report what works, the exact recipe, and the resulting file path under ${ROOT}\\docs\\og-candidate.* . Do NOT edit the repo's ui/src or public/ (the build agent does that). Close any browser tab you open.` },
 ]
+const NOEDGE = "\n\nBROWSER RULE (user instruction): do NOT use Microsoft Edge in any way: never start msedge.exe, never use a CDP/remote-debugging connection to Edge, never launch Playwright/Puppeteer/Selenium or any browser binary yourself. If a browser is truly needed use only the built-in Browser pane tools (mcp__Claude_Browser__*) with your own tab; otherwise report what could not be checked. Kill any server you start by PID when done."
+
 phase('Analyze')
 const analysis = await parallel(ANALYSTS.map(a => () =>
   agent(`${COMMON}\n\nTASK (${a.k}): ${a.t}\nReturn a 5-line summary.`, { label: `analyze:${a.k}`, phase: 'Analyze', schema: SUM })))
@@ -57,7 +59,7 @@ log(`builders: ${built.filter(Boolean).length}/${BUILDERS.length}`)
 
 // ---------- Integrate ----------
 phase('Integrate')
-const integ = await agent(`${COMMON}
+const integ = await agent(`${COMMON}${NOEDGE}
 
 Builders' notes:\n${JSON.stringify(built.filter(Boolean))}\n
 You are the integrator: make everything consistent with docs/UX-SPEC.md; run the FULL suite until green (npm run build:ui first; adapt tests only where they encode the old behaviour, list them); check SPEC.md check counts are still true (119 passive + 25 deep = 144 unless the spec changed ids); rescan the 12-site corpus from docs/ux-corpus.md through a local server (free port, passive only, 3 s apart) and append an 'after' column/verdict to docs/ux-corpus.md; confirm the scanner's own page (scan https://header-scan.jakobmart4.workers.dev, it is live and current main may not be deployed yet — instead scan the local public/index.html by serving it with a tiny static server on a free port and HEADERSCAN_ALLOW_PRIVATE=1) no longer gets the irrelevant ux fails. Stop every server. Report honest counts and what is unverified.`,
@@ -72,14 +74,14 @@ const REVIEWERS = [
 ]
 phase('Review')
 const reviews = await parallel(REVIEWERS.map(r => () =>
-  agent(`${COMMON}\n\nYou are an ADVERSARIAL reviewer. Do NOT modify repo files; only report REAL, evidenced problems (drop doubtful ones), most severe first.\n${r.t}`,
+  agent(`${COMMON}${NOEDGE}\n\nYou are an ADVERSARIAL reviewer. Do NOT modify repo files; only report REAL, evidenced problems (drop doubtful ones), most severe first.\n${r.t}`,
     { label: `review:${r.k}`, phase: 'Review', schema: FIND })))
 const all = reviews.filter(Boolean).flatMap(r => r.findings)
 log(`review findings: ${all.length}`)
 
 // ---------- Fix ----------
 phase('Fix')
-const fixed = await agent(`${COMMON}
+const fixed = await agent(`${COMMON}${NOEDGE}
 
 Fix these reviewer findings (verify each is real first; skip false ones with a reason; add a regression test per fix; keep the suite green; update SPEC.md/README.md/UX-SPEC.md if behaviour changed; rebuild public/index.html with npm run build:ui if you touch ui/src; stop any process you started):\n${JSON.stringify(all, null, 1)}`,
   { label: 'fixer', phase: 'Fix', schema: { type: 'object', properties: { fixed: { type: 'array', items: { type: 'string' } }, skipped: { type: 'array', items: { type: 'string' } }, tests_passed: { type: 'number' }, tests_failed: { type: 'number' }, unverified: { type: 'string' } }, required: ['fixed', 'tests_passed', 'tests_failed'] } })

@@ -1,13 +1,14 @@
 // Build dist/ for Cloudflare Pages: copy public/, write _headers with a CSP that allows the inline
 // <style>/<script> by SHA-256 hash (same rule as server.js loadIndex).
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import crypto from 'node:crypto';
 
 rmSync('dist', { recursive: true, force: true });
 mkdirSync('dist');
 cpSync('public', 'dist', { recursive: true });
 
-const html = readFileSync('public/index.html', 'utf8');
+// every top-level public/*.html page (index, privacy) contributes its inline <style>/<script> hashes to the one site-wide CSP
+const html = readdirSync('public').filter((f) => f.endsWith('.html')).map((f) => readFileSync('public/' + f, 'utf8')).join('\n');
 const hash = (s) => `'sha256-${crypto.createHash('sha256').update(s, 'utf8').digest('base64')}'`;
 const style = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => hash(m[1]));
 const script = [...html.matchAll(/<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => hash(m[1]));

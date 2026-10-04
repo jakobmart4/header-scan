@@ -1,6 +1,7 @@
 // HTTP server: static index.html + JSON API. See SPEC.md 4 and 5. node:http only, no framework.
 import http from 'node:http';
 import crypto from 'node:crypto';
+import net from 'node:net';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { scan as realScan, resolveTxt as realResolveTxt } from './lib/scan.js';
@@ -9,10 +10,23 @@ import { makeToken, isVerified, isSharedHost, txtNameFor } from './lib/verify.js
 
 const MAX_BODY = 4096;
 const MAX_ACTIVE = 4;
+const MAX_PER_IP = 2; // concurrent scans per client: one slow-target client must not hold every slot
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1']);
 
 class ApiError extends Error {
   constructor(status, code, message, headers = {}) { super(message); this.status = status; this.code = code; this.headers = headers; }
+}
+
+// Limiter key: IPv6 clients share their /64 (one subscriber routinely owns a whole /64, so rotating addresses must not buy fresh quota).
+export function limiterKey(ip) {
+  ip = String(ip).replace(/%.*$/, '');
+  if (!net.isIPv6(ip)) return ip;
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
+  if (mapped) return mapped[1];
+  const [head, tail = ''] = ip.split('::');
+  const h = head ? head.split(':') : [], t = tail ? tail.split(':') : [];
+  const groups = ip.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '').toLowerCase()).join(':') + '::/64';
 }
 
 function version() {
@@ -58,6 +72,7 @@ export function createServer(deps = {}) {
   const index = loadIndex();
   const ver = version();
   let active = 0;
+  const activeBy = new Map(); // limiter key -> running scans
 
   // ponytail: in-memory, resets on restart; per-process only, put a real limiter in front for multi-instance.
   const hits = new Map();
@@ -118,10 +133,20 @@ export function createServer(deps = {}) {
     return /^[a-z][a-z0-9+.-]*:\/\//i.test(u) ? u : 'https://' + u;
   };
 
-  async function runScan(url, deep, verified) {
+  // Called before limit() too, so a rejection for capacity does not use up the client's per-minute quota.
+  function admit(ip) {
     if (active >= MAX_ACTIVE) throw new ApiError(503, 'BUSY', 'server busy, try again shortly', { 'Retry-After': '10' });
-    active++;
-    try { return await scan({ url, deep, verified }); } finally { active--; }
+    if ((activeBy.get(ip) || 0) >= MAX_PER_IP) throw new ApiError(429, 'RATE_LIMITED', 'too many scans running from your address, wait for one to finish', { 'Retry-After': '10' });
+  }
+
+  async function runScan(ip, url, deep, verified) {
+    admit(ip);
+    active++; activeBy.set(ip, (activeBy.get(ip) || 0) + 1);
+    try { return await scan({ url, deep, verified }); } finally {
+      active--;
+      const n = activeBy.get(ip) - 1;
+      if (n > 0) activeBy.set(ip, n); else activeBy.delete(ip);
+    }
   }
 
   // Validate a host for verification: hostname only, public, not a shared platform domain or IP.
@@ -135,11 +160,12 @@ export function createServer(deps = {}) {
 
   async function route(req, res, u) {
     const p = u.pathname;
-    const ip = clientIp(req);
+    const ip = limiterKey(clientIp(req));
     if (proxyKey && p.startsWith('/api/') && p !== '/api/health' && !proxied(req)) throw new ApiError(403, 'FORBIDDEN', 'use the public site');
     if (p === '/' || p === '/index.html') {
       if (req.method !== 'GET' && req.method !== 'HEAD') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'method not allowed', { Allow: 'GET, HEAD' });
-      if (!index) throw new ApiError(404, 'NOT_FOUND', 'not found');
+      // behind the proxy the UI lives on the Worker only: the backend is not a second public entry point
+      if (!index || (proxyKey && !proxied(req))) throw new ApiError(404, 'NOT_FOUND', 'not found');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': index.csp, 'Cache-Control': 'no-store' });
       return res.end(index.body);
     }
@@ -149,21 +175,23 @@ export function createServer(deps = {}) {
     }
     if (p === '/api/scan') {
       if (req.method === 'GET') {
+        admit(ip);
         limit(ip, [['scan', 6]]);
-        return send(res, 200, await runScan(normalizeUrl(u.searchParams.get('url')), false, false));
+        return send(res, 200, await runScan(ip, normalizeUrl(u.searchParams.get('url')), false, false));
       }
       if (req.method !== 'POST') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'method not allowed', { Allow: 'GET, POST' });
       const body = await readJson(req);
       const wantDeep = body.deep === true;
+      admit(ip);
       limit(ip, wantDeep ? [['scan', 6], ['deep', 2]] : [['scan', 6]]);
       const url = normalizeUrl(body.url);
-      if (!wantDeep) return send(res, 200, await runScan(url, false, false));
+      if (!wantDeep) return send(res, 200, await runScan(ip, url, false, false));
       const target = parseTarget(url, { allowPrivate: process.env.HEADERSCAN_ALLOW_PRIVATE === '1' });
       // Ownership is re-checked on EVERY deep request; a client-supplied `verified` is never read.
       if (!(await isVerified(target.host, resolveTxt, { secret: deps.secret }))) {
         throw new ApiError(403, 'NOT_VERIFIED', `domain ownership not verified: add a DNS TXT record at ${txtNameFor(target.host)} (see POST /api/verify/start)`);
       }
-      return send(res, 200, await runScan(url, true, true));
+      return send(res, 200, await runScan(ip, url, true, true));
     }
     if (p === '/api/verify/start' || p === '/api/verify/check') {
       if (req.method !== 'POST') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'method not allowed', { Allow: 'POST' });
@@ -201,7 +229,7 @@ export function createServer(deps = {}) {
       send(res, err.status, { error: { code: err.code, message: err.message } }, err.headers);
     }
   });
-  server.requestTimeout = 15000;
+  server.requestTimeout = 15000; // time allowed to RECEIVE the request; it does not cut off long scans (45 s deadline in lib/scan.js)
   server.on('close', () => clearInterval(prune));
   return server;
 }

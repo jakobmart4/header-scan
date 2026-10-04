@@ -32,6 +32,8 @@ Form classification (per counted form; fields = `input`/`textarea`/`select` tags
 
 Known ceiling (comment with `ponytail:`): a tool whose other pages exist but are unlinked on the scanned page is treated as single-page; evidence says "single-page tool" so the user can tell why.
 
+> Update (reviewer round): the form classes, tool evidence, link rules and 403 handling in section 1 and the table below are superseded by the "Page-type signals" paragraph in SPEC.md section 6.6: forms are lead/search/auth/inert, tool status allows one real other page (legal/utility links, self and `/` ignored, www = apex), JSON-LD alone no longer suffices when promo links exist, and 403 is info only on a tool or a Cloudflare bot filter.
+
 ## 2. Rule table (owner A). "Unchanged" means byte-identical behaviour and evidence.
 
 | id | applicability condition | NOT applicable result (status, evidence, fix '') | applicable / strict |

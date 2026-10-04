@@ -101,3 +101,39 @@ Rows omitted (correct and uninteresting): all `info` results for ux-breadcrumbs,
 8. **Low-value strictness on minimal pages.** ux-alt-text fail on HN's spacer gifs, ux-404-page warn for tiny plain 404 bodies on HN and the worker. Correct, but noisy; leave as is unless the page-type work makes them skippable.
 
 Checks that held up well on this corpus: ux-local-schema, ux-maps, ux-breadcrumbs, ux-favicon, ux-default-hostname, ux-js-bundle-size, ux-alt-text (as a fact), seo-title/meta/OG/twitter/lang/canonical/robots/sitemap (as facts).
+
+## After the applicability work (rescan 2026-10-04)
+
+Method: same as above. Local server on a random free port (`HEADERSCAN_ALLOW_PRIVATE` unset for the 11 public sites), passive `GET /api/scan?url=...`, 11 s apart (the 6 per minute rate limit makes 3 s impossible), each scan returned 119 findings and no module errors. The own-site row is the built `public/index.html` served by a throwaway static server on a free port with `HEADERSCAN_ALLOW_PRIVATE=1` (the live worker still serves the old build). Servers stopped afterwards. Verdicts below were checked against the scanner's evidence strings and, where noted, the raw HTML; they were not re-verified page by page.
+
+Only rows whose status changed or that expose a new problem are listed. Everything not listed is unchanged from the table above.
+
+| site | check id | before | after | verdict |
+|---|---|---|---|---|
+| header-scan (local build) | ux-internal-links | fail | skipped | fixed |
+| header-scan (local build) | ux-cta-above-fold | warn | skipped | fixed |
+| header-scan (local build) | ux-faq | warn | skipped | fixed |
+| header-scan (local build) | ux-privacy-policy | fail | info (no personal-data form or tracker, single-page tool) | fixed |
+| header-scan (local build) | ux-thank-you | warn | skipped | fixed |
+| header-scan (local build) | ux-404-page | warn | info | fixed |
+| header-scan (local build) | quality score | B 88 | A 90 (0 fail, ux 100); the remaining deductions are seo/ai warns, not ux | measured |
+| err.ee | ux-thank-you | warn | skipped | fixed (search/feedback forms only) |
+| err.ee | ux-case-studies | pass | info | fixed (slug substring no longer matches) |
+| err.ee | ux-privacy-policy | fail | fail | now correct for a different reason: the page carries a gtag tracker and no policy link in raw HTML |
+| err.ee | ux-faq (8 items) / ux-response-time | pass | pass | still FP: 11 `<details>` collapsibles still count (known limit, >= 2 count), `24h` regex untouched |
+| hacker news | ux-thank-you | warn | skipped | fixed |
+| hacker news | ux-case-studies | pass | info | fixed (external link) |
+| hacker news | ux-privacy-policy | fail | pass (`/user`) | accidental pass: the link branch is unchanged, the match is a front-page username (`privacyisntdead`) in `user?id=`. Content-dependent, not caused by this work; a real FN |
+| wikipedia | ux-thank-you | warn | skipped | fixed |
+| wikipedia | ux-case-studies | pass | info | fixed |
+| notion | ux-404-page | warn (HTTP 401) | info (auth-gated host) | fixed |
+| notion | ux-case-studies | pass | pass (`/product/projects`) | still FP, documented limit |
+| eesti.ee | ux-privacy-policy | warn | fail | regression-ish: Cloudflare injects `static.cloudflareinsights.com/beacon.min.js` for the scanner's Accept header, and the widened tracker list now counts it, so "tracker and no policy link" becomes fail. Consistent with the spec (tool-tracker.html expects fail) but the raw HTML has no links at all, so absence still proves little. Decision for the owner: keep (cookieless but third-party analytics) or treat a lone cloudflareinsights beacon as non-collecting |
+| eesti.ee | ux-analytics | not listed (info) | pass | widened tracker list, expected |
+| allbirds | ux-privacy-policy / ux-thank-you | fail / warn | fail / warn | unchanged by contract: the contact form is a real lead form and the commerce signal keeps it strict |
+| summit dental | ux-thank-you | warn | warn | unchanged by contract (lead form) |
+| example.com | ux-internal-links / ux-privacy-policy / ux-cta-above-fold | fail / warn / warn | fail / warn / warn | unchanged by contract: no tool signal, stays strict |
+| excalidraw | ux-internal-links / ux-cta-above-fold / ux-privacy-policy | fail / warn / warn | fail / warn / warn | still FP/N/A: an empty app shell is never `isSinglePageTool` (seo-spa-shell owns it) |
+| mdn, smashing, wikipedia, hacker news, err.ee, notion, eesti.ee | ux-cta-above-fold | warn | warn | unchanged: docs/news/forum/wiki page types deliberately stay strict, word list/window out of scope |
+
+Irrelevant fail/warn results removed: the 6 own-site rows, 3 thank-you warns (err.ee, HN, Wikipedia; Allbirds and Summit stay), 3 false case-study passes (err.ee, HN, Wikipedia) and 1 Notion 404 warn. New or worse: eesti.ee privacy warn to fail. Still wrong and out of scope here: excalidraw (app shell), example.com, all cta warns on non-marketing pages, err.ee FAQ/response-time, Notion case-studies, HN privacy pass.

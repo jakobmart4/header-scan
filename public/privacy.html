@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Privacy | header-scan</title>
+<meta name="description" content="What header-scan processes when you scan a website: the URL you enter and your IP address for rate limiting, nothing stored, no cookies, no analytics.">
+<link rel="canonical" href="https://header-scan.jakobmart4.workers.dev/privacy">
+<style>
+:root{--paper:#e9ebf0;--surface:#fff;--ink:#0b1020;--muted:#4b5365;--accent:#4338ca;--rule:#c9cfdb}
+@media (prefers-color-scheme:dark){:root{--paper:#050608;--surface:#14171f;--ink:#eef0f6;--muted:#9aa2b5;--accent:#a5b4fc;--rule:#2b3040}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:1rem/1.6 system-ui,"Segoe UI",sans-serif}
+main{max-width:42rem;margin:0 auto;padding:2rem 1rem 4rem}
+article{background:var(--surface);border-radius:1.25rem;box-shadow:0 0 0 6px color-mix(in srgb,var(--rule) 55%,transparent);padding:1.5rem}
+h1{margin:0 0 .25rem;font-size:2rem;letter-spacing:-.02em;line-height:1.15}
+h2{margin:1.75rem 0 .5rem;font-size:1.125rem}
+p,li{margin:.5rem 0}
+ul{padding-left:1.25rem}
+.muted{color:var(--muted);font-size:.875rem}
+a{color:var(--accent);text-underline-offset:.15em}
+a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:2px}
+@media (forced-colors:active){article{border:1px solid CanvasText}}
+</style>
+</head>
+<body>
+<main>
+<article>
+<p><a href="/">&larr; header-scan</a></p>
+<h1>Privacy</h1>
+<p class="muted">Last updated 4 October 2026</p>
+
+<h2>What this service does</h2>
+<p>header-scan is a free website scanner run as a personal project. You enter a web address, our server fetches that site (headers, the home page, a few well-known files, TLS and DNS information) and returns a graded report to you.</p>
+
+<h2>What is processed</h2>
+<ul>
+<li><strong>The address you enter</strong> (or the host name for owner verification). It is used to run the scan and is not stored.</li>
+<li><strong>Your IP address.</strong> The server keeps it in memory for about a minute to limit how many scans one visitor can start, and to cap parallel scans. It is not written to disk.</li>
+<li><strong>The scan result.</strong> It is sent back to your browser and is not stored on the server. The Copy and Download buttons work locally in your browser.</li>
+</ul>
+
+<h2>What is not collected</h2>
+<ul>
+<li>No cookies, no local storage, no accounts.</li>
+<li>No analytics, advertising or tracking, and no third-party requests from the page (fonts, scripts and images are all local).</li>
+<li>The application server logs only internal error messages, not scanned addresses or visitor IP addresses.</li>
+</ul>
+
+<h2>Hosting providers</h2>
+<p>The site is delivered through Cloudflare and the scanning backend runs on Render. Like any host, they process connection data (such as IP addresses and request metadata) to run and secure their services, under their own policies: <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">Cloudflare</a> and <a href="https://render.com/privacy" rel="noopener noreferrer">Render</a>.</p>
+
+<h2>Sites you scan</h2>
+<p>A scan sends ordinary web requests to the address you entered, from our hosting provider's network, so they can appear in that site's logs. Scans are passive by default. Active checks (for example looking for exposed <code>/.git/</code> or <code>/.env</code> files) run only after the domain owner proves control with a DNS TXT record. Only scan sites you own or are allowed to test.</p>
+
+<h2>Legal basis and your rights</h2>
+<p>Processing is based on the legitimate interest of operating and protecting the service. Nothing is retained beyond the minutes described above, so there is normally nothing to access or delete. If you are in the EU you may also complain to your data protection authority (in Estonia: <a href="https://www.aki.ee/" rel="noopener noreferrer">Andmekaitse Inspektsioon</a>).</p>
+</article>
+</main>
+</body>
+</html>

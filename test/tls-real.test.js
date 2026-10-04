@@ -168,14 +168,14 @@ describe('tls.js against real TLS servers', { skip: !HAVE_OPENSSL && 'openssl bi
     assert.equal(sha1['tls-https'].status, 'pass', sha1['tls-https'].evidence);
     assert.equal(sha1['tls-cert-sigalg'].status, 'fail');
     assert.equal(sha1['tls-cert-sigalg'].evidence, 'sha1WithRSA');
-    const e = await scan(await serve(cert('ec', { k: ec })));
+    const e = await scan(await serve(cert('ec-leaf', { k: ec })));
     assert.equal(e['tls-cert-key'].status, 'pass');
     assert.equal(e['tls-cert-key'].evidence, 'EC 256 bits');
     assert.equal(e['tls-cert-sigalg'].evidence, 'ecdsa-with-SHA256');
   });
 
   test('a plain-TCP (non-TLS) listener: tls-https fails, TLS-only checks are skipped', async () => {
-    const s = net.createServer((c) => { c.on('error', () => {}); c.end('HTTP/1.1 400 Bad Request\r\n\r\n'); });
+    const s = net.createServer((c) => { sockets.add(c); c.on('error', () => {}); c.end('HTTP/1.1 400 Bad Request\r\n\r\n'); });
     servers.push(s);
     await new Promise((r) => s.listen(0, '127.0.0.1', r));
     const r = await scan(s);

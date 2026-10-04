@@ -49,8 +49,6 @@ describe('tls.js', () => {
     f = await T(async () => res(301, { location: 'http://example.test/other' }));
     assert.equal(f['tls-http-redirect'].status, 'fail');
   });
-  test('tls-legacy-protocols', (t) => t.skip('needs a real TLS server (self-signed cert + TLS1.0/1.1 support); not faked'));
-  test('tls-alpn-h2', (t) => t.skip('needs a real TLS server negotiating ALPN h2; not faked'));
 });
 
 // ---------------------------------------------------------------- html.js
