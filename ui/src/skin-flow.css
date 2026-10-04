@@ -1,0 +1,198 @@
+/* skin-flow: state-change flow layered on the highend skin.
+   1. filter changes morph via the View Transitions API (app.js initFilterFlow snapshots before the radio flips; the :has() filtering stays the source of truth)
+   2. staged scan loader: ten category rows light up in a wave that is phase-locked to the segmented #loadbar (indeterminate, claims no progress)
+   3. smoother #toast; results-state crossfade is a root view transition (app.js setState)
+   Motion: transform + opacity only (plus the UA's own group morph). Everything is killed by the base.css reduced-motion catch-all;
+   the view-transition pseudo-elements are not matched by `*`, so they get their own reduced-motion rule below. */
+
+/* ---------------------------------------------------------------------------------------------
+   1. Filter flow (view transitions). Names exist ONLY while html.flow-vt-filter is set by app.js initFilterFlow,
+   so a named element never costs a stacking context at rest. Bounded set: filters, list, <=10 category blocks, empty, raw, deep.
+   --------------------------------------------------------------------------------------------- */
+@supports (view-transition-name: none) {
+  html.flow-vt-filter #filters { view-transition-name: flow-filters; }
+  html.flow-vt-filter #findings { view-transition-name: flow-list; }
+  html.flow-vt-filter #empty { view-transition-name: flow-empty; }
+  html.flow-vt-filter #raw-card { view-transition-name: flow-raw; }
+  html.flow-vt-filter #deep { view-transition-name: flow-deep; }
+  html.flow-vt-filter #findings > .cat[data-c="headers"]  { view-transition-name: flow-cat-headers; }
+  html.flow-vt-filter #findings > .cat[data-c="cookies"]  { view-transition-name: flow-cat-cookies; }
+  html.flow-vt-filter #findings > .cat[data-c="tls"]      { view-transition-name: flow-cat-tls; }
+  html.flow-vt-filter #findings > .cat[data-c="dns"]      { view-transition-name: flow-cat-dns; }
+  html.flow-vt-filter #findings > .cat[data-c="mail"]     { view-transition-name: flow-cat-mail; }
+  html.flow-vt-filter #findings > .cat[data-c="content"]  { view-transition-name: flow-cat-content; }
+  html.flow-vt-filter #findings > .cat[data-c="seo"]      { view-transition-name: flow-cat-seo; }
+  html.flow-vt-filter #findings > .cat[data-c="ai"]       { view-transition-name: flow-cat-ai; }
+  html.flow-vt-filter #findings > .cat[data-c="ux"]       { view-transition-name: flow-cat-ux; }
+  html.flow-vt-filter #findings > .cat[data-c="exposure"] { view-transition-name: flow-cat-exposure; }
+}
+
+/* the page itself does not crossfade: the new root sits on top, only the named groups move */
+html.flow-vt-filter::view-transition-old(root) { display: none; }
+html.flow-vt-filter::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+html.flow-vt-filter::view-transition-group(*) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-out);
+}
+/* blocks that enter or leave (not in both states) fade and slide a short way; the rest morph in place */
+html.flow-vt-filter::view-transition-new(*):only-child { animation: flow-vt-in 320ms var(--ease-out) both; }
+html.flow-vt-filter::view-transition-old(*):only-child { animation: flow-vt-out 200ms var(--ease-io) both; }
+@keyframes flow-vt-in  { from { opacity: 0; transform: translateY(14px); } }
+@keyframes flow-vt-out { to   { opacity: 0; transform: translateY(-8px); } }
+
+/* the snapshot carries the reveal, so the skin's re-show rise on category blocks would play twice (app.js sets html.flow-vt-ok) */
+html.flow-vt-ok #results[data-state="done"][data-refilter] :is(.cat, #empty) { animation: none; }
+
+/* results-state changes (loading <-> report/error): plain root crossfade, the viewport-sized root snapshot is cheap */
+html.flow-vt-state::view-transition-group(root) {
+  animation-duration: 300ms;
+  animation-timing-function: var(--ease-io);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-image-pair(*), ::view-transition-old(*), ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   2. Staged scan loader
+   #loadbar: ten segments (mask), so the existing sweep visibly lights them one after another.
+   The sweep head travels 140% of the bar; one full pass takes 5.6s, i.e. 0.4s per segment.
+   The stage rows (static markup in the template, inside .skel-cats) use delay = row * 0.4s and the same 5.6s cycle, so row N
+   lights up while the head crosses segment N. Not real progress: the wave just repeats until the scan ends.
+   --------------------------------------------------------------------------------------------- */
+#loadbar {
+  -webkit-mask: linear-gradient(90deg, #000 calc(100% - 4px), transparent 0) 0 0 / 10% 100% repeat-x;
+          mask: linear-gradient(90deg, #000 calc(100% - 4px), transparent 0) 0 0 / 10% 100% repeat-x;
+}
+#app[data-busy="true"] #loadbar::after { animation-duration: 5.6s; }
+
+.skel-cats.flow-on { display: flex; flex-direction: column; }
+.skel-cats.flow-on::before { display: none; } /* the generic bar hints are replaced by the rows */
+.flow-head {
+  position: relative; z-index: 1;
+  margin: 0; padding: var(--s4) var(--s4) var(--s3);
+  font: 600 .6875rem/1.4 var(--font-body);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.flow-stages {
+  position: relative; z-index: 1; /* above the skeleton shimmer overlay */
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; gap: .625rem;
+  margin: 0; padding: 0 var(--s4) var(--s4);
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .flow-head { padding: var(--s5) var(--s5) var(--s3); }
+  .flow-stages { padding: 0 var(--s5) var(--s5); }
+}
+
+.flow-stage:nth-child(2) { --i: 1; } .flow-stage:nth-child(3) { --i: 2; } .flow-stage:nth-child(4) { --i: 3; } .flow-stage:nth-child(5) { --i: 4; }
+.flow-stage:nth-child(6) { --i: 5; } .flow-stage:nth-child(7) { --i: 6; } .flow-stage:nth-child(8) { --i: 7; } .flow-stage:nth-child(9) { --i: 8; } .flow-stage:nth-child(10) { --i: 9; }
+.flow-stage {
+  position: relative; isolation: isolate;
+  flex: 1 1 0; min-height: 2.5rem;
+  display: grid; align-items: center;
+  grid-template-columns: 1.1rem minmax(0, 1fr);
+  grid-template-areas: "dot name" "bar bar";
+  gap: var(--s2) var(--s3);
+  padding: var(--s2) var(--s4);
+  border-radius: 1.25rem;
+  background: var(--tile);
+}
+@media (min-width: 640px) {
+  .flow-stage {
+    grid-template-columns: 1.1rem 9.5rem minmax(0, 1fr);
+    grid-template-areas: "dot name bar";
+  }
+}
+/* lit tile: an accent wash behind the row (opacity only) */
+.flow-stage::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent);
+  opacity: 0;
+}
+.flow-dot {
+  grid-area: dot;
+  display: grid; place-items: center;
+  width: 1.1rem; height: 1.1rem;
+  border: 2px solid var(--edge);
+  border-radius: 50%;
+}
+.flow-dot::after {
+  content: ""; width: .5rem; height: .5rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.flow-name {
+  grid-area: name; min-width: 0;
+  font: 650 .9375rem/1.2 var(--font-display);
+  letter-spacing: -.015em;
+  color: var(--ink);
+}
+.flow-bar {
+  grid-area: bar;
+  display: block; height: .75rem; overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+/* static (reduced motion / no animation): hatched, never a full solid bar, so it cannot read as "100%" */
+.flow-bar > i {
+  display: block; height: 100%;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 .5rem, transparent 0 1rem);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* negative delay = the same phase as 'wait i * .4s, then start', but no pending delay phase: a delayed infinite animation
+     forces a main-thread frame at every start, which meant ~14 frames/s for the first seconds of a scan */
+  .flow-bar > i { background: var(--accent); transform: scaleX(0); opacity: 0; }
+  .flow-stage::before { animation: flow-tile 5.6s linear infinite; animation-delay: calc(var(--i, 0) * .4s - 5.6s); }
+  .flow-dot::after    { animation: flow-dot  5.6s linear infinite; animation-delay: calc(var(--i, 0) * .4s - 5.6s); }
+  .flow-bar > i       { animation: flow-fill 5.6s linear infinite; animation-delay: calc(var(--i, 0) * .4s - 5.6s); }
+}
+/* lit window = 28.6% of the cycle (1.6s, the 40% sweep width); the rest is dark so only a short run of rows is lit at once */
+@keyframes flow-tile {
+  0%        { opacity: 0; }
+  4%, 24%   { opacity: 1; }
+  32%, 100% { opacity: 0; }
+}
+@keyframes flow-dot {
+  0%        { transform: scale(.35); opacity: .35; }
+  4%, 24%   { transform: scale(1);   opacity: 1; }
+  32%, 100% { transform: scale(.35); opacity: .35; }
+}
+@keyframes flow-fill {
+  0%        { transform: scaleX(0); opacity: 1; }
+  20%, 25%  { transform: scaleX(1); opacity: 1; }
+  32%       { transform: scaleX(1); opacity: 0; }
+  32.1%, 100% { transform: scaleX(0); opacity: 0; }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   3. Toast: eases out faster than it eases in, small overshoot on arrival
+   --------------------------------------------------------------------------------------------- */
+#toast {
+  transform: translateY(.75rem) scale(.98);
+  transition: opacity 200ms var(--ease-io), transform 260ms var(--ease-io);
+}
+#toast[data-show="true"] {
+  transform: none;
+  transition: opacity var(--d-mid) var(--ease-out), transform 560ms cubic-bezier(.34, 1.4, .64, 1);
+}
+
+@media (forced-colors: active) {
+  #loadbar { -webkit-mask: none; mask: none; }
+  .flow-stage { border: 1px solid CanvasText; }
+  .flow-stage::before { display: none; }
+  .flow-dot { border-color: CanvasText; }
+  .flow-dot::after, .flow-bar > i { background: Highlight; forced-color-adjust: none; }
+  .flow-bar { box-shadow: none; border: 1px solid CanvasText; }
+}

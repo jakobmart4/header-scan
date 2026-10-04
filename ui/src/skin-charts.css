@@ -1,0 +1,212 @@
+/* skin-charts: chart interaction + polish layered on the highend skin.
+   Owns: donut (legend highlight, textured arcs, depth, tick bezel), heat grid (crosshair, legend), category rows
+   (segment draw, hover numerals), severity stack. Base = final state; keyframes hold only the from-side;
+   only transform/opacity animate. DOM comes from index.template.html (.dn-t, .dn-depth) and app.js (renderHeat, renderCats, renderStack). */
+
+:root { --xc-veil: color-mix(in srgb, var(--surface) 70%, transparent); }
+
+/* =========================== 1. DONUT =========================== */
+#donut { --hole: 1.15rem; }
+
+/* inner bezel: hairline + dial ticks drawn in the border box of the hole (background-origin trick, no extra element) */
+#donut::after {
+  border: 4px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    repeating-conic-gradient(from -.35deg, color-mix(in srgb, var(--ink) 34%, transparent) 0 .7deg, transparent .7deg 6deg) border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+/* non-colour cue: arcs are cut into dashes (warn: coarse) and fine ticks (fail); pass stays solid.
+   .dn-t / .dn-depth are aria-hidden spans from the template, painted between the arcs and the veil/hole. */
+#donut .dn-t, #donut .dn-depth {
+  position: absolute; inset: 0; z-index: -1;
+  border-radius: 50%; pointer-events: none;
+}
+#donut .dn-t {
+  background: repeating-conic-gradient(var(--surface) 0 var(--cut), transparent 0 var(--per));
+  -webkit-mask-image: conic-gradient(transparent 0 calc(var(--lo) * 1%), #000 0 calc(var(--hi) * 1%), transparent 0);
+          mask-image: conic-gradient(transparent 0 calc(var(--lo) * 1%), #000 0 calc(var(--hi) * 1%), transparent 0);
+}
+#donut .dn-t[data-s="warn"] { --lo: var(--a); --hi: var(--b); --cut: 2.8deg; --per: 10deg; }
+#donut .dn-t[data-s="fail"] { --lo: var(--b); --hi: 99.7; --cut: 1.8deg; --per: 4.5deg; }
+#donut[data-empty="true"] .dn-t { display: none; }
+/* depth: light edge inside, soft shade outside; neutral white/black alpha so all three statuses keep their hue */
+#donut .dn-depth {
+  background: radial-gradient(closest-side, transparent 70%, rgb(255 255 255 / .2) 75%, transparent 87%, rgb(0 0 0 / .14) 100%);
+}
+#donut[data-empty="true"] .dn-depth { display: none; }
+
+/* highlight: a veil over the other arcs fades in (opacity only) */
+#donut::before {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  border-radius: 50%; pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--d-mid) var(--ease-out);
+}
+#donut[data-hl="pass"]::before { background: conic-gradient(transparent 0 calc(var(--a) * 1%), var(--xc-veil) 0); opacity: 1; }
+#donut[data-hl="warn"]::before { background: conic-gradient(var(--xc-veil) 0 calc(var(--a) * 1%), transparent 0 calc(var(--b) * 1%), var(--xc-veil) 0); opacity: 1; }
+#donut[data-hl="fail"]::before { background: conic-gradient(var(--xc-veil) 0 calc(var(--b) * 1%), transparent 0); opacity: 1; }
+@supports selector(:has(*)) {
+  #donut-card:has(.lg[data-s="pass"]:hover) #donut::before { background: conic-gradient(transparent 0 calc(var(--a) * 1%), var(--xc-veil) 0); opacity: 1; }
+  #donut-card:has(.lg[data-s="warn"]:hover) #donut::before { background: conic-gradient(var(--xc-veil) 0 calc(var(--a) * 1%), transparent 0 calc(var(--b) * 1%), var(--xc-veil) 0); opacity: 1; }
+  #donut-card:has(.lg[data-s="fail"]:hover) #donut::before { background: conic-gradient(var(--xc-veil) 0 calc(var(--b) * 1%), transparent 0); opacity: 1; }
+}
+#donut[data-empty="true"]::before { display: none; }
+
+/* legend rows: no-shift hover plate (negative margin cancels the padding), swatch pops */
+.legend > .lg { margin-inline: -.5rem; padding-inline: .5rem; border-radius: .625rem; }
+.legend > .lg[data-s="pass"], .legend > .lg[data-s="warn"], .legend > .lg[data-s="fail"] { cursor: default; }
+.legend > .lg:hover:not(.plain) { background: var(--tile); }
+.legend .sw { transition: transform var(--d-mid) var(--ease-out); }
+@media (hover: hover) { .legend > .lg:hover .sw { transform: scale(1.3); } }
+
+/* =========================== 2. HEAT GRID =========================== */
+#heat { --xh: color-mix(in srgb, var(--accent) 16%, transparent); }
+#heat td.hc { transition: transform var(--d-fast) var(--ease-out); }
+#heat td.hc:not([data-z]) { font-weight: 650; }
+#heat td.hc[data-z] { color: var(--muted); }
+#heat td.hc:hover { position: relative; z-index: 2; transform: scale(1.14); outline: 2px solid var(--accent); outline-offset: -1px; }
+@supports selector(:has(*)) {
+  /* row + column crosshair; no tooltip (headers carry title/aria) */
+  #heat tbody tr:has(:hover) > td.hc,
+  #heat:has(:is(td.hc, thead th):nth-child(2):hover) :is(td.hc, thead th):nth-child(2),
+  #heat:has(:is(td.hc, thead th):nth-child(3):hover) :is(td.hc, thead th):nth-child(3),
+  #heat:has(:is(td.hc, thead th):nth-child(4):hover) :is(td.hc, thead th):nth-child(4),
+  #heat:has(:is(td.hc, thead th):nth-child(5):hover) :is(td.hc, thead th):nth-child(5),
+  #heat:has(:is(td.hc, thead th):nth-child(6):hover) :is(td.hc, thead th):nth-child(6),
+  #heat:has(:is(td.hc, thead th):nth-child(7):hover) :is(td.hc, thead th):nth-child(7),
+  #heat:has(:is(td.hc, thead th):nth-child(8):hover) :is(td.hc, thead th):nth-child(8),
+  #heat:has(:is(td.hc, thead th):nth-child(9):hover) :is(td.hc, thead th):nth-child(9),
+  #heat:has(:is(td.hc, thead th):nth-child(10):hover) :is(td.hc, thead th):nth-child(10),
+  #heat:has(:is(td.hc, thead th):nth-child(11):hover) :is(td.hc, thead th):nth-child(11) {
+    background-image: linear-gradient(var(--xh), var(--xh));
+  }
+  #heat tbody tr:has(:hover) > th { color: var(--ink); box-shadow: inset -3px 0 0 var(--accent); }
+  #heat:has(:is(td.hc, thead th):nth-child(2):hover) thead th:nth-child(2),
+  #heat:has(:is(td.hc, thead th):nth-child(3):hover) thead th:nth-child(3),
+  #heat:has(:is(td.hc, thead th):nth-child(4):hover) thead th:nth-child(4),
+  #heat:has(:is(td.hc, thead th):nth-child(5):hover) thead th:nth-child(5),
+  #heat:has(:is(td.hc, thead th):nth-child(6):hover) thead th:nth-child(6),
+  #heat:has(:is(td.hc, thead th):nth-child(7):hover) thead th:nth-child(7),
+  #heat:has(:is(td.hc, thead th):nth-child(8):hover) thead th:nth-child(8),
+  #heat:has(:is(td.hc, thead th):nth-child(9):hover) thead th:nth-child(9),
+  #heat:has(:is(td.hc, thead th):nth-child(10):hover) thead th:nth-child(10),
+  #heat:has(:is(td.hc, thead th):nth-child(11):hover) thead th:nth-child(11) {
+    color: var(--ink); box-shadow: inset 0 -3px 0 var(--accent);
+  }
+}
+
+/* legend: smooth ramp (cells are continuous, so no fake bins) with quarter ticks and real endpoints from the JS */
+.heat-legend { gap: var(--s3); }
+.heat-legend i {
+  flex: 1 1 6rem; max-width: 10rem; height: .625rem;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--surface) 0 25%),
+    linear-gradient(90deg, var(--track), var(--fail));
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .heat-legend i {
+    background:
+      repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--surface) 0 25%),
+      linear-gradient(90deg, var(--track), color-mix(in srgb, var(--fail) var(--heat-max), var(--track)));
+  }
+}
+.heat-legend span { font-variant-numeric: tabular-nums; }
+
+/* =========================== 3. CATEGORY ROWS =========================== */
+@keyframes xc-seg { from { transform: scaleX(0); } }
+/* the track appears with its row; each segment then fills in turn (pass, warn, fail), left to right */
+#results[data-state="done"] #cats .bar { animation: none; }
+#cats .bar > .seg { transform-origin: left center; }
+#cats .bar > .seg:nth-child(2) { --k: 1; }
+#cats .bar > .seg:nth-child(3) { --k: 2; }
+#results[data-state="done"] #cats .bar > .seg {
+  animation: xc-seg calc(var(--d-reveal) * 1.4) var(--ease-out)
+    calc(300ms + min(var(--i, 0), 10) * var(--step) + var(--k, 0) * 110ms) backwards;
+}
+#cats > .crow { --xc-bg: var(--tile); }
+#cats > .crow:hover { --xc-bg: color-mix(in srgb, var(--accent) 7%, var(--tile)); background: var(--xc-bg); }
+.crow .bar { transition: transform var(--d-mid) var(--ease-out); }
+.crow:hover .bar { transform: scaleY(1.45); }
+
+/* hover numerals live inside .crow-name (absolute: zero layout impact), built by app.js renderCats */
+/* the numerals sit over the right end of the name column: only where that column is wide enough to hold the longest name too
+   (it is a definite-width grid track, so inline-size containment is safe). Longest need is about 175px (name + three numerals) */
+.crow-name { position: relative; container-type: inline-size; }
+.crow-name .xc-n {
+  position: absolute; right: 0; top: 50%;
+  display: flex; align-items: center; gap: .6rem;
+  height: 1.5rem; margin-top: -.75rem; padding-left: .5rem;
+  background: var(--xc-bg);
+  opacity: 0; transform: translateY(4px);
+  transition: opacity var(--d-mid) var(--ease-out), transform var(--d-mid) var(--ease-out);
+  pointer-events: none;
+}
+.crow:hover .xc-n { opacity: 1; transform: none; }
+@media (hover: none) and (min-width: 400px) { .crow-name .xc-n { opacity: 1; transform: none; } }
+@media (max-width: 359.98px) { .crow-name .xc-n { display: none; } }
+@container (max-width: 12.5rem) { .crow-name .xc-n { display: none; } }
+@supports not (container-type: inline-size) { .crow-name .xc-n { display: none; } }
+.xc-n b {
+  display: inline-flex; align-items: baseline; gap: .15rem;
+  font: 700 1.25rem/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.03em;
+  color: var(--c);
+}
+.xc-n b[data-s="pass"] { --c: var(--pass); }
+.xc-n b[data-s="warn"] { --c: var(--warn); }
+.xc-n b[data-s="fail"] { --c: var(--fail); }
+.xc-n b i { font: 600 .6875rem/1 var(--font-body); font-style: normal; letter-spacing: 0; }
+
+/* =========================== 4. SEVERITY STACK =========================== */
+@keyframes xc-ss { from { transform: scaleX(0); } }
+.sevstack { margin: var(--s3) 0 var(--s4); }
+.ss-bar {
+  display: flex; gap: 2px; height: .875rem; overflow: hidden;
+  border-radius: var(--r-pill); background: var(--track);
+  box-shadow: 0 0 0 1px var(--edge);
+}
+.ss-seg {
+  flex: var(--n, 0) 1 0; min-width: 4px; display: block;
+  background: color-mix(in srgb, var(--fail) var(--sv, 100%), var(--surface));
+  transform-origin: left center;
+}
+.ss-seg[data-sev="5"], .ss-sw[data-sev="5"] { --sv: 100%; }
+.ss-seg[data-sev="4"], .ss-sw[data-sev="4"] { --sv: 90%; }
+.ss-seg[data-sev="3"], .ss-sw[data-sev="3"] { --sv: 81%; }
+.ss-seg[data-sev="2"], .ss-sw[data-sev="2"] { --sv: 71%; }
+.ss-seg[data-sev="1"], .ss-sw[data-sev="1"] { --sv: 62%; }
+#results[data-state="done"] .ss-seg {
+  animation: xc-ss calc(var(--d-reveal) * 1.4) var(--ease-out) calc(450ms + var(--si, 0) * 50ms) backwards;
+}
+.ss-key {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .25rem;
+  margin: var(--s2) 0 0; padding: 0; list-style: none;
+}
+.ss-k { display: grid; gap: .1rem; min-width: 0; font-size: .6875rem; line-height: 1.25; color: var(--muted); }
+.ss-l { display: flex; align-items: center; gap: .3rem; white-space: nowrap; font-weight: 600; }
+.ss-sw {
+  flex: none; width: .5rem; height: .5rem; border-radius: 50%;
+  background: color-mix(in srgb, var(--fail) var(--sv, 100%), var(--surface));
+  box-shadow: 0 0 0 1px var(--edge);
+}
+.ss-v { font: 700 1.25rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--ink); }
+.ss-k[data-z] .ss-v { color: var(--muted); font-weight: 500; }
+.ss-s { white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* the skeleton reserves the heat card: the stack adds roughly this much */
+.skel-heat { min-height: calc(17.75rem + 5.1rem); }
+@media (min-width: 640px) and (max-width: 959.98px) { .skel-heat { min-height: 28.6rem; } }
+@media (min-width: 960px) { .skel-heat { min-height: calc(19.5rem + 5.1rem); } }
+
+/* =========================== forced colors =========================== */
+@media (forced-colors: active) {
+  #donut::after { border-color: Canvas; background: Canvas; box-shadow: none; }
+  #donut .dn-t { forced-color-adjust: none; background: repeating-conic-gradient(Canvas 0 var(--cut), transparent 0 var(--per)); }
+  #donut .dn-depth { display: none; }
+  .ss-bar { box-shadow: none; border: 1px solid CanvasText; background: Canvas; }
+  .ss-seg { forced-color-adjust: none; background: CanvasText; }
+  .ss-sw { forced-color-adjust: none; background: CanvasText; box-shadow: none; }
+  #heat td.hc:hover { outline-color: Highlight; }
+}

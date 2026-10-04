@@ -1,0 +1,153 @@
+/* skin-motion: fluid motion language, layered on top of skin.css (append AFTER the skin).
+   Rules kept from DESIGN.md: animate only transform / opacity / registered --p --gn; base CSS is the final state, reveal
+   keyframes hold only the `from` side; the reduced-motion catch-all in base.css (animation/transition: none !important)
+   neutralises everything here, and nothing in this layer carries information. New features sit behind @supports. */
+
+/* ============================== 1. spring easing tokens ==============================
+   cubic-bezier fallbacks first; linear() real springs (damped oscillator, zeta .7 / .55 / 1) where supported.
+   soft ~4.6% overshoot (cards, rows, chevrons, chips), pop ~12.6% (badges, grade letter, disc), settle 0% (numeric draws:
+   the count-up must never read above the real score). */
+:root {
+  --spring-soft: cubic-bezier(.34, 1.25, .64, 1);
+  --spring-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --settle: cubic-bezier(.16, 1, .3, 1);
+  --m-lift: 0 18px 28px -18px rgb(30 35 90 / .35);
+}
+@media (prefers-color-scheme: dark) { :root { --m-lift: 0 18px 28px -18px rgb(0 0 0 / .7); } }
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-soft: linear(0, 0.041, 0.141, 0.271, 0.412, 0.548, 0.671, 0.776, 0.861, 0.927, 0.976, 1.009, 1.03, 1.042, 1.046, 1.045, 1.041, 1.035, 1.029, 1.023, 1.017, 1.012, 1.007, 1.004, 1.002, 1, 1);
+    --spring-pop: linear(0, 0.051, 0.176, 0.34, 0.517, 0.684, 0.829, 0.945, 1.031, 1.086, 1.117, 1.126, 1.121, 1.106, 1.085, 1.063, 1.042, 1.023, 1.008, 0.997, 0.99, 0.985, 0.984, 0.985, 0.986, 0.989, 0.992, 0.995, 0.997, 0.999, 1);
+    --settle: linear(0, 0.083, 0.246, 0.417, 0.566, 0.686, 0.777, 0.844, 0.893, 0.927, 0.95, 0.967, 0.978, 0.985, 0.99, 0.993, 1);
+  }
+}
+
+/* ============================== 2. reveal choreography (replays on every scan) ==============================
+   Timeline in ms (start + duration = end, all < 1600):
+   cards 0..180+560 | gauges 100+950 | grade 660+520 | meta/actions 300/360+520 | donut 280+600 (scroll-driven where supported) |
+   legend 420..570+520 | rows 240..660+640 | category groups 450..720+560.
+   Deliberately NOT animated: the 119 finding rows, the category bar tracks (skin-charts fills their segments) and the 50 heat
+   cells: concurrently running animations cost scan-completion frames, and most of those sit below the fold anyway. */
+@keyframes m-rise { from { opacity: 0; transform: translateY(.5rem); } }
+@keyframes m-rise-sm { from { opacity: 0; transform: translateY(.875rem) scale(.985); } }
+@keyframes m-rise-xs { from { opacity: 0; transform: translateY(.5rem); } }
+@keyframes m-slide-xs { from { opacity: 0; transform: translateX(-.5rem); } }
+@keyframes m-fade { from { opacity: 0; } }
+@keyframes m-ring-in { from { opacity: 0; transform: rotate(-120deg) scale(.9); } }
+@keyframes m-list-in { from { opacity: 0; transform: translateY(-.5rem); } }
+@keyframes m-chip { from { transform: scale(.93); } }
+
+/* cards: --m-delay is read by the shorthand (skin sets delays with animation-delay, which a shorthand would reset) */
+#results[data-state="done"] #rail > .card,
+#results[data-state="done"] #cats-card {
+  animation: m-rise 560ms var(--settle) var(--m-delay, 0ms) backwards;
+}
+#results[data-state="done"] #donut-card { --m-delay: 90ms; }
+#results[data-state="done"] #heat-card { --m-delay: 180ms; }
+#results[data-state="done"] #cats-card { --m-delay: 60ms; }
+
+/* gauges: ring + count-up share one keyframe (skin); only the curve changes, never overshooting the score */
+html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-ring,
+html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
+  animation-duration: 950ms;
+  animation-timing-function: var(--settle);
+}
+/* no registered properties: the ring spins in instead of sweeping */
+html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="skip"]) .gauge-ring {
+  animation: m-ring-in 800ms var(--spring-soft) var(--delay, 100ms) backwards;
+}
+#results[data-state="done"] .gauge-grade {
+  animation-duration: 520ms;
+  animation-delay: 660ms;
+  animation-timing-function: var(--spring-pop);
+}
+#results[data-state="done"] #scorecard #meta { animation: m-rise-xs 520ms var(--spring-soft) 300ms backwards; }
+#results[data-state="done"] #scorecard #actions { animation: m-rise-xs 520ms var(--spring-soft) 360ms backwards; }
+
+/* donut: fades in (no spin: the gauge sweep is the one hero motion); legend rows slide in one by one */
+#results[data-state="done"] #donut { animation: m-fade 600ms var(--settle) 280ms backwards; }
+#results[data-state="done"] .legend > .lg { animation: m-slide-xs 520ms var(--spring-soft) calc(420ms + var(--lk, 0) * 50ms) backwards; }
+.legend > .lg:nth-child(2) { --lk: 1; } .legend > .lg:nth-child(3) { --lk: 2; }
+.legend > .lg:nth-child(4) { --lk: 3; } .legend > .lg:nth-child(5) { --lk: 4; }
+
+/* category rows (--i is set by app.js on the row) */
+#results[data-state="done"] #cats > .crow {
+  animation: m-rise-sm 640ms var(--spring-soft) calc(240ms + min(var(--i, 0), 10) * 42ms) backwards;
+}
+
+/* findings: the ten category groups reveal (the shorthand carries a delay var so the skin's [data-refilter] rule, higher
+   specificity, still wins on filter changes; the name is the same in both states, so a filter change never restarts rows);
+   the finding rows inside keep the skin's own behaviour */
+#results[data-state="done"] .cat {
+  animation: m-rise-sm 560ms var(--spring-soft) calc(450ms + min(var(--i, 0), 10) * 30ms) backwards;
+}
+.cat[open] > .list { animation: m-list-in 420ms var(--spring-soft) backwards; }
+
+/* ============================== 3. micro-interactions (transform only, never layout) ============================== */
+.btn { transition: transform 420ms var(--spring-soft); }
+.btn:hover:not(:disabled) { transform: translateY(-2px); }
+.btn:active:not(:disabled) { transform: translateY(1px) scale(.965); transition-duration: 90ms; transition-timing-function: var(--settle); }
+#scan-btn::after { transition: transform 480ms var(--spring-pop); }
+#scan-btn:active:not(:disabled)::after { transform: scale(.9); transition-duration: 90ms; }
+
+.chips label { transition: transform 380ms var(--spring-soft); }
+@media (hover: hover) { .chips label:hover { transform: translateY(-1px); } }
+.chips label:active { transform: scale(.95); transition-duration: 90ms; transition-timing-function: var(--settle); }
+/* a chip springs when it becomes the selection (and once per scan for the defaults) */
+.rb:checked + label { animation: m-chip 520ms var(--spring-pop); }
+
+.cat-sum::before { transition: transform 480ms var(--spring-pop); }
+@media (hover: hover) {
+  .cat:not([open]) > .cat-sum:hover::before { transform: translateX(2px) rotate(-45deg); }
+  .cat[open] > .cat-sum:hover::before { transform: translateY(2px) rotate(45deg); }
+}
+
+/* deep-scan stepper / verified badge pops: same keyframes as panels.css, spring curve */
+#deep[data-v="pending"] .steps li:nth-child(1)::before,
+#deep[data-v="verified"] .steps li:nth-child(-n+2)::before,
+#deep[data-v="verified"] #deep-btn::before,
+#deep[data-v="verified"] #verify-badge::before,
+#deep[data-v="verified"] #verify-badge::after { animation-timing-function: var(--spring-pop); }
+
+/* ============================== 4. scroll-driven enhancements (behind @supports) ============================== */
+@supports (animation-timeline: view()) {
+  /* the donut sits below the fold in most windows: its fade follows the scroll instead of playing unseen. One timeline only
+     (a view timeline per finding row cost about 4x the main-thread time per scroll frame with the All filter). */
+  #results[data-state="done"] #donut {
+    animation-timeline: view();
+    animation-range: entry 10% entry 90%;
+    animation-duration: auto;
+    animation-delay: 0s;
+    animation-timing-function: linear;
+  }
+}
+
+/* sticky scorecard (skin.css sticks it from 45rem window height; skin-radar.css lets it stick from 64rem, because the rail cards
+   below are 390 to 480px tall and need room next to it): scrolling 0..360px fades in a ground shadow.
+   The shadow is a pseudo layer whose opacity is animated; box-shadow itself is never animated (and no scale: the card keeps
+   the width of the cards it floats over). Without scroll-timeline support, or under reduced motion, the shadow layer stays at opacity 0. */
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 960px) and (min-height: 64rem) {
+    @keyframes m-lift { to { opacity: 1; } }
+    #scorecard::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      box-shadow: var(--m-lift);
+      opacity: 0;
+      pointer-events: none;
+      animation: m-lift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0px 360px;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  #scorecard::after { display: none; }
+}
+
+/* print / full-page capture: no hidden-until-scrolled rows */
+@media print { *, *::before, *::after { animation: none !important; } }

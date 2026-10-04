@@ -1,0 +1,158 @@
+/* taste: "cold lab ledger". Cool zinc paper + one petrol-teal accent, geometric sans (no serif), heavy tight display type, soft 16px tiles.
+   Asymmetry: boxed rail vs open ledger main (staggered 2rem lower), big Security ring vs small Quality ring, indented lede, short accent rule.
+   Dials (skill baseline 8/6/4): variance 8 kept, motion 5 (report already choreographs ~1.6s; extra motion hurts reading data), density 5 (data page). */
+
+:root {
+  /* colour (light): cool zinc, no beige, no pure black/white */
+  --paper: #e8ecef;
+  --surface: #f9fbfc;
+  --ink: #10151a;
+  --muted: #47525c;
+  --rule: #c8d1d8;
+  --edge: #77838d;
+  --track: #d9e0e5;
+  --wash: #dceef1;
+  --accent: #00697a;
+  --accent-ink: #f9fbfc;
+  --pass: #1f6b2c;
+  --pass-bg: #dfeedc;
+  --warn: #8a5300;
+  --warn-bg: #f7e9cf;
+  --fail: #b3261e;
+  --fail-bg: #fbe1dd;
+  --info: #3b5a8f;
+  --info-bg: #e2e9f4;
+
+  /* type: system stacks only; display is a heavy tight sans, numbers are mono */
+  --font-body: ui-sans-serif, "Segoe UI Variable Text", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-display: ui-sans-serif, "Segoe UI Variable Display", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+
+  /* shape rule: containers and tiles 16px, inner blocks (code, evidence, tags, status stamps) 8px, controls pill */
+  --r-card: 16px;
+  --r-chip: 8px;
+  --ring-w: .65rem;
+
+  /* shadows tinted to the slate/teal hue, never black */
+  --shadow-card: 0 1px 2px rgb(16 36 48 / .07), 0 12px 28px -18px rgb(16 36 48 / .28);
+  --shadow-lift: 0 26px 50px -32px rgb(0 82 98 / .5);
+
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0b0f12;
+    --surface: #131a1f;
+    --ink: #e9eef1;
+    --muted: #9aa6b0;
+    --rule: #26313a;
+    --edge: #7a8792;
+    --track: #1d262d;
+    --wash: #0f2a30;
+    --accent: #55d0e4;
+    --accent-ink: #03222a;
+    --pass: #86d47a;
+    --pass-bg: #17301a;
+    --warn: #efbf5c;
+    --warn-bg: #35290e;
+    --fail: #ff8f85;
+    --fail-bg: #3a1a17;
+    --info: #9db8ea;
+    --info-bg: #1a2640;
+    --shadow-card: 0 1px 0 var(--rule);
+    --shadow-lift: 0 0 0 0 transparent;
+  }
+}
+
+/* ---------- page frame ---------- */
+@keyframes t-rise { from { opacity: 0; transform: translateY(12px); } }
+
+#masthead { padding: var(--s7) 0 var(--s5); border-bottom: 0; gap: var(--s3); }
+#masthead::after { content: ""; justify-self: start; width: 3.5rem; height: .3rem; border-radius: 999px; background: var(--accent); }
+h1 {
+  font: 800 clamp(2.5rem, 7vw, 4.25rem)/.95 var(--font-display);
+  letter-spacing: -.05em;
+  animation: t-rise 520ms var(--ease-out) backwards;
+}
+#masthead p { max-width: 46ch; }
+@media (min-width: 640px) { #masthead p { margin-left: clamp(0rem, 8vw, 7rem); } }
+
+.eyebrow {
+  font: 700 var(--fs-3)/1.3 var(--font-body);
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--ink);
+}
+
+/* ---------- controls: pill ---------- */
+.btn { border-radius: var(--r-pill); padding-inline: var(--s5); }
+.btn:active:not(:disabled) { transform: scale(.98); }
+input[type="text"] { border-radius: var(--r-pill); padding-inline: var(--s4); }
+#scan-form { padding: var(--s3); gap: var(--s3); }
+#toast { border-radius: var(--r-pill); }
+
+/* ---------- rail: boxed tiles, one tinted ---------- */
+#scorecard { --surface: var(--wash); }
+#deep { background: var(--wash); }
+#deep::before { inset: var(--s4) auto var(--s4) 0; border-radius: 0 4px 4px 0; }
+
+.gauges { justify-content: space-between; align-items: flex-end; }
+.gauge-item .eyebrow { order: 2; }
+.gauge-item:first-child .gauge { --gauge-size: 8.25rem; }
+.gauge-item:last-child .gauge { --gauge-size: 6.25rem; }
+.gauge-item:last-child .gauge-grade { font-size: var(--fs-5); }
+.gauge-grade { font-weight: 800; letter-spacing: -.04em; }
+.gauge-num, .legend dd, .donut-total, .cat-count { font-family: var(--font-mono); }
+.donut-total { font-weight: 700; }
+
+#heat { border-spacing: 3px; }
+#heat td.hc { border-radius: 5px; font-family: var(--font-mono); }
+
+/* ---------- main: open ledger, tiles on paper ---------- */
+#cats-card { padding: 0; background: none; border: 0; box-shadow: none; }
+#cats-card > .eyebrow { margin-bottom: var(--s3); }
+#cats { gap: var(--s3); }
+#cats > .crow {
+  padding: var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+.crow .bar { height: .5rem; border-radius: 999px; }
+.crow-name { font-weight: 700; letter-spacing: -.01em; }
+
+.cat { margin: 0 0 var(--s6); border: 0; border-radius: 0; background: none; box-shadow: none; }
+.cat-sum { padding: var(--s3) 0; border-top: 2px solid var(--ink); }
+.cat[open] > .cat-sum { border-bottom: 0; }
+.cat-sum::before { border-color: var(--accent); margin-left: 0; }
+.cat-sum:focus-visible { outline-offset: 2px; }
+.cat-name { font-size: var(--fs-4); font-weight: 800; letter-spacing: -.02em; }
+.list { display: grid; gap: var(--s2); padding: var(--s1) 0 0; }
+.fnd { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+.fnd-title { font-weight: 700; letter-spacing: -.01em; }
+.pill, .chip { border-radius: var(--r-chip); letter-spacing: .02em; }
+.tag { font-family: var(--font-mono); }
+
+#filters { border-bottom: 0; padding-block: var(--s3); }
+.chips label { font-weight: 500; }
+
+/* ---------- asymmetric offset: main column sits 2rem lower than the rail ---------- */
+@media (min-width: 960px) {
+  #report-main { margin-top: var(--s6); }
+  .skel-cats, .skel-list { margin-top: var(--s6); }
+}
+
+/* ---------- motion: transform/opacity only, from-side keyframes, done state only ---------- */
+#results[data-state="done"] #scorecard { animation: t-rise var(--d-reveal) var(--ease-out) backwards; }
+#results[data-state="done"] #donut-card { animation: t-rise var(--d-reveal) var(--ease-out) 80ms backwards; }
+#results[data-state="done"] #heat-card { animation: t-rise var(--d-reveal) var(--ease-out) 160ms backwards; }
+
+/* ---------- forced colors: restore the borders removed above ---------- */
+@media (forced-colors: active) {
+  .cat-sum { border-top-color: CanvasText; }
+  #cats > .crow, .fnd { border: 1px solid CanvasText; }
+  #masthead::after { background: Highlight; forced-color-adjust: none; }
+  #deep::before { background: Highlight; }
+}

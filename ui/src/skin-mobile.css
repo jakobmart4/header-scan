@@ -1,0 +1,202 @@
+/* skin-mobile.css: mobile + chrome compaction (after skin-compact.css, before skin-tabs.css: the tabs file overrides #cats > .crow padding).
+   1. <= 640px: the donut, heat and radar cards become ONE swipeable strip (#strip, built by app.js initStrip; without the script the
+      three cards simply stay stacked). Scorecard stays on top. Dots (.strip-dots) are real buttons that scroll to a card.
+   2. category rows: denser, two columns from 480px, smaller gauges, one-line tag.
+   3. masthead + scan form compaction; scorecard compaction; tighter gaps (never below the 14px the two bezel rings need).
+   4. >= 960px: tighter rail cards (the skin's sticky scorecard is untouched).
+   Motion rules unchanged: only transform/opacity, nothing here carries information, reduced motion is the base.css catch-all.
+   No inline styles, no url(), no @import. Skeleton heights (.skel-*) follow the real heights measured at 375/768/1200. */
+
+/* ======================================== A. category rows (all widths) ======================================== */
+:root { --gauge-size-sm: 2.5rem; }
+#cats { gap: .5rem; }
+#cats > .crow {
+  grid-template-columns: var(--gauge-size-sm) minmax(0, 1fr);
+  column-gap: .625rem;
+  row-gap: .125rem;
+  padding: .5rem .75rem;
+  border-radius: 1rem;
+}
+#cats .gauge-sm { --ring-w: .3rem; --num-fs: .75rem; }
+#cats .crow-name { font-size: .9375rem; line-height: 1.25; }
+#cats .crow-tag { font-size: .75rem; line-height: 1.3; }
+#cats .crow .bar { height: .625rem; }
+@media (min-width: 480px) {
+  #cats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .625rem; }
+}
+
+/* ======================================== B. phones: <= 640px ======================================== */
+@media (max-width: 640px) {
+  :root { --gauge-size: 6.5rem; --donut-size: 7.5rem; }
+
+  /* gaps between cards: rings are 7px per side, so anything >= 14px keeps them apart */
+  #report, #rail, #report-main, #skeleton { gap: 1.125rem; }
+  #results { margin-bottom: 1rem; }
+
+  /* masthead: small pill, smaller h1, lede clamped to two lines (the full text stays in the DOM) */
+  #masthead { gap: .5rem; padding: 1rem 0 .75rem; margin-bottom: .75rem; }
+  #masthead::before { padding: .2rem .6rem; font-size: .625rem; letter-spacing: .14em; }
+  #masthead h1 { font-size: clamp(1.75rem, 8.5vw, 2.25rem); line-height: 1; letter-spacing: -.04em; }
+  #masthead p {
+    max-width: none; font-size: .875rem; line-height: 1.4;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* scan form: label on top, field + icon button in one row. The button keeps the text "Scan" for assistive tech
+     (font-size 0 hides it visually; the arrow disc is the visible icon). */
+  #scan-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .25rem .5rem; padding: .75rem; }
+  #scan-form .field { display: contents; }
+  #scan-form .field > label { grid-column: 1 / -1; padding-left: .5rem; font-size: .8125rem; line-height: 1.2; }
+  #scan-form input[type="text"] { grid-column: 1; }
+  #scan-form #scan-btn {
+    grid-column: 2;
+    width: 3rem; min-width: 3rem; min-height: 3rem; padding: 0;
+    justify-content: center; gap: 0;
+    font-size: 0;
+  }
+  #loadbar { margin-top: .5rem; }
+  #status { min-height: 1.25rem; margin: .25rem 0 .875rem; font-size: .8125rem; line-height: 1.25rem; }
+  #results[data-err="true"] > #error-box { margin-bottom: 1.125rem; }
+
+  /* scorecard: smaller rings and grade, one-row actions, small meta */
+  #scorecard { padding: .875rem 1rem; }
+  .gauges { gap: .5rem; }
+  .gauge-item { gap: .25rem; }
+  .gauge:not(.gauge-sm) { --ring-w: .5rem; }
+  .gauge-grade { font-size: 2rem; margin-bottom: 0; }
+  #scorecard #meta { margin: .625rem 0 .5rem; font-size: .75rem; line-height: 1.4; }
+  #scorecard #actions { flex-wrap: nowrap; gap: .5rem; }
+  #scorecard #actions .btn {
+    flex: 1 1 0; min-width: 0; min-height: 2.75rem;
+    padding: .25rem .5rem; font-size: .8125rem; line-height: 1.15; text-align: center;
+  }
+
+  /* category card */
+  #cats-card { padding: .875rem; }
+  #cats-card .eyebrow { margin-bottom: .625rem; }
+
+  /* ---------- the strip (donut | heat | radar). The element is created by app.js initStrip and only exists in this range ---------- */
+  #strip {
+    display: flex;
+    gap: 1rem;
+    margin: -.5rem -1rem;          /* full bleed: the cards' outer rings live in the padding, the next card peeks at the edge */
+    padding: .5rem 1rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #strip::-webkit-scrollbar { display: none; }
+  #strip:focus-visible { outline-offset: -4px; border-radius: 1.25rem; }
+  #strip > .card { flex: 0 0 min(88%, 22rem); min-width: 0; padding: .875rem; scroll-snap-align: start; }
+  #strip > #donut-card { display: flex; flex-direction: column; }
+  #strip #donut { margin: auto; }
+  #strip #donut-card .legend { margin-top: .5rem; }
+  #strip #heat-card { display: flex; flex-direction: column; }
+  #strip .heat-wrap { margin-top: .5rem; }
+  #strip .eyebrow { margin-bottom: .5rem; }
+  #strip #radar-card .radar { max-width: 13rem; margin: .25rem auto 0; } /* the radar sets the strip height: keep it modest */
+  #strip #donut-card .legend > .lg { padding: .2rem 0; }
+  #strip #radar-card .radar-key { margin-top: .25rem; }
+  #strip #radar-card .radar-note, #strip #radar-card .radar-codes { margin-top: .25rem; line-height: 1.35; }
+  #strip #radar-card .radar-codes { font-size: .75rem; }
+
+  /* the cards left the "#rail > .card" selector the skin animates, so animate them here (same keyframes, same delays);
+     the donut/radar scroll-driven fades watch a block-axis scroller that does not exist inside the strip: show the final state */
+  #results[data-state="done"] #strip > .card { animation: m-rise 560ms var(--settle) var(--m-delay, 0ms) backwards; }
+  #results[data-state="done"] #radar-card { --m-delay: 135ms; }
+  #results[data-state="done"] #strip #donut,
+  #results[data-state="done"] #strip #radar-card .radar-data,
+  #results[data-state="done"] #strip #radar-card .radar-pts { animation: none; }
+
+  /* dots: real buttons (a mouse user in a narrow window has no swipe); the active one is bigger AND accent coloured.
+     The 44px hit area overlaps the strip's bottom padding, so the row costs ~32px. */
+  .strip-dots { display: flex; justify-content: center; gap: 0; margin-top: -.75rem; }
+  .strip-dots[hidden] { display: none; }
+  .strip-dot {
+    position: relative; width: 2.75rem; height: 2.75rem; margin: 0; padding: 0;
+    border: 0; background: none; cursor: pointer;
+  }
+  .strip-dot::before {
+    content: ""; position: absolute; left: 50%; top: 50%; width: .5rem; height: .5rem; margin: -.25rem 0 0 -.25rem; border-radius: 50%;
+    background: var(--edge);
+    transition: transform var(--d-mid) var(--ease-out);
+  }
+  .strip-dot[aria-current="true"]::before { background: var(--accent); transform: scale(1.5); }
+  .strip-dot:focus-visible { outline: 3px solid var(--accent); outline-offset: -6px; border-radius: 50%; }
+
+  /* skeleton: donut + heat + radar are one strip tall; scorecard / category heights follow the real cards */
+  .skel-gauges { min-height: 15.25rem; }
+  .skel-gauges::before { inset: 1rem 1rem auto; }
+  .skel-donut { min-height: 31.5rem; }
+  .skel-donut::before { inset: 2.5rem 1rem auto; }
+  .skel-heat { display: none; }
+}
+
+@media (max-width: 479.98px) { .skel-cats { min-height: 47.5rem; } }
+@media (min-width: 480px) and (max-width: 640px) { .skel-cats { min-height: 27.5rem; } }
+
+/* heat grid inside a 253..302px card: 3-letter codes must not clip */
+@media (max-width: 359.98px) {
+  #heat thead th { font-size: .5625rem; letter-spacing: -.05em; }
+}
+
+/* ======================================== C. tablet 641..959: keep the bento, tighten ======================================== */
+@media (min-width: 641px) {
+  #masthead { padding: 1.5rem 0 1rem; margin-bottom: 1rem; }
+  #masthead h1 { font-size: clamp(2.5rem, 6vw, 3.5rem); }
+  #masthead p { font-size: 1rem; }
+  #scan-form { padding: .75rem .75rem .75rem 1.25rem; }
+  #status { margin: .5rem 0 1rem; }
+}
+@media (min-width: 641px) and (max-width: 959.98px) {
+  :root { --gauge-size: 7.5rem; --donut-size: 7.5rem; }
+  #report, #rail, #report-main { gap: 1.25rem; }
+  #rail > .card { padding: 1.25rem; }
+  /* the scorecard spans the bento: gauges left, meta + actions right */
+  #scorecard { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 1.5rem; align-items: center; }
+  #scorecard .gauges { grid-column: 1; grid-row: 1 / span 3; gap: 1.25rem; }
+  #scorecard > :not(.gauges) { grid-column: 2; }
+  #scorecard #meta { margin: 0 0 .75rem; text-align: left; font-size: .8125rem; }
+  #scorecard #actions { justify-content: flex-start; }
+  #scorecard #actions .btn { flex: 0 1 auto; }
+  #cats-card { padding: 1.25rem; }
+  #heat td.hc { height: 1.75rem; } /* the skin made the cells tall to fill a stretched card; rows now size to content */
+  .skel-gauges { min-height: 12.25rem; }
+  .skel-gauges::before { inset: 1.25rem 1.25rem auto; }
+  .skel-donut, .skel-heat { min-height: 25.5rem; }
+  .skel-cats { min-height: 26.5rem; }
+}
+
+/* ======================================== D. desktop >= 960: slightly tighter rail ======================================== */
+@media (min-width: 960px) {
+  :root { --gauge-size: 7.5rem; --donut-size: 7.5rem; }
+  #rail, #report-main { gap: 1.25rem; }
+  #rail > .card { padding: 1.25rem; }
+  #scorecard #meta { margin: 1rem 0 .75rem; }
+  .gauge-item { gap: .375rem; }
+  .legend > .lg { padding: .3rem 0; }
+  #heat td.hc { height: 1.5rem; }
+  #radar-card .radar { max-width: 18.5rem; }
+  #cats-card { padding: 1.25rem; }
+  .skel-gauges { min-height: 22.5rem; }
+  .skel-gauges::before { inset: 3.5rem 1.25rem auto; }
+  .skel-donut { min-height: 24.5rem; }
+  .skel-heat { min-height: calc(17.5rem + 5.1rem); }
+  .skel-cats { min-height: 26.5rem; }
+}
+
+/* ======================================== print: everything visible, no scroller ======================================== */
+@media print {
+  #strip { display: grid; overflow: visible; margin: 0; padding: 0; gap: 1rem; }
+  #strip > .card { break-inside: avoid; }
+  .strip-dots { display: none; }
+}
+
+@media (forced-colors: active) {
+  .strip-dot::before { forced-color-adjust: none; background: GrayText; }
+  .strip-dot[aria-current="true"]::before { background: Highlight; }
+}
