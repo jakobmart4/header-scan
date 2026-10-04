@@ -52,6 +52,13 @@
   </div>
   <div id="error-box" role="alert"><p id="error-msg"></p></div>
 
+  <!-- report tabs: shown only while #results has data-view (app.js initTabs/tabsRender); #report is the tabpanel -->
+  <div id="xt" class="xt"><div class="xt-list" role="tablist" aria-label="Report sections">
+    <button type="button" id="xt-tab-overview" class="xt-tab" role="tab" aria-selected="false" aria-controls="report" tabindex="-1"><span class="xt-t">Overview</span></button>
+    <button type="button" id="xt-tab-findings" class="xt-tab" role="tab" aria-selected="false" aria-controls="report" tabindex="-1"><span class="xt-t">Findings</span><span class="xt-n"><span id="xt-count">0</span><span id="xt-count-sr" class="sr"> issues</span></span></button>
+    <button type="button" id="xt-tab-details" class="xt-tab" role="tab" aria-selected="false" aria-controls="report deep" tabindex="-1" aria-label="Details: raw response headers and deep scan" title="Raw response headers and the owner-only deep scan"><span class="xt-t">Details</span></button>
+  </div></div>
+
   <div id="report">
     <aside id="rail">
       <section id="scorecard" class="card" aria-label="Grades">
@@ -143,7 +150,11 @@
           <input class="rb" type="radio" name="st" id="st-info" value="info"><label for="st-info">Info</label>
           <input class="rb" type="radio" name="st" id="st-skipped" value="skipped"><label for="st-skipped">Skipped</label>
         </fieldset>
-        <p id="shown" class="muted" role="status" aria-live="polite"></p>
+        <div class="fx-meta">
+          <p id="shown" class="muted" role="status" aria-live="polite"></p>
+          <button type="button" id="expand-all" class="fx-all" aria-controls="findings" hidden>Expand all</button>
+          <span id="fx-live" class="sr" role="status" aria-live="polite"></span>
+        </div>
       </div>
       <div id="findings"></div>
       <p id="empty" class="muted" hidden><span id="empty-msg">No findings match these filters.</span> <button type="button" id="reset-filters" class="btn">Show all findings</button></p>

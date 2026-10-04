@@ -92,6 +92,7 @@
     res.dataset.state = v.s;
     res.dataset.err = v.err;
     res.setAttribute('aria-busy', String(v.s === 'loading'));
+    if (v.s === 'done') enhance(tabsDone); // scroll + focus work of a finished deep scan (needs the report displayed)
   }
   function flushState() { var v = want; want = null; if (v) applyState(v); }
   function setState(s, err) {
@@ -135,6 +136,14 @@
     return c;
   }
 
+  // ISO timestamp -> local date and time; anything unparseable is shown as sent
+  function when(iso) {
+    try {
+      var d = new Date(iso);
+      return isNaN(d.getTime()) ? String(iso) : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (e) { return String(iso); }
+  }
+
   function renderGauges(r) {
     [['security', 'Security'], ['quality', 'Quality']].forEach(function (p) {
       var s = r.score[p[0]], g = $('gauge-' + p[0]);
@@ -159,9 +168,11 @@
     var m = $('meta');
     clear(m);
     m.appendChild(txt(r.url));
-    [r.scannedAt, r.durationMs + ' ms', r.deep ? 'deep scan' : 'passive scan'].forEach(function (t) {
+    [when(r.scannedAt), r.durationMs + ' ms', r.deep ? 'deep scan' : 'passive scan'].forEach(function (t, i) {
+      var s = h('span', 'nw', t);
+      if (!i) s.title = String(r.scannedAt); // the ISO value stays available
       m.appendChild(txt(' • '));
-      m.appendChild(h('span', 'nw', t));
+      m.appendChild(s);
     });
     if (r.errors && r.errors.length) {
       m.appendChild(txt(' • ' + r.errors.length + ' module error(s): ' +
@@ -301,6 +312,7 @@
       if (!s) return;
       var band = scoreBand(s.score), li = h('li', 'crow');
       li.dataset.g = band;
+      li.dataset.c = c;
       num(li, '--i', i++);
       var g = h('div', 'gauge gauge-sm');
       g.setAttribute('role', 'img');
@@ -338,6 +350,7 @@
   function renderFindings(r) {
     var box = $('findings'), ci = 0, fi = 0;
     clear(box);
+    fxOpen = 0;
     CATS.forEach(function (c) {
       var list = r.findings.filter(function (f) { return f.category === c; });
       if (!list.length) return;
@@ -360,7 +373,7 @@
       var ul = h('ul', 'list');
       list.forEach(function (f) {
         var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill');
-        li.dataset.s = f.status; li.dataset.c = c;
+        li.dataset.s = f.status; li.dataset.c = c; li.dataset.sev = String(f.severity);
         num(li, '--i', fi++);
         pill.dataset.s = f.status;
         pill.appendChild(glyph(f.status));
@@ -381,6 +394,7 @@
           a.href = f.ref; a.rel = 'noopener noreferrer'; a.target = '_blank';
           li.appendChild(a);
         }
+        enhance(compactRow, li);
         ul.appendChild(li);
       });
       d.appendChild(ul);
@@ -406,6 +420,7 @@
     if (cat !== 'all' || st === 'pass' || st === 'info' || st === 'skipped') {
       Array.prototype.forEach.call(document.querySelectorAll('#findings .cat'), function (d) { d.open = true; });
     }
+    enhance(fxSync);
   }
 
   // The filter radios are visually hidden and, in the scrolling chip strips on narrow screens, sit at the strip
@@ -432,17 +447,327 @@
     });
   }
 
-  function show(r) {
+  function show(r, deep) {
     result = r;
     renderRaw(r);
     renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
     enhance(renderStack, r.findings);
     enhance(renderRadar, r);
+    enhance(stripSync);
+    enhance(function () { tabsRender(r, deep); });
     // Follow the latest scan unless the user typed their own host.
     if (!$('host').value || $('host').value === autoHost) {
       $('host').value = autoHost = r.host || '';
       $('host').dispatchEvent(new Event('input'));
     }
+  }
+
+  // ---- Compact finding rows (skin-compact.css). Plain rows stay valid: all of this is enhancement keyed on li.fnd[data-fx],
+  // so if it throws the report is still complete. Row = h3 > button (APG accordion); fail rows start open, the rest closed.
+  var UNTIL_FOUND = 'onbeforematch' in document.documentElement; // hidden="until-found": find-in-page can open a collapsed row
+  var phoneMQ = window.matchMedia ? matchMedia('(max-width: 640px)') : { matches: false };
+  var fxSeq = 0, fxOpen = 0;
+  function rowOpen(li) { return li.dataset.fx === 'open'; }
+  function setRow(li, on, touched) {
+    var b = li.querySelector('.fnd-toggle');
+    if (!b) return;
+    if (touched) li.dataset.touched = '1';
+    li.dataset.fx = on ? 'open' : 'closed';
+    b.setAttribute('aria-expanded', String(on));
+    Array.prototype.forEach.call(li.querySelectorAll('[data-fxh]'), function (el) {
+      if (on) el.removeAttribute('hidden'); else el.setAttribute('hidden', UNTIL_FOUND ? 'until-found' : '');
+    });
+  }
+  // li is a finished row (head, optional evidence/fix/ref). Called from renderFindings for every row.
+  function compactRow(li) {
+    var head = li.querySelector('.fnd-head'), title = li.querySelector('.fnd-title');
+    var ev = li.querySelector('.fnd-evidence'), fix = li.querySelector('.fnd-fix'), ref = li.querySelector('.fnd-ref');
+    var fail = li.dataset.s === 'fail', ids = [], id = 'fx' + (++fxSeq);
+    if (!head || !title) return;
+    if (ev) { head.appendChild(ev); if (!fail) ev.dataset.fxh = '1'; } // evidence is the collapsed one-line preview on fail rows
+    [fix, ref].forEach(function (el) { if (el) el.dataset.fxh = '1'; });
+    [ev, fix, ref].forEach(function (el, i) { if (el) { el.id = id + 'abc'.charAt(i); ids.push(el.id); } });
+    if (!ids.length) { li.dataset.fx = 'none'; return; }
+    if (fail && ev) li.dataset.prev = '1';
+    var b = h('button', 'fnd-toggle'), tt = h('span', 'fnd-tt', title.textContent);
+    b.type = 'button';
+    b.setAttribute('aria-controls', ids.join(' '));
+    b.appendChild(tt);
+    clear(title);
+    title.appendChild(b);
+    // phones: only the first three failed rows start open (a scan can have 15), the others show the one-line preview
+    setRow(li, fail && (!phoneMQ.matches || ++fxOpen <= 3));
+  }
+  // rows the current filter shows: same rule as syncFilters (works for the :has path and the data-cat/data-st fallback alike)
+  function fxRows() {
+    var c = document.querySelector('input[name=cat]:checked').value, t = document.querySelector('input[name=st]:checked').value;
+    return Array.prototype.filter.call($('findings').querySelectorAll('li.fnd[data-fx="open"], li.fnd[data-fx="closed"]'), function (li) {
+      var s = li.dataset.s;
+      return (c === 'all' || li.dataset.c === c) && (t === 'all' || (t === 'issues' ? s === 'fail' || s === 'warn' : s === t));
+    });
+  }
+  function fxSync() {
+    var all = $('expand-all'), r = fxRows();
+    all.hidden = !r.length;
+    all.textContent = r.length && r.every(rowOpen) ? 'Collapse all' : 'Expand all';
+  }
+  function initRows() {
+    var box = $('findings'), all = $('expand-all'), live = $('fx-live');
+    box.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('.fnd-toggle');
+      if (!b) return;
+      var li = b.closest('li.fnd');
+      setRow(li, !rowOpen(li), true);
+      fxSync();
+    });
+    box.addEventListener('animationend', function (ev) { // the reveal plays once per user toggle, not on every later re-show
+      if (ev.animationName !== 'x-open') return;
+      var li = ev.target.closest && ev.target.closest('li.fnd');
+      if (!li) return;
+      var parts = li.querySelectorAll('.fnd-evidence, .fnd-fix, .fnd-ref');
+      if (ev.target === parts[parts.length - 1]) delete li.dataset.touched;
+    });
+    box.addEventListener('beforematch', function (ev) { // find-in-page landed in a collapsed row
+      var li = ev.target.closest && ev.target.closest('li.fnd');
+      if (li && !rowOpen(li)) { setRow(li, true, true); fxSync(); }
+    });
+    all.addEventListener('click', function () {
+      var r = fxRows(), on = !r.every(rowOpen);
+      r.forEach(function (li) {
+        if (on) { var d = li.closest('details.cat'); if (d) d.open = true; }
+        setRow(li, on); // no 'touched': 100+ simultaneous reveal animations are noise
+      });
+      fxSync();
+      live.textContent = r.length + (r.length === 1 ? ' finding ' : ' findings ') + (on ? 'expanded' : 'collapsed'); // the label flips while focus stays on the button
+    });
+    // printing shows everything: open every closed <details> in the report (category groups, raw headers); the print CSS shows the row parts
+    var reopened = [];
+    window.addEventListener('beforeprint', function () {
+      reopened = reopened.concat(Array.prototype.filter.call(document.querySelectorAll('#report details:not([open])'), function (d) { d.open = true; return true; }));
+    });
+    window.addEventListener('afterprint', function () { reopened.forEach(function (d) { d.open = false; }); reopened = []; });
+  }
+
+  // ---- Report tabs Overview | Findings | Details (skin-tabs.css). #xt is real markup; #results[data-view] picks the visible group
+  // by CSS and exists only after tabsRender, so without JS (or if it throws) the whole report stays visible.
+  // #report is the tabpanel; while Details is selected the deep-scan section (outside #results) is a second panel of that tab.
+  var VIEWS = ['overview', 'findings', 'details'];
+  var TV = { first: true, lastUrl: null, after: null, fix: null };
+  function tabEl(v) { return $('xt-tab-' + v); }
+  function tabsMeasure() { // the tray height follows text zoom / wrapping (CSS reads it as a unitless number of px)
+    var hgt = $('xt').offsetHeight;
+    if (hgt) document.documentElement.style.setProperty('--xt-h', String(hgt));
+  }
+  // back to the top of the report (under the tray when it is sticky), only when the page is scrolled past it
+  function tabsToStrip() {
+    var strip = $('xt'), cs = getComputedStyle(strip), gap = parseFloat(cs.marginBottom) || 0;
+    var tray = cs.position === 'fixed' ? 0 : strip.offsetHeight + gap;
+    var y = window.pageYOffset + $('report').getBoundingClientRect().top - tray - 8;
+    if (window.pageYOffset > y) window.scrollTo(0, Math.max(0, y));
+  }
+  function tabSelect(v, focus, scroll, noHash) {
+    if (VIEWS.indexOf(v) < 0) return;
+    var res = $('results'), deep = $('deep');
+    res.dataset.view = v;
+    VIEWS.forEach(function (k) {
+      tabEl(k).setAttribute('aria-selected', String(k === v));
+      tabEl(k).tabIndex = k === v ? 0 : -1;
+    });
+    $('report').setAttribute('aria-labelledby', 'xt-tab-' + v);
+    if (v === 'details') { deep.setAttribute('role', 'tabpanel'); deep.setAttribute('aria-labelledby', 'xt-tab-details'); }
+    else { deep.removeAttribute('role'); deep.setAttribute('aria-labelledby', 'deep-h'); }
+    tabsMeasure();
+    if (focus) tabEl(v).focus({ preventScroll: true });
+    if (scroll) tabsToStrip();
+    if (!noHash) { try { history.replaceState(null, '', '#view=' + v); } catch (e) { /* sandboxed */ } }
+  }
+  function hashView() {
+    var m = /(?:^#|&)view=(overview|findings|details)(?:&|$)/.exec(location.hash);
+    return m ? m[1] : null;
+  }
+  function setRadio(id) {
+    var r = $(id);
+    if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+  // open one finding in the Findings tab: widen the filters when they hide it, expand the row, focus its toggle
+  function tabsGoto(li) {
+    var c = document.querySelector('input[name=cat]:checked'), s = document.querySelector('input[name=st]:checked');
+    if (c.value !== 'all' && c.value !== li.dataset.c) setRadio('cat-all');
+    if (s.value !== 'all' && s.value !== 'issues' && s.value !== li.dataset.s) setRadio('st-issues');
+    tabSelect('findings', false, false);
+    var d = li.closest('details.cat'), b = li.querySelector('.fnd-toggle');
+    if (d) d.open = true;
+    if (b && b.getAttribute('aria-expanded') === 'false') b.click();
+    li.scrollIntoView({ block: 'center' });
+    (b || tabEl('findings')).focus({ preventScroll: true });
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  // Overview card: counts, the three most severe failed checks (warnings when nothing failed) and the deep-scan cue
+  function tabsFix(c) {
+    if (TV.fix && TV.fix.parentNode) TV.fix.parentNode.removeChild(TV.fix);
+    var main = $('report-main'), fix = TV.fix = h('section', 'card xt-fix'), hd = h('h2', 'eyebrow', 'Fix first');
+    fix.setAttribute('aria-labelledby', 'xt-fix-h');
+    hd.id = 'xt-fix-h';
+    fix.appendChild(hd);
+    fix.appendChild(h('p', 'xt-sum', c.fail + ' failed, ' + plural(c.warn, 'warning', 'warnings')));
+    var rows = Array.prototype.map.call($('findings').querySelectorAll('.fnd[data-s="' + (c.fail ? 'fail' : 'warn') + '"]'), function (li, i) {
+      return { li: li, sev: Number(li.dataset.sev) || 0, i: i };
+    });
+    rows.sort(function (a, b) { return b.sev - a.sev || a.i - b.i; });
+    if (rows.length) {
+      var ol = h('ol', 'xt-top');
+      rows.slice(0, 3).forEach(function (r) {
+        var item = h('li'), b = h('button', 'xt-item'), t = r.li.querySelector('.fnd-title'), f = r.li.querySelector('.fnd-fix');
+        b.type = 'button';
+        b.appendChild(h('span', 'xt-sev', 'Sev ' + r.sev));
+        b.appendChild(h('span', 'xt-ttl', t ? t.textContent : ''));
+        if (f) b.appendChild(h('span', 'xt-fx', f.textContent.replace(/^Fix:\s*/, '')));
+        b.addEventListener('click', function () { tabsGoto(r.li); });
+        item.appendChild(b);
+        ol.appendChild(item);
+      });
+      fix.appendChild(ol);
+    }
+    var cue = h('div', 'xt-cue'), go = h('button', 'btn', 'Verify ownership');
+    cue.appendChild(h('p', 'muted', 'Exposed files (.git, .env) are only checked in a deep scan, for domains you own.'));
+    go.type = 'button';
+    go.addEventListener('click', function () { tabSelect('details', false, true); tabEl('details').focus({ preventScroll: true }); });
+    cue.appendChild(go);
+    fix.appendChild(cue);
+    main.insertBefore(fix, main.firstChild);
+  }
+  // Overview category rows open their findings (a real button stretched over the row)
+  function tabsLinkCats() {
+    Array.prototype.forEach.call(document.querySelectorAll('#cats > .crow'), function (li) {
+      var r = $('cat-' + li.dataset.c), tag = li.querySelector('.crow-tag');
+      if (!r) return;
+      var issues = tag && /fail|warn/.test(tag.textContent), b = h('button', 'crow-go');
+      b.type = 'button';
+      b.appendChild(h('span', 'sr', 'Show ' + CAT_NAME[li.dataset.c] + ' findings'));
+      b.addEventListener('click', function () {
+        setRadio(r.id);
+        setRadio(issues ? 'st-issues' : 'st-all');
+        tabSelect('findings', false, true);
+        tabEl('findings').focus({ preventScroll: true }); // the button is hidden now: hand focus to the tab
+      });
+      li.appendChild(b);
+    });
+  }
+  // Called from show() with the new report. Re-scanning the same URL keeps the tab; a new URL starts at the Overview;
+  // a deep scan (started from Details) lands on Findings. The scroll and focus work waits for state "done" (tabsDone).
+  function tabsRender(r, deep) {
+    var res = $('results'), c = counts(r.findings), url = $('url').value.trim().toLowerCase();
+    $('xt-count').textContent = String(c.fail + c.warn); // fail + warn over ALL findings: the filter radios do not change it
+    $('xt-count-sr').textContent = ' issues (' + c.fail + ' failed, ' + plural(c.warn, 'warning', 'warnings') + ')';
+    tabEl('findings').title = c.fail + ' failed, ' + plural(c.warn, 'warning', 'warnings');
+    try { tabsFix(c); tabsLinkCats(); } catch (e) { /* the tabs work without them */ }
+    document.documentElement.classList.add('xt');
+    var same = TV.lastUrl !== null && url === TV.lastUrl;
+    TV.lastUrl = url;
+    var v = TV.first ? hashView() || 'overview' : deep ? 'findings' : same && res.dataset.view ? res.dataset.view : 'overview';
+    TV.first = false;
+    TV.after = deep ? { scroll: true, focus: true } : null;
+    tabSelect(v, false, false);
+  }
+  function tabsDone() {
+    var a = TV.after;
+    TV.after = null;
+    tabsMeasure();
+    if (!a) return;
+    if (a.scroll) tabsToStrip();
+    // the deep scan button (outside the tab it landed on) is hidden now and focus fell to <body>: hand it to the tab
+    var cur = document.activeElement;
+    if (a.focus && (!cur || cur === document.body)) tabEl($('results').dataset.view).focus({ preventScroll: true });
+  }
+  function initTabs() {
+    var res = $('results');
+    $('report').setAttribute('role', 'tabpanel');
+    VIEWS.forEach(function (v) { tabEl(v).addEventListener('click', function () { tabSelect(v, false, true); }); });
+    $('xt').querySelector('.xt-list').addEventListener('keydown', function (ev) {
+      if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+      var i = VIEWS.indexOf(res.dataset.view), k = ev.key, n;
+      if (k === 'ArrowRight') n = (i + 1) % VIEWS.length;
+      else if (k === 'ArrowLeft') n = (i + VIEWS.length - 1) % VIEWS.length;
+      else if (k === 'Home') n = 0;
+      else if (k === 'End') n = VIEWS.length - 1;
+      else return;
+      ev.preventDefault();
+      tabSelect(VIEWS[n], true, true); // automatic activation: switching is a CSS toggle, nothing to load
+    });
+    if (window.ResizeObserver) new ResizeObserver(tabsMeasure).observe($('xt'));
+    window.addEventListener('hashchange', function () {
+      var v = hashView();
+      if (v && res.dataset.view && v !== res.dataset.view) tabSelect(v, false, true, true);
+    });
+  }
+
+  // ---- Phones (<= 640px): the donut, heat and radar cards (existing nodes, ids unchanged) move into one swipeable strip with
+  // position dots; above 640px they go back to their place. If this throws the cards simply stay stacked.
+  var stripSync = function () {};
+  function initStrip() {
+    if (!window.matchMedia) return;
+    var cards = ['donut-card', 'heat-card', 'radar-card'].map($), mq = matchMedia('(max-width: 640px)');
+    var strip = h('div'), dots = h('div', 'strip-dots');
+    strip.id = 'strip';
+    strip.setAttribute('role', 'region');
+    strip.setAttribute('aria-label', 'Charts');
+    strip.tabIndex = 0;
+    dots.setAttribute('role', 'group');
+    dots.setAttribute('aria-label', 'Choose chart');
+    function visible() { return cards.filter(function (c) { return !c.hidden; }); } // the radar card stays hidden where it is not drawn
+    // dot i is "on" when card i is the one nearest to the strip's start edge
+    function mark() {
+      var vis = visible(), kids = dots.children, best = 0, bd = Infinity;
+      var edge = strip.getBoundingClientRect().left + (parseFloat(getComputedStyle(strip).paddingLeft) || 0);
+      vis.forEach(function (c, i) {
+        var d = Math.abs(c.getBoundingClientRect().left - edge);
+        if (d < bd) { bd = d; best = i; }
+      });
+      for (var i = 0; i < kids.length; i++) kids[i].setAttribute('aria-current', String(i === best));
+    }
+    function go(i) { // scroll the strip itself (not the page) so card i sits at the start edge
+      var c = visible()[i];
+      if (!c) return;
+      var pad = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+      var left = c.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft - pad;
+      var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      strip.scrollTo({ left: left, behavior: calm ? 'auto' : 'smooth' });
+      for (var k = 0; k < dots.children.length; k++) dots.children[k].setAttribute('aria-current', String(k === i));
+    }
+    function draw() {
+      var n = visible().length;
+      while (dots.children.length > n) dots.removeChild(dots.lastChild);
+      while (dots.children.length < n) {
+        var b = h('button', 'strip-dot');
+        b.type = 'button';
+        b.addEventListener('click', go.bind(null, dots.children.length));
+        dots.appendChild(b);
+      }
+      for (var j = 0; j < n; j++) dots.children[j].setAttribute('aria-label', 'Show chart ' + (j + 1) + ' of ' + n);
+      dots.hidden = n < 2;
+      mark();
+    }
+    strip.addEventListener('scroll', mark, { passive: true }); // 3 rect reads: cheap enough without rAF throttling
+    function wrap() {
+      var host = cards[0].parentNode;
+      if (strip.parentNode || !host) return;
+      host.insertBefore(strip, cards[0]);
+      cards.forEach(function (c) { strip.appendChild(c); });
+      host.insertBefore(dots, strip.nextSibling);
+      strip.scrollLeft = 0;
+      draw();
+    }
+    function unwrap() {
+      var host = strip.parentNode;
+      if (!host) return;
+      cards.forEach(function (c) { host.insertBefore(c, strip); });
+      host.removeChild(strip);
+      if (dots.parentNode) dots.parentNode.removeChild(dots);
+    }
+    function sync() { if (mq.matches) wrap(); else unwrap(); }
+    if (mq.addEventListener) mq.addEventListener('change', sync); else if (mq.addListener) mq.addListener(sync);
+    stripSync = function () { strip.scrollLeft = 0; draw(); }; // a new report starts at the first card; the radar card may have appeared
+    sync();
   }
 
   async function runScan(deep) {
@@ -454,7 +779,7 @@
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
-      show(r);
+      show(r, deep);
       setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
     } catch (e) {
@@ -618,6 +943,9 @@
   }
   enhance(initLegendHover);
   enhance(initFilterFlow);
+  enhance(initRows);
+  enhance(initTabs);
+  enhance(initStrip);
 
   syncFilters();
 })();

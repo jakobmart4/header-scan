@@ -1,0 +1,240 @@
+/* skin-tabs.css - report tabs Overview | Findings | Details.
+   #xt (tablist) is real markup before #report in the template; app.js initTabs/tabsRender drive it and set #results[data-view]. Without the script nothing here matches and the whole
+   report stays visible. Groups are picked by id, no node is moved:
+     overview = #rail cards + #cats-card      findings = #filters + #findings + #empty      details = #raw-card + #deep (outside #results)
+   Motion: transform only (indicator bar); the base.css reduced-motion catch-all neutralises it. */
+
+:root { --xt-h: 56; --xt-top: .5rem; } /* tray height in px (a number: app.js initTabs re-measures it, text zoom grows it); 56 = 44px tab + 2 x .375rem padding */
+
+/* ---------- strip: only while a report is shown ---------- */
+#results[data-state="done"][data-view] > #xt {
+  display: block;
+  position: relative;
+  z-index: 12; /* above the sticky filter tray (10) and the sticky scorecard (2) */
+  margin: 0 0 var(--s5);
+}
+@media (min-height: 30rem) {
+  #results[data-state="done"][data-view] > #xt { position: sticky; top: var(--xt-top); }
+}
+
+.xt-list {
+  display: flex;
+  gap: .125rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: .375rem;
+  border-radius: var(--r-pill);
+  background: var(--shell);
+  box-shadow: 0 0 0 1px var(--shell-line), 0 22px 30px -24px rgb(30 35 90 / .35);
+}
+.xt-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-width: 7.5rem;
+  min-height: 44px;
+  padding: 0 var(--s4);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: 600 var(--fs-2)/1.2 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.xt-tab:hover { background: var(--tile); background: color-mix(in srgb, var(--surface) 60%, transparent); color: var(--ink); }
+.xt-tab:active { transform: scale(.97); }
+/* selected = lifted surface + ink + bold + accent bar (never colour alone) */
+.xt-tab[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 var(--hi), 0 0 0 1px var(--shell-line), 0 8px 16px -10px rgb(30 35 90 / .4);
+}
+.xt-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 1.5rem;
+  height: 3px;
+  margin-left: -.75rem;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  animation: xt-bar var(--d-mid) var(--ease-out) backwards;
+}
+@keyframes xt-bar { from { transform: scaleX(0); } }
+
+.xt-n {
+  position: relative; /* anchors the .sr text */
+  min-width: 1.5rem;
+  padding: .125rem .4rem;
+  border-radius: var(--r-pill);
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--ink);
+  font: 700 var(--fs-1)/1.2 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .xt-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: auto; }
+  /* label + badge may wrap (text zoom, 320px): the tray grows instead of clipping into the next tab */
+  .xt-tab { min-width: 0; padding: .25rem var(--s2); flex-wrap: wrap; white-space: normal; line-height: 1.15; text-align: center; }
+  .xt-t { min-width: 0; overflow-wrap: anywhere; } /* 200% text: a long word breaks instead of overlapping the next tab */
+}
+@media (max-width: 359.98px) {
+  .xt-tab { gap: .25rem; font-size: .8125rem; }
+  .xt-n { min-width: 0; padding-inline: .3rem; }
+}
+
+/* ---------- sticky offsets: the tray owns the top, everything sticky/focusable sits below it ---------- */
+html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky scorecard only covers the charts */
+@media (min-height: 30rem) {
+  html.xt { scroll-padding-top: calc(var(--xt-top) + var(--xt-h) * 1px + var(--s2)); }
+}
+/* the filter bar (108px) sticks only where it costs <15% of the viewport: not on 800px laptops */
+@media (min-width: 641px) and (min-height: 56rem) {
+  /* --filters-h is measured by app.js and is 0 while the filter bar is hidden (Overview / Details) */
+  html.xt #filters { top: calc(var(--xt-top) + var(--xt-h) * 1px + var(--s2)); }
+  html.xt { scroll-padding-top: calc(var(--xt-top) + var(--xt-h) * 1px + var(--s2) + var(--filters-h, 0px) + var(--s2)); }
+}
+
+/* phones: ONE sticky layer, docked at the bottom (thumb zone); the page gets room for it */
+@media (max-width: 640px) and (min-height: 30rem) {
+  #results[data-state="done"][data-view] > #xt {
+    position: fixed;
+    top: auto;
+    left: .5rem;
+    right: .5rem;
+    bottom: max(.5rem, env(safe-area-inset-bottom));
+    margin: 0;
+  }
+  .xt-list { box-shadow: 0 0 0 1px var(--shell-line), 0 -10px 28px -12px rgb(30 35 90 / .45); }
+  html.xt { scroll-padding-top: 0; scroll-padding-bottom: calc(var(--xt-h) * 1px + 1.5rem); }
+  html.xt body { padding-bottom: calc(var(--xt-h) * 1px + 1rem); }
+  html.xt #toast { bottom: calc(var(--xt-h) * 1px + 1.25rem + env(safe-area-inset-bottom)); }
+}
+
+/* ---------- groups (screen only: print shows everything) ---------- */
+@media screen {
+  #results[data-view="overview"] #report-main > :not(#cats-card, .xt-fix) { display: none; }
+  #results[data-view="findings"] :is(#rail, #cats-card, .xt-fix, #raw-card) { display: none; }
+  #results[data-view="details"] :is(#rail, #cats-card, .xt-fix, #filters, #findings, #empty, #report-main > h2.sr) { display: none; }
+  /* the deep-scan panel sits after #results */
+  #results[data-view]:not([data-view="details"]) ~ #deep { display: none; }
+  #results[data-view="details"] ~ #deep { margin-top: 0; }
+  /* a single group fills the width (the Overview keeps the rail + main columns) */
+  #results[data-view="findings"] #report,
+  #results[data-view="details"] #report { grid-template-columns: minmax(0, 1fr); }
+}
+@media print {
+  #results > #xt, .xt-fix, .crow-go { display: none !important; }
+}
+
+/* ---------- Overview: "Fix first" card ---------- */
+.xt-fix { display: grid; gap: var(--s3); align-content: start; }
+.xt-fix .eyebrow { justify-self: start; margin: 0; }
+.xt-sum { margin: 0; font: 700 var(--fs-4)/1.25 var(--font-display); color: var(--ink); }
+.xt-top { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.xt-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .125rem .75rem;
+  align-items: baseline;
+  width: 100%;
+  min-height: 44px;
+  padding: .625rem .75rem;
+  border: 1px solid var(--edge);
+  border-radius: 1rem;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.xt-item:active { transform: scale(.985); }
+@media (hover: hover) { .xt-item:hover { background: var(--track); } }
+.xt-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.xt-sev { padding: 0 .375rem; border: 1px solid var(--edge); border-radius: var(--r-chip); background: var(--surface); font: 700 var(--fs-1)/1.6 var(--font-mono); white-space: nowrap; }
+.xt-ttl { font-weight: 600; font-size: .9375rem; line-height: 1.35; overflow-wrap: anywhere; }
+.xt-fx {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: .8125rem;
+  line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.xt-cue { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
+.xt-cue p { flex: 1 1 14rem; margin: 0; font-size: .875rem; line-height: 1.4; }
+.xt-cue .btn { flex: none; min-height: 44px; }
+@media (max-width: 640px) { .xt-cue .btn { width: 100%; } }
+
+/* ---------- Overview: category rows are links to their findings ---------- */
+#cats > .crow { position: relative; padding-right: 1.75rem; }
+.crow-go { position: absolute; inset: 0; z-index: 2; margin: 0; padding: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
+.crow-go:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.crow-go::after { /* chevron */
+  content: ""; position: absolute; right: .875rem; top: .875rem; width: .5rem; height: .5rem;
+  border-right: 2px solid var(--muted); border-top: 2px solid var(--muted); transform: rotate(45deg);
+}
+
+/* ---------- wide screens: use the width (CSS only, no node moves) ---------- */
+@media (min-width: 960px) {
+  /* masthead and scan form share one row; after a scan the lede goes (it stays in the DOM, and shows before the first scan) */
+  #app { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); column-gap: var(--s6); align-items: center; }
+  #app > * { grid-column: 1 / -1; }
+  #app > #masthead { grid-column: 1; }
+  #app > #scan-form { grid-column: 2; }
+  html.xt #masthead p { display: none; }
+}
+@supports (display: contents) {
+  @media (min-width: 1100px) {
+    /* Overview: scorecard | Fix first, then the three charts in one row, then the category rows */
+    #results[data-view="overview"] #report { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+    #results[data-view="overview"] :is(#rail, #report-main) { display: contents; }
+    #results[data-view="overview"] #scorecard { grid-column: 1; grid-row: 1; }
+    #results[data-view="overview"] .xt-fix { grid-column: 2 / span 2; grid-row: 1; }
+    #results[data-view="overview"] #donut-card { grid-column: 1; grid-row: 2; }
+    #results[data-view="overview"] #heat-card { grid-column: 2; grid-row: 2; }
+    #results[data-view="overview"] #radar-card { grid-column: 3; grid-row: 2; }
+    #results[data-view="overview"] #cats-card { grid-column: 1 / -1; grid-row: 3; }
+    #results[data-view="overview"] #cats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+}
+@media (min-width: 1100px) {
+  /* Findings: two columns of rows (a 1100px single column leaves title and severity 700px apart) */
+  #results[data-view="findings"] #findings .cat > .list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; }
+  #results[data-view="findings"] #findings .cat > .list > .fnd + .fnd { border-top: 0; }
+  #results[data-view="findings"] #findings .cat > .list > .fnd { border-bottom: 1px solid var(--rule); }
+  #results[data-view="findings"] #findings .cat > .list > .fnd:last-child,
+  #results[data-view="findings"] #findings .cat > .list > .fnd:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+}
+
+@media (forced-colors: active) {
+  .xt-list { border: 1px solid CanvasText; }
+  .xt-tab[aria-selected="true"] { border: 2px solid Highlight; }
+  .xt-tab[aria-selected="true"]::after { background: Highlight; forced-color-adjust: none; }
+}
+
+/* phones: grades, then Fix first, then the chart strip, then the category rows (one column; ids and DOM order are untouched) */
+@supports (display: contents) {
+  @media (max-width: 640px) {
+    #results[data-view="overview"] :is(#rail, #report-main) { display: contents; }
+    #results[data-view="overview"] #scorecard { order: 0; }
+    #results[data-view="overview"] .xt-fix { order: 1; }
+    #results[data-view="overview"] :is(#strip, .strip-dots, #donut-card, #heat-card, #radar-card) { order: 2; }
+    #results[data-view="overview"] #cats-card { order: 3; }
+  }
+}
+@media (max-width: 640px) {
+  .xt-fix { padding: .875rem; gap: .625rem; }
+  .xt-sum { font-size: 1.0625rem; }
+  .xt-item { padding: .5rem .625rem; }
+  .xt-fx { -webkit-line-clamp: 1; line-clamp: 1; }
+}

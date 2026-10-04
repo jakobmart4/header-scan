@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const rd = (...p) => readFileSync(join(root, ...p), 'utf8').replace(/\r\n?/g, '\n');
 const BASE = ['tokens.css', 'base.css', 'layout.css', 'gauge.css', 'charts.css', 'findings.css', 'panels.css'];
 // the real skin = skin.css + the skin-*.css layers, same order as scripts/build-ui.mjs
-const SKIN = ['skin.css', 'skin-charts.css', 'skin-flow.css', 'skin-motion.css', 'skin-radar.css'];
+const SKIN = ['skin.css', 'skin-charts.css', 'skin-flow.css', 'skin-motion.css', 'skin-radar.css', 'skin-compact.css', 'skin-mobile.css', 'skin-tabs.css'];
 const sample = JSON.stringify(JSON.parse(rd('design', 'sample.json')));
 const vdir = join(root, 'ui', 'variants'); // experiments only: x-<name>.css (+ optional x-<name>.js) layered over the skin (ui/DESIGN.md)
 if (!existsSync(vdir)) mkdirSync(vdir, { recursive: true });

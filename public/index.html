@@ -2509,6 +2509,610 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     #radar-card .radar-rl { text-shadow: none; }
   }
 }
+/* skin-compact.css: compact, expandable finding rows (app.js renderFindings > compactRow, fxSync, initRows).
+   Everything is keyed on .fnd[data-fx] (set by app.js), so without the script the plain page is unchanged.
+   Collapsed row = status pill + title + severity dots (+ one-line evidence preview on fail rows). The row is a real
+   <button class="fnd-toggle"> inside the h3 (APG accordion); its ::before is stretched over the head, head items sit above it and let clicks fall through.
+   Collapsed bodies use hidden="until-found" where supported (find-in-page opens the row), else display:none.
+   Motion: opacity/transform only, killed by the base.css reduced-motion catch-all. */
+
+.fnd[data-fx] { --fx-ind: 0px; padding: 0 var(--s3) 0 var(--s4); }
+@media (min-width: 641px) { .fnd[data-fx] { --fx-ind: 5.75rem; } }
+.fnd[data-fx="open"] { padding-bottom: .625rem; }
+.fnd[data-fx="open"] > .fnd-head { row-gap: .25rem; }
+
+/* ---------- head: the whole row ---------- */
+.fnd[data-fx] > .fnd-head {
+  position: relative;
+  align-content: flex-start;
+  gap: 0 var(--s2);
+  min-height: 2.75rem;
+  padding: .625rem 1.75rem .5rem 0;
+}
+.fnd[data-fx][data-prev] > .fnd-head { padding-block: .5rem .4rem; }
+.fnd[data-fx][data-prev] .fnd-toggle::after { top: .9375rem; }
+.fnd[data-fx] .fnd-head > :not(.fnd-title) { position: relative; z-index: 1; pointer-events: none; } /* the h3 stays static: the button's ::before is sized by .fnd-head */
+.fnd[data-fx] .pill { min-height: 1.5rem; }
+@media (min-width: 641px) { .fnd[data-fx] .pill { min-width: 5.25rem; justify-content: center; } }
+.fnd[data-fx] .fnd-title { flex: 1 1 10rem; font-size: .9375rem; line-height: 1.35; }
+.fnd[data-fx] .sev { --dot: .7rem; flex: none; margin-left: auto; }
+
+.fnd-toggle {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  pointer-events: auto; /* the head items are pointer-events:none (inherited by the h3): the button opts back in */
+}
+.fnd-toggle::before { content: ""; position: absolute; inset: 0; z-index: 0; } /* whole-row hit area (.fnd-head is positioned) */
+.fnd-toggle:focus-visible { outline: none; }
+.fnd-toggle:focus-visible::before { outline: 3px solid var(--accent); outline-offset: -3px; }
+.fnd-toggle::after { /* chevron: right when closed, down when open */
+  content: "";
+  position: absolute;
+  right: .625rem;
+  top: 1.0625rem;
+  width: .5rem;
+  height: .5rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform var(--d-mid) var(--ease-out);
+}
+.fnd[data-fx="open"] .fnd-toggle::after { transform: rotate(45deg); }
+@media (hover: hover) { .fnd[data-fx="closed"]:hover { background: var(--tile); } }
+
+/* ---------- evidence (lives in the head, moved by app.js), fix, reference ---------- */
+.fnd[data-fx] .fnd-head > .fnd-evidence {
+  flex: 0 0 calc(100% - var(--fx-ind));
+  min-width: 0;
+  margin: .125rem 0 0 var(--fx-ind);
+  font-size: .8125rem;
+  line-height: 1.4;
+}
+.fnd[data-fx="open"]:is([data-s="fail"], [data-s="warn"]) .fnd-head > .fnd-evidence { padding: .25rem .625rem; }
+.fnd[data-fx="open"] .fnd-head > .fnd-evidence { pointer-events: auto; }
+.fnd[data-fx] > .fnd-fix { margin: .25rem 0 0 var(--fx-ind); font-size: .875rem; line-height: 1.45; }
+.fnd[data-fx] > .fnd-ref { display: block; width: fit-content; margin: .125rem 0 0 var(--fx-ind); padding: .25rem 0; }
+@media (max-width: 640px) { .fnd[data-fx] > .fnd-ref { display: flex; align-items: center; min-height: 2.75rem; } }
+
+/* collapsed parts: hidden="until-found" must beat base.css [hidden]{display:none!important} and leave no gap */
+.fnd[data-fx] [hidden="until-found"] { display: block !important; }
+.fnd[data-fx] [hidden] { margin: 0 !important; padding: 0 !important; min-height: 0 !important; }
+
+/* ---------- collapsed look (screen only; print shows the open look) ---------- */
+@media screen {
+  .fnd[data-fx="closed"] .fnd-head > .tag { /* still read by screen readers and found by find-in-page */
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .fnd[data-fx="closed"] .fnd-title { flex: 1 1 0; min-width: 0; }
+  .fnd[data-fx="closed"] .fnd-tt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .fnd[data-fx="closed"] .fnd-head > .fnd-evidence { /* one-line preview, full text stays in the DOM */
+    margin-top: .125rem;
+    padding: 0;
+    background: none;
+    color: var(--muted);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+@media screen and (max-width: 640px) {
+  /* one line for previews and for quiet rows; only warn rows keep two (full title stays in the DOM and in the open row) */
+  .fnd[data-fx="closed"][data-prev] .fnd-tt,
+  .fnd[data-fx="closed"]:is([data-s="pass"], [data-s="info"], [data-s="skipped"]) .fnd-tt { -webkit-line-clamp: 1; line-clamp: 1; }
+  /* the severity count is also in the dots: say it once (sr-only keeps it for screen readers) */
+  .fnd[data-fx="open"] .fnd-head > .tag {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
+/* ---------- open reveal: opacity/translate only; plays only after a user toggle ---------- */
+@keyframes x-open { from { opacity: 0; transform: translateY(-.375rem); } }
+.fnd[data-fx="open"][data-touched] :is(.fnd-evidence, .fnd-fix, .fnd-ref) {
+  animation: x-open var(--d-mid) var(--ease-out) backwards;
+}
+
+/* ---------- category headers: shorter ---------- */
+.cat { margin-bottom: 1rem; }
+.cat-sum { min-height: 2.75rem; padding: .25rem var(--s3); }
+.cat-name { font-size: 1.0625rem; }
+@media (max-width: 480px) { /* name + count + five chips must fit one line at 375 */
+  .cat-sum { gap: 2px 4px; }
+  .cat-sum .chip { padding-inline: .25rem; }
+}
+
+/* ---------- expand/collapse all (real markup in the template, next to #shown; hidden until app.js enables it) ---------- */
+.fx-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s1) var(--s3); min-width: 0; }
+.fx-all {
+  min-width: 7.5rem;
+  min-height: 2.25rem;
+  padding: 0 .875rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 var(--fs-2)/1.2 var(--font-body);
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.fx-all:active { transform: scale(.96); }
+@media (hover: hover) { .fx-all:hover { background: var(--track); } }
+@media (max-width: 640px) { .fx-all { min-height: 44px; } }
+
+@media print {
+  .fx-all { display: none !important; }
+  .fnd-toggle::before, .fnd-toggle::after { display: none; } /* the button holds the title: keep the text, drop the chrome */
+  .fnd[data-fx] [hidden] { display: block !important; content-visibility: visible !important; margin: .25rem 0 0 var(--fx-ind) !important; }
+  .fnd[data-fx] .fnd-head > .fnd-evidence { pointer-events: auto; }
+}
+@media (forced-colors: active) {
+  .fnd-toggle::after { border-color: CanvasText; }
+  /* a closed row's parts are content-visibility:hidden but keep their own border: drop it */
+  .fnd[data-fx] [hidden] { border: 0 !important; }
+  .fnd[data-fx="closed"] .fnd-head > .fnd-evidence { border: 0; }
+}
+/* skin-mobile.css: mobile + chrome compaction (after skin-compact.css, before skin-tabs.css: the tabs file overrides #cats > .crow padding).
+   1. <= 640px: the donut, heat and radar cards become ONE swipeable strip (#strip, built by app.js initStrip; without the script the
+      three cards simply stay stacked). Scorecard stays on top. Dots (.strip-dots) are real buttons that scroll to a card.
+   2. category rows: denser, two columns from 480px, smaller gauges, one-line tag.
+   3. masthead + scan form compaction; scorecard compaction; tighter gaps (never below the 14px the two bezel rings need).
+   4. >= 960px: tighter rail cards (the skin's sticky scorecard is untouched).
+   Motion rules unchanged: only transform/opacity, nothing here carries information, reduced motion is the base.css catch-all.
+   No inline styles, no url(), no @import. Skeleton heights (.skel-*) follow the real heights measured at 375/768/1200. */
+
+/* ======================================== A. category rows (all widths) ======================================== */
+:root { --gauge-size-sm: 2.5rem; }
+#cats { gap: .5rem; }
+#cats > .crow {
+  grid-template-columns: var(--gauge-size-sm) minmax(0, 1fr);
+  column-gap: .625rem;
+  row-gap: .125rem;
+  padding: .5rem .75rem;
+  border-radius: 1rem;
+}
+#cats .gauge-sm { --ring-w: .3rem; --num-fs: .75rem; }
+#cats .crow-name { font-size: .9375rem; line-height: 1.25; }
+#cats .crow-tag { font-size: .75rem; line-height: 1.3; }
+#cats .crow .bar { height: .625rem; }
+@media (min-width: 480px) {
+  #cats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .625rem; }
+}
+
+/* ======================================== B. phones: <= 640px ======================================== */
+@media (max-width: 640px) {
+  :root { --gauge-size: 6.5rem; --donut-size: 7.5rem; }
+
+  /* gaps between cards: rings are 7px per side, so anything >= 14px keeps them apart */
+  #report, #rail, #report-main, #skeleton { gap: 1.125rem; }
+  #results { margin-bottom: 1rem; }
+
+  /* masthead: small pill, smaller h1, lede clamped to two lines (the full text stays in the DOM) */
+  #masthead { gap: .5rem; padding: 1rem 0 .75rem; margin-bottom: .75rem; }
+  #masthead::before { padding: .2rem .6rem; font-size: .625rem; letter-spacing: .14em; }
+  #masthead h1 { font-size: clamp(1.75rem, 8.5vw, 2.25rem); line-height: 1; letter-spacing: -.04em; }
+  #masthead p {
+    max-width: none; font-size: .875rem; line-height: 1.4;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* scan form: label on top, field + icon button in one row. The button keeps the text "Scan" for assistive tech
+     (font-size 0 hides it visually; the arrow disc is the visible icon). */
+  #scan-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .25rem .5rem; padding: .75rem; }
+  #scan-form .field { display: contents; }
+  #scan-form .field > label { grid-column: 1 / -1; padding-left: .5rem; font-size: .8125rem; line-height: 1.2; }
+  #scan-form input[type="text"] { grid-column: 1; }
+  #scan-form #scan-btn {
+    grid-column: 2;
+    width: 3rem; min-width: 3rem; min-height: 3rem; padding: 0;
+    justify-content: center; gap: 0;
+    font-size: 0;
+  }
+  #loadbar { margin-top: .5rem; }
+  #status { min-height: 1.25rem; margin: .25rem 0 .875rem; font-size: .8125rem; line-height: 1.25rem; }
+  #results[data-err="true"] > #error-box { margin-bottom: 1.125rem; }
+
+  /* scorecard: smaller rings and grade, one-row actions, small meta */
+  #scorecard { padding: .875rem 1rem; }
+  .gauges { gap: .5rem; }
+  .gauge-item { gap: .25rem; }
+  .gauge:not(.gauge-sm) { --ring-w: .5rem; }
+  .gauge-grade { font-size: 2rem; margin-bottom: 0; }
+  #scorecard #meta { margin: .625rem 0 .5rem; font-size: .75rem; line-height: 1.4; }
+  #scorecard #actions { flex-wrap: nowrap; gap: .5rem; }
+  #scorecard #actions .btn {
+    flex: 1 1 0; min-width: 0; min-height: 2.75rem;
+    padding: .25rem .5rem; font-size: .8125rem; line-height: 1.15; text-align: center;
+  }
+
+  /* category card */
+  #cats-card { padding: .875rem; }
+  #cats-card .eyebrow { margin-bottom: .625rem; }
+
+  /* ---------- the strip (donut | heat | radar). The element is created by app.js initStrip and only exists in this range ---------- */
+  #strip {
+    display: flex;
+    gap: 1rem;
+    margin: -.5rem -1rem;          /* full bleed: the cards' outer rings live in the padding, the next card peeks at the edge */
+    padding: .5rem 1rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #strip::-webkit-scrollbar { display: none; }
+  #strip:focus-visible { outline-offset: -4px; border-radius: 1.25rem; }
+  #strip > .card { flex: 0 0 min(88%, 22rem); min-width: 0; padding: .875rem; scroll-snap-align: start; }
+  #strip > #donut-card { display: flex; flex-direction: column; }
+  #strip #donut { margin: auto; }
+  #strip #donut-card .legend { margin-top: .5rem; }
+  #strip #heat-card { display: flex; flex-direction: column; }
+  #strip .heat-wrap { margin-top: .5rem; }
+  #strip .eyebrow { margin-bottom: .5rem; }
+  #strip #radar-card .radar { max-width: 13rem; margin: .25rem auto 0; } /* the radar sets the strip height: keep it modest */
+  #strip #donut-card .legend > .lg { padding: .2rem 0; }
+  #strip #radar-card .radar-key { margin-top: .25rem; }
+  #strip #radar-card .radar-note, #strip #radar-card .radar-codes { margin-top: .25rem; line-height: 1.35; }
+  #strip #radar-card .radar-codes { font-size: .75rem; }
+
+  /* the cards left the "#rail > .card" selector the skin animates, so animate them here (same keyframes, same delays);
+     the donut/radar scroll-driven fades watch a block-axis scroller that does not exist inside the strip: show the final state */
+  #results[data-state="done"] #strip > .card { animation: m-rise 560ms var(--settle) var(--m-delay, 0ms) backwards; }
+  #results[data-state="done"] #radar-card { --m-delay: 135ms; }
+  #results[data-state="done"] #strip #donut,
+  #results[data-state="done"] #strip #radar-card .radar-data,
+  #results[data-state="done"] #strip #radar-card .radar-pts { animation: none; }
+
+  /* dots: real buttons (a mouse user in a narrow window has no swipe); the active one is bigger AND accent coloured.
+     The 44px hit area overlaps the strip's bottom padding, so the row costs ~32px. */
+  .strip-dots { display: flex; justify-content: center; gap: 0; margin-top: -.75rem; }
+  .strip-dots[hidden] { display: none; }
+  .strip-dot {
+    position: relative; width: 2.75rem; height: 2.75rem; margin: 0; padding: 0;
+    border: 0; background: none; cursor: pointer;
+  }
+  .strip-dot::before {
+    content: ""; position: absolute; left: 50%; top: 50%; width: .5rem; height: .5rem; margin: -.25rem 0 0 -.25rem; border-radius: 50%;
+    background: var(--edge);
+    transition: transform var(--d-mid) var(--ease-out);
+  }
+  .strip-dot[aria-current="true"]::before { background: var(--accent); transform: scale(1.5); }
+  .strip-dot:focus-visible { outline: 3px solid var(--accent); outline-offset: -6px; border-radius: 50%; }
+
+  /* skeleton: donut + heat + radar are one strip tall; scorecard / category heights follow the real cards */
+  .skel-gauges { min-height: 15.25rem; }
+  .skel-gauges::before { inset: 1rem 1rem auto; }
+  .skel-donut { min-height: 31.5rem; }
+  .skel-donut::before { inset: 2.5rem 1rem auto; }
+  .skel-heat { display: none; }
+}
+
+@media (max-width: 479.98px) { .skel-cats { min-height: 47.5rem; } }
+@media (min-width: 480px) and (max-width: 640px) { .skel-cats { min-height: 27.5rem; } }
+
+/* heat grid inside a 253..302px card: 3-letter codes must not clip */
+@media (max-width: 359.98px) {
+  #heat thead th { font-size: .5625rem; letter-spacing: -.05em; }
+}
+
+/* ======================================== C. tablet 641..959: keep the bento, tighten ======================================== */
+@media (min-width: 641px) {
+  #masthead { padding: 1.5rem 0 1rem; margin-bottom: 1rem; }
+  #masthead h1 { font-size: clamp(2.5rem, 6vw, 3.5rem); }
+  #masthead p { font-size: 1rem; }
+  #scan-form { padding: .75rem .75rem .75rem 1.25rem; }
+  #status { margin: .5rem 0 1rem; }
+}
+@media (min-width: 641px) and (max-width: 959.98px) {
+  :root { --gauge-size: 7.5rem; --donut-size: 7.5rem; }
+  #report, #rail, #report-main { gap: 1.25rem; }
+  #rail > .card { padding: 1.25rem; }
+  /* the scorecard spans the bento: gauges left, meta + actions right */
+  #scorecard { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 1.5rem; align-items: center; }
+  #scorecard .gauges { grid-column: 1; grid-row: 1 / span 3; gap: 1.25rem; }
+  #scorecard > :not(.gauges) { grid-column: 2; }
+  #scorecard #meta { margin: 0 0 .75rem; text-align: left; font-size: .8125rem; }
+  #scorecard #actions { justify-content: flex-start; }
+  #scorecard #actions .btn { flex: 0 1 auto; }
+  #cats-card { padding: 1.25rem; }
+  #heat td.hc { height: 1.75rem; } /* the skin made the cells tall to fill a stretched card; rows now size to content */
+  .skel-gauges { min-height: 12.25rem; }
+  .skel-gauges::before { inset: 1.25rem 1.25rem auto; }
+  .skel-donut, .skel-heat { min-height: 25.5rem; }
+  .skel-cats { min-height: 26.5rem; }
+}
+
+/* ======================================== D. desktop >= 960: slightly tighter rail ======================================== */
+@media (min-width: 960px) {
+  :root { --gauge-size: 7.5rem; --donut-size: 7.5rem; }
+  #rail, #report-main { gap: 1.25rem; }
+  #rail > .card { padding: 1.25rem; }
+  #scorecard #meta { margin: 1rem 0 .75rem; }
+  .gauge-item { gap: .375rem; }
+  .legend > .lg { padding: .3rem 0; }
+  #heat td.hc { height: 1.5rem; }
+  #radar-card .radar { max-width: 18.5rem; }
+  #cats-card { padding: 1.25rem; }
+  .skel-gauges { min-height: 22.5rem; }
+  .skel-gauges::before { inset: 3.5rem 1.25rem auto; }
+  .skel-donut { min-height: 24.5rem; }
+  .skel-heat { min-height: calc(17.5rem + 5.1rem); }
+  .skel-cats { min-height: 26.5rem; }
+}
+
+/* ======================================== print: everything visible, no scroller ======================================== */
+@media print {
+  #strip { display: grid; overflow: visible; margin: 0; padding: 0; gap: 1rem; }
+  #strip > .card { break-inside: avoid; }
+  .strip-dots { display: none; }
+}
+
+@media (forced-colors: active) {
+  .strip-dot::before { forced-color-adjust: none; background: GrayText; }
+  .strip-dot[aria-current="true"]::before { background: Highlight; }
+}
+/* skin-tabs.css - report tabs Overview | Findings | Details.
+   #xt (tablist) is real markup before #report in the template; app.js initTabs/tabsRender drive it and set #results[data-view]. Without the script nothing here matches and the whole
+   report stays visible. Groups are picked by id, no node is moved:
+     overview = #rail cards + #cats-card      findings = #filters + #findings + #empty      details = #raw-card + #deep (outside #results)
+   Motion: transform only (indicator bar); the base.css reduced-motion catch-all neutralises it. */
+
+:root { --xt-h: 56; --xt-top: .5rem; } /* tray height in px (a number: app.js initTabs re-measures it, text zoom grows it); 56 = 44px tab + 2 x .375rem padding */
+
+/* ---------- strip: only while a report is shown ---------- */
+#results[data-state="done"][data-view] > #xt {
+  display: block;
+  position: relative;
+  z-index: 12; /* above the sticky filter tray (10) and the sticky scorecard (2) */
+  margin: 0 0 var(--s5);
+}
+@media (min-height: 30rem) {
+  #results[data-state="done"][data-view] > #xt { position: sticky; top: var(--xt-top); }
+}
+
+.xt-list {
+  display: flex;
+  gap: .125rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: .375rem;
+  border-radius: var(--r-pill);
+  background: var(--shell);
+  box-shadow: 0 0 0 1px var(--shell-line), 0 22px 30px -24px rgb(30 35 90 / .35);
+}
+.xt-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-width: 7.5rem;
+  min-height: 44px;
+  padding: 0 var(--s4);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: 600 var(--fs-2)/1.2 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.xt-tab:hover { background: var(--tile); background: color-mix(in srgb, var(--surface) 60%, transparent); color: var(--ink); }
+.xt-tab:active { transform: scale(.97); }
+/* selected = lifted surface + ink + bold + accent bar (never colour alone) */
+.xt-tab[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 var(--hi), 0 0 0 1px var(--shell-line), 0 8px 16px -10px rgb(30 35 90 / .4);
+}
+.xt-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 1.5rem;
+  height: 3px;
+  margin-left: -.75rem;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  animation: xt-bar var(--d-mid) var(--ease-out) backwards;
+}
+@keyframes xt-bar { from { transform: scaleX(0); } }
+
+.xt-n {
+  position: relative; /* anchors the .sr text */
+  min-width: 1.5rem;
+  padding: .125rem .4rem;
+  border-radius: var(--r-pill);
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--ink);
+  font: 700 var(--fs-1)/1.2 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .xt-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: auto; }
+  /* label + badge may wrap (text zoom, 320px): the tray grows instead of clipping into the next tab */
+  .xt-tab { min-width: 0; padding: .25rem var(--s2); flex-wrap: wrap; white-space: normal; line-height: 1.15; text-align: center; }
+  .xt-t { min-width: 0; overflow-wrap: anywhere; } /* 200% text: a long word breaks instead of overlapping the next tab */
+}
+@media (max-width: 359.98px) {
+  .xt-tab { gap: .25rem; font-size: .8125rem; }
+  .xt-n { min-width: 0; padding-inline: .3rem; }
+}
+
+/* ---------- sticky offsets: the tray owns the top, everything sticky/focusable sits below it ---------- */
+html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky scorecard only covers the charts */
+@media (min-height: 30rem) {
+  html.xt { scroll-padding-top: calc(var(--xt-top) + var(--xt-h) * 1px + var(--s2)); }
+}
+/* the filter bar (108px) sticks only where it costs <15% of the viewport: not on 800px laptops */
+@media (min-width: 641px) and (min-height: 56rem) {
+  /* --filters-h is measured by app.js and is 0 while the filter bar is hidden (Overview / Details) */
+  html.xt #filters { top: calc(var(--xt-top) + var(--xt-h) * 1px + var(--s2)); }
+  html.xt { scroll-padding-top: calc(var(--xt-top) + var(--xt-h) * 1px + var(--s2) + var(--filters-h, 0px) + var(--s2)); }
+}
+
+/* phones: ONE sticky layer, docked at the bottom (thumb zone); the page gets room for it */
+@media (max-width: 640px) and (min-height: 30rem) {
+  #results[data-state="done"][data-view] > #xt {
+    position: fixed;
+    top: auto;
+    left: .5rem;
+    right: .5rem;
+    bottom: max(.5rem, env(safe-area-inset-bottom));
+    margin: 0;
+  }
+  .xt-list { box-shadow: 0 0 0 1px var(--shell-line), 0 -10px 28px -12px rgb(30 35 90 / .45); }
+  html.xt { scroll-padding-top: 0; scroll-padding-bottom: calc(var(--xt-h) * 1px + 1.5rem); }
+  html.xt body { padding-bottom: calc(var(--xt-h) * 1px + 1rem); }
+  html.xt #toast { bottom: calc(var(--xt-h) * 1px + 1.25rem + env(safe-area-inset-bottom)); }
+}
+
+/* ---------- groups (screen only: print shows everything) ---------- */
+@media screen {
+  #results[data-view="overview"] #report-main > :not(#cats-card, .xt-fix) { display: none; }
+  #results[data-view="findings"] :is(#rail, #cats-card, .xt-fix, #raw-card) { display: none; }
+  #results[data-view="details"] :is(#rail, #cats-card, .xt-fix, #filters, #findings, #empty, #report-main > h2.sr) { display: none; }
+  /* the deep-scan panel sits after #results */
+  #results[data-view]:not([data-view="details"]) ~ #deep { display: none; }
+  #results[data-view="details"] ~ #deep { margin-top: 0; }
+  /* a single group fills the width (the Overview keeps the rail + main columns) */
+  #results[data-view="findings"] #report,
+  #results[data-view="details"] #report { grid-template-columns: minmax(0, 1fr); }
+}
+@media print {
+  #results > #xt, .xt-fix, .crow-go { display: none !important; }
+}
+
+/* ---------- Overview: "Fix first" card ---------- */
+.xt-fix { display: grid; gap: var(--s3); align-content: start; }
+.xt-fix .eyebrow { justify-self: start; margin: 0; }
+.xt-sum { margin: 0; font: 700 var(--fs-4)/1.25 var(--font-display); color: var(--ink); }
+.xt-top { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.xt-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .125rem .75rem;
+  align-items: baseline;
+  width: 100%;
+  min-height: 44px;
+  padding: .625rem .75rem;
+  border: 1px solid var(--edge);
+  border-radius: 1rem;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+.xt-item:active { transform: scale(.985); }
+@media (hover: hover) { .xt-item:hover { background: var(--track); } }
+.xt-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.xt-sev { padding: 0 .375rem; border: 1px solid var(--edge); border-radius: var(--r-chip); background: var(--surface); font: 700 var(--fs-1)/1.6 var(--font-mono); white-space: nowrap; }
+.xt-ttl { font-weight: 600; font-size: .9375rem; line-height: 1.35; overflow-wrap: anywhere; }
+.xt-fx {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: .8125rem;
+  line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.xt-cue { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
+.xt-cue p { flex: 1 1 14rem; margin: 0; font-size: .875rem; line-height: 1.4; }
+.xt-cue .btn { flex: none; min-height: 44px; }
+@media (max-width: 640px) { .xt-cue .btn { width: 100%; } }
+
+/* ---------- Overview: category rows are links to their findings ---------- */
+#cats > .crow { position: relative; padding-right: 1.75rem; }
+.crow-go { position: absolute; inset: 0; z-index: 2; margin: 0; padding: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
+.crow-go:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.crow-go::after { /* chevron */
+  content: ""; position: absolute; right: .875rem; top: .875rem; width: .5rem; height: .5rem;
+  border-right: 2px solid var(--muted); border-top: 2px solid var(--muted); transform: rotate(45deg);
+}
+
+/* ---------- wide screens: use the width (CSS only, no node moves) ---------- */
+@media (min-width: 960px) {
+  /* masthead and scan form share one row; after a scan the lede goes (it stays in the DOM, and shows before the first scan) */
+  #app { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); column-gap: var(--s6); align-items: center; }
+  #app > * { grid-column: 1 / -1; }
+  #app > #masthead { grid-column: 1; }
+  #app > #scan-form { grid-column: 2; }
+  html.xt #masthead p { display: none; }
+}
+@supports (display: contents) {
+  @media (min-width: 1100px) {
+    /* Overview: scorecard | Fix first, then the three charts in one row, then the category rows */
+    #results[data-view="overview"] #report { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+    #results[data-view="overview"] :is(#rail, #report-main) { display: contents; }
+    #results[data-view="overview"] #scorecard { grid-column: 1; grid-row: 1; }
+    #results[data-view="overview"] .xt-fix { grid-column: 2 / span 2; grid-row: 1; }
+    #results[data-view="overview"] #donut-card { grid-column: 1; grid-row: 2; }
+    #results[data-view="overview"] #heat-card { grid-column: 2; grid-row: 2; }
+    #results[data-view="overview"] #radar-card { grid-column: 3; grid-row: 2; }
+    #results[data-view="overview"] #cats-card { grid-column: 1 / -1; grid-row: 3; }
+    #results[data-view="overview"] #cats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+}
+@media (min-width: 1100px) {
+  /* Findings: two columns of rows (a 1100px single column leaves title and severity 700px apart) */
+  #results[data-view="findings"] #findings .cat > .list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .75rem; }
+  #results[data-view="findings"] #findings .cat > .list > .fnd + .fnd { border-top: 0; }
+  #results[data-view="findings"] #findings .cat > .list > .fnd { border-bottom: 1px solid var(--rule); }
+  #results[data-view="findings"] #findings .cat > .list > .fnd:last-child,
+  #results[data-view="findings"] #findings .cat > .list > .fnd:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+}
+
+@media (forced-colors: active) {
+  .xt-list { border: 1px solid CanvasText; }
+  .xt-tab[aria-selected="true"] { border: 2px solid Highlight; }
+  .xt-tab[aria-selected="true"]::after { background: Highlight; forced-color-adjust: none; }
+}
+
+/* phones: grades, then Fix first, then the chart strip, then the category rows (one column; ids and DOM order are untouched) */
+@supports (display: contents) {
+  @media (max-width: 640px) {
+    #results[data-view="overview"] :is(#rail, #report-main) { display: contents; }
+    #results[data-view="overview"] #scorecard { order: 0; }
+    #results[data-view="overview"] .xt-fix { order: 1; }
+    #results[data-view="overview"] :is(#strip, .strip-dots, #donut-card, #heat-card, #radar-card) { order: 2; }
+    #results[data-view="overview"] #cats-card { order: 3; }
+  }
+}
+@media (max-width: 640px) {
+  .xt-fix { padding: .875rem; gap: .625rem; }
+  .xt-sum { font-size: 1.0625rem; }
+  .xt-item { padding: .5rem .625rem; }
+  .xt-fx { -webkit-line-clamp: 1; line-clamp: 1; }
+}
 </style>
 </head>
 <body>
@@ -2545,6 +3149,13 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
   </div><div class="skel skel-list"></div>
   </div>
   <div id="error-box" role="alert"><p id="error-msg"></p></div>
+
+  <!-- report tabs: shown only while #results has data-view (app.js initTabs/tabsRender); #report is the tabpanel -->
+  <div id="xt" class="xt"><div class="xt-list" role="tablist" aria-label="Report sections">
+    <button type="button" id="xt-tab-overview" class="xt-tab" role="tab" aria-selected="false" aria-controls="report" tabindex="-1"><span class="xt-t">Overview</span></button>
+    <button type="button" id="xt-tab-findings" class="xt-tab" role="tab" aria-selected="false" aria-controls="report" tabindex="-1"><span class="xt-t">Findings</span><span class="xt-n"><span id="xt-count">0</span><span id="xt-count-sr" class="sr"> issues</span></span></button>
+    <button type="button" id="xt-tab-details" class="xt-tab" role="tab" aria-selected="false" aria-controls="report deep" tabindex="-1" aria-label="Details: raw response headers and deep scan" title="Raw response headers and the owner-only deep scan"><span class="xt-t">Details</span></button>
+  </div></div>
 
   <div id="report">
     <aside id="rail">
@@ -2637,7 +3248,11 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
           <input class="rb" type="radio" name="st" id="st-info" value="info"><label for="st-info">Info</label>
           <input class="rb" type="radio" name="st" id="st-skipped" value="skipped"><label for="st-skipped">Skipped</label>
         </fieldset>
-        <p id="shown" class="muted" role="status" aria-live="polite"></p>
+        <div class="fx-meta">
+          <p id="shown" class="muted" role="status" aria-live="polite"></p>
+          <button type="button" id="expand-all" class="fx-all" aria-controls="findings" hidden>Expand all</button>
+          <span id="fx-live" class="sr" role="status" aria-live="polite"></span>
+        </div>
       </div>
       <div id="findings"></div>
       <p id="empty" class="muted" hidden><span id="empty-msg">No findings match these filters.</span> <button type="button" id="reset-filters" class="btn">Show all findings</button></p>
@@ -2767,6 +3382,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     res.dataset.state = v.s;
     res.dataset.err = v.err;
     res.setAttribute('aria-busy', String(v.s === 'loading'));
+    if (v.s === 'done') enhance(tabsDone); // scroll + focus work of a finished deep scan (needs the report displayed)
   }
   function flushState() { var v = want; want = null; if (v) applyState(v); }
   function setState(s, err) {
@@ -2810,6 +3426,14 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     return c;
   }
 
+  // ISO timestamp -> local date and time; anything unparseable is shown as sent
+  function when(iso) {
+    try {
+      var d = new Date(iso);
+      return isNaN(d.getTime()) ? String(iso) : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (e) { return String(iso); }
+  }
+
   function renderGauges(r) {
     [['security', 'Security'], ['quality', 'Quality']].forEach(function (p) {
       var s = r.score[p[0]], g = $('gauge-' + p[0]);
@@ -2834,9 +3458,11 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     var m = $('meta');
     clear(m);
     m.appendChild(txt(r.url));
-    [r.scannedAt, r.durationMs + ' ms', r.deep ? 'deep scan' : 'passive scan'].forEach(function (t) {
+    [when(r.scannedAt), r.durationMs + ' ms', r.deep ? 'deep scan' : 'passive scan'].forEach(function (t, i) {
+      var s = h('span', 'nw', t);
+      if (!i) s.title = String(r.scannedAt); // the ISO value stays available
       m.appendChild(txt(' • '));
-      m.appendChild(h('span', 'nw', t));
+      m.appendChild(s);
     });
     if (r.errors && r.errors.length) {
       m.appendChild(txt(' • ' + r.errors.length + ' module error(s): ' +
@@ -2976,6 +3602,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
       if (!s) return;
       var band = scoreBand(s.score), li = h('li', 'crow');
       li.dataset.g = band;
+      li.dataset.c = c;
       num(li, '--i', i++);
       var g = h('div', 'gauge gauge-sm');
       g.setAttribute('role', 'img');
@@ -3013,6 +3640,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
   function renderFindings(r) {
     var box = $('findings'), ci = 0, fi = 0;
     clear(box);
+    fxOpen = 0;
     CATS.forEach(function (c) {
       var list = r.findings.filter(function (f) { return f.category === c; });
       if (!list.length) return;
@@ -3035,7 +3663,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
       var ul = h('ul', 'list');
       list.forEach(function (f) {
         var li = h('li', 'fnd'), head = h('div', 'fnd-head'), pill = h('span', 'pill');
-        li.dataset.s = f.status; li.dataset.c = c;
+        li.dataset.s = f.status; li.dataset.c = c; li.dataset.sev = String(f.severity);
         num(li, '--i', fi++);
         pill.dataset.s = f.status;
         pill.appendChild(glyph(f.status));
@@ -3056,6 +3684,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
           a.href = f.ref; a.rel = 'noopener noreferrer'; a.target = '_blank';
           li.appendChild(a);
         }
+        enhance(compactRow, li);
         ul.appendChild(li);
       });
       d.appendChild(ul);
@@ -3081,6 +3710,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     if (cat !== 'all' || st === 'pass' || st === 'info' || st === 'skipped') {
       Array.prototype.forEach.call(document.querySelectorAll('#findings .cat'), function (d) { d.open = true; });
     }
+    enhance(fxSync);
   }
 
   // The filter radios are visually hidden and, in the scrolling chip strips on narrow screens, sit at the strip
@@ -3107,17 +3737,327 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     });
   }
 
-  function show(r) {
+  function show(r, deep) {
     result = r;
     renderRaw(r);
     renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
     enhance(renderStack, r.findings);
     enhance(renderRadar, r);
+    enhance(stripSync);
+    enhance(function () { tabsRender(r, deep); });
     // Follow the latest scan unless the user typed their own host.
     if (!$('host').value || $('host').value === autoHost) {
       $('host').value = autoHost = r.host || '';
       $('host').dispatchEvent(new Event('input'));
     }
+  }
+
+  // ---- Compact finding rows (skin-compact.css). Plain rows stay valid: all of this is enhancement keyed on li.fnd[data-fx],
+  // so if it throws the report is still complete. Row = h3 > button (APG accordion); fail rows start open, the rest closed.
+  var UNTIL_FOUND = 'onbeforematch' in document.documentElement; // hidden="until-found": find-in-page can open a collapsed row
+  var phoneMQ = window.matchMedia ? matchMedia('(max-width: 640px)') : { matches: false };
+  var fxSeq = 0, fxOpen = 0;
+  function rowOpen(li) { return li.dataset.fx === 'open'; }
+  function setRow(li, on, touched) {
+    var b = li.querySelector('.fnd-toggle');
+    if (!b) return;
+    if (touched) li.dataset.touched = '1';
+    li.dataset.fx = on ? 'open' : 'closed';
+    b.setAttribute('aria-expanded', String(on));
+    Array.prototype.forEach.call(li.querySelectorAll('[data-fxh]'), function (el) {
+      if (on) el.removeAttribute('hidden'); else el.setAttribute('hidden', UNTIL_FOUND ? 'until-found' : '');
+    });
+  }
+  // li is a finished row (head, optional evidence/fix/ref). Called from renderFindings for every row.
+  function compactRow(li) {
+    var head = li.querySelector('.fnd-head'), title = li.querySelector('.fnd-title');
+    var ev = li.querySelector('.fnd-evidence'), fix = li.querySelector('.fnd-fix'), ref = li.querySelector('.fnd-ref');
+    var fail = li.dataset.s === 'fail', ids = [], id = 'fx' + (++fxSeq);
+    if (!head || !title) return;
+    if (ev) { head.appendChild(ev); if (!fail) ev.dataset.fxh = '1'; } // evidence is the collapsed one-line preview on fail rows
+    [fix, ref].forEach(function (el) { if (el) el.dataset.fxh = '1'; });
+    [ev, fix, ref].forEach(function (el, i) { if (el) { el.id = id + 'abc'.charAt(i); ids.push(el.id); } });
+    if (!ids.length) { li.dataset.fx = 'none'; return; }
+    if (fail && ev) li.dataset.prev = '1';
+    var b = h('button', 'fnd-toggle'), tt = h('span', 'fnd-tt', title.textContent);
+    b.type = 'button';
+    b.setAttribute('aria-controls', ids.join(' '));
+    b.appendChild(tt);
+    clear(title);
+    title.appendChild(b);
+    // phones: only the first three failed rows start open (a scan can have 15), the others show the one-line preview
+    setRow(li, fail && (!phoneMQ.matches || ++fxOpen <= 3));
+  }
+  // rows the current filter shows: same rule as syncFilters (works for the :has path and the data-cat/data-st fallback alike)
+  function fxRows() {
+    var c = document.querySelector('input[name=cat]:checked').value, t = document.querySelector('input[name=st]:checked').value;
+    return Array.prototype.filter.call($('findings').querySelectorAll('li.fnd[data-fx="open"], li.fnd[data-fx="closed"]'), function (li) {
+      var s = li.dataset.s;
+      return (c === 'all' || li.dataset.c === c) && (t === 'all' || (t === 'issues' ? s === 'fail' || s === 'warn' : s === t));
+    });
+  }
+  function fxSync() {
+    var all = $('expand-all'), r = fxRows();
+    all.hidden = !r.length;
+    all.textContent = r.length && r.every(rowOpen) ? 'Collapse all' : 'Expand all';
+  }
+  function initRows() {
+    var box = $('findings'), all = $('expand-all'), live = $('fx-live');
+    box.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('.fnd-toggle');
+      if (!b) return;
+      var li = b.closest('li.fnd');
+      setRow(li, !rowOpen(li), true);
+      fxSync();
+    });
+    box.addEventListener('animationend', function (ev) { // the reveal plays once per user toggle, not on every later re-show
+      if (ev.animationName !== 'x-open') return;
+      var li = ev.target.closest && ev.target.closest('li.fnd');
+      if (!li) return;
+      var parts = li.querySelectorAll('.fnd-evidence, .fnd-fix, .fnd-ref');
+      if (ev.target === parts[parts.length - 1]) delete li.dataset.touched;
+    });
+    box.addEventListener('beforematch', function (ev) { // find-in-page landed in a collapsed row
+      var li = ev.target.closest && ev.target.closest('li.fnd');
+      if (li && !rowOpen(li)) { setRow(li, true, true); fxSync(); }
+    });
+    all.addEventListener('click', function () {
+      var r = fxRows(), on = !r.every(rowOpen);
+      r.forEach(function (li) {
+        if (on) { var d = li.closest('details.cat'); if (d) d.open = true; }
+        setRow(li, on); // no 'touched': 100+ simultaneous reveal animations are noise
+      });
+      fxSync();
+      live.textContent = r.length + (r.length === 1 ? ' finding ' : ' findings ') + (on ? 'expanded' : 'collapsed'); // the label flips while focus stays on the button
+    });
+    // printing shows everything: open every closed <details> in the report (category groups, raw headers); the print CSS shows the row parts
+    var reopened = [];
+    window.addEventListener('beforeprint', function () {
+      reopened = reopened.concat(Array.prototype.filter.call(document.querySelectorAll('#report details:not([open])'), function (d) { d.open = true; return true; }));
+    });
+    window.addEventListener('afterprint', function () { reopened.forEach(function (d) { d.open = false; }); reopened = []; });
+  }
+
+  // ---- Report tabs Overview | Findings | Details (skin-tabs.css). #xt is real markup; #results[data-view] picks the visible group
+  // by CSS and exists only after tabsRender, so without JS (or if it throws) the whole report stays visible.
+  // #report is the tabpanel; while Details is selected the deep-scan section (outside #results) is a second panel of that tab.
+  var VIEWS = ['overview', 'findings', 'details'];
+  var TV = { first: true, lastUrl: null, after: null, fix: null };
+  function tabEl(v) { return $('xt-tab-' + v); }
+  function tabsMeasure() { // the tray height follows text zoom / wrapping (CSS reads it as a unitless number of px)
+    var hgt = $('xt').offsetHeight;
+    if (hgt) document.documentElement.style.setProperty('--xt-h', String(hgt));
+  }
+  // back to the top of the report (under the tray when it is sticky), only when the page is scrolled past it
+  function tabsToStrip() {
+    var strip = $('xt'), cs = getComputedStyle(strip), gap = parseFloat(cs.marginBottom) || 0;
+    var tray = cs.position === 'fixed' ? 0 : strip.offsetHeight + gap;
+    var y = window.pageYOffset + $('report').getBoundingClientRect().top - tray - 8;
+    if (window.pageYOffset > y) window.scrollTo(0, Math.max(0, y));
+  }
+  function tabSelect(v, focus, scroll, noHash) {
+    if (VIEWS.indexOf(v) < 0) return;
+    var res = $('results'), deep = $('deep');
+    res.dataset.view = v;
+    VIEWS.forEach(function (k) {
+      tabEl(k).setAttribute('aria-selected', String(k === v));
+      tabEl(k).tabIndex = k === v ? 0 : -1;
+    });
+    $('report').setAttribute('aria-labelledby', 'xt-tab-' + v);
+    if (v === 'details') { deep.setAttribute('role', 'tabpanel'); deep.setAttribute('aria-labelledby', 'xt-tab-details'); }
+    else { deep.removeAttribute('role'); deep.setAttribute('aria-labelledby', 'deep-h'); }
+    tabsMeasure();
+    if (focus) tabEl(v).focus({ preventScroll: true });
+    if (scroll) tabsToStrip();
+    if (!noHash) { try { history.replaceState(null, '', '#view=' + v); } catch (e) { /* sandboxed */ } }
+  }
+  function hashView() {
+    var m = /(?:^#|&)view=(overview|findings|details)(?:&|$)/.exec(location.hash);
+    return m ? m[1] : null;
+  }
+  function setRadio(id) {
+    var r = $(id);
+    if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+  // open one finding in the Findings tab: widen the filters when they hide it, expand the row, focus its toggle
+  function tabsGoto(li) {
+    var c = document.querySelector('input[name=cat]:checked'), s = document.querySelector('input[name=st]:checked');
+    if (c.value !== 'all' && c.value !== li.dataset.c) setRadio('cat-all');
+    if (s.value !== 'all' && s.value !== 'issues' && s.value !== li.dataset.s) setRadio('st-issues');
+    tabSelect('findings', false, false);
+    var d = li.closest('details.cat'), b = li.querySelector('.fnd-toggle');
+    if (d) d.open = true;
+    if (b && b.getAttribute('aria-expanded') === 'false') b.click();
+    li.scrollIntoView({ block: 'center' });
+    (b || tabEl('findings')).focus({ preventScroll: true });
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  // Overview card: counts, the three most severe failed checks (warnings when nothing failed) and the deep-scan cue
+  function tabsFix(c) {
+    if (TV.fix && TV.fix.parentNode) TV.fix.parentNode.removeChild(TV.fix);
+    var main = $('report-main'), fix = TV.fix = h('section', 'card xt-fix'), hd = h('h2', 'eyebrow', 'Fix first');
+    fix.setAttribute('aria-labelledby', 'xt-fix-h');
+    hd.id = 'xt-fix-h';
+    fix.appendChild(hd);
+    fix.appendChild(h('p', 'xt-sum', c.fail + ' failed, ' + plural(c.warn, 'warning', 'warnings')));
+    var rows = Array.prototype.map.call($('findings').querySelectorAll('.fnd[data-s="' + (c.fail ? 'fail' : 'warn') + '"]'), function (li, i) {
+      return { li: li, sev: Number(li.dataset.sev) || 0, i: i };
+    });
+    rows.sort(function (a, b) { return b.sev - a.sev || a.i - b.i; });
+    if (rows.length) {
+      var ol = h('ol', 'xt-top');
+      rows.slice(0, 3).forEach(function (r) {
+        var item = h('li'), b = h('button', 'xt-item'), t = r.li.querySelector('.fnd-title'), f = r.li.querySelector('.fnd-fix');
+        b.type = 'button';
+        b.appendChild(h('span', 'xt-sev', 'Sev ' + r.sev));
+        b.appendChild(h('span', 'xt-ttl', t ? t.textContent : ''));
+        if (f) b.appendChild(h('span', 'xt-fx', f.textContent.replace(/^Fix:\s*/, '')));
+        b.addEventListener('click', function () { tabsGoto(r.li); });
+        item.appendChild(b);
+        ol.appendChild(item);
+      });
+      fix.appendChild(ol);
+    }
+    var cue = h('div', 'xt-cue'), go = h('button', 'btn', 'Verify ownership');
+    cue.appendChild(h('p', 'muted', 'Exposed files (.git, .env) are only checked in a deep scan, for domains you own.'));
+    go.type = 'button';
+    go.addEventListener('click', function () { tabSelect('details', false, true); tabEl('details').focus({ preventScroll: true }); });
+    cue.appendChild(go);
+    fix.appendChild(cue);
+    main.insertBefore(fix, main.firstChild);
+  }
+  // Overview category rows open their findings (a real button stretched over the row)
+  function tabsLinkCats() {
+    Array.prototype.forEach.call(document.querySelectorAll('#cats > .crow'), function (li) {
+      var r = $('cat-' + li.dataset.c), tag = li.querySelector('.crow-tag');
+      if (!r) return;
+      var issues = tag && /fail|warn/.test(tag.textContent), b = h('button', 'crow-go');
+      b.type = 'button';
+      b.appendChild(h('span', 'sr', 'Show ' + CAT_NAME[li.dataset.c] + ' findings'));
+      b.addEventListener('click', function () {
+        setRadio(r.id);
+        setRadio(issues ? 'st-issues' : 'st-all');
+        tabSelect('findings', false, true);
+        tabEl('findings').focus({ preventScroll: true }); // the button is hidden now: hand focus to the tab
+      });
+      li.appendChild(b);
+    });
+  }
+  // Called from show() with the new report. Re-scanning the same URL keeps the tab; a new URL starts at the Overview;
+  // a deep scan (started from Details) lands on Findings. The scroll and focus work waits for state "done" (tabsDone).
+  function tabsRender(r, deep) {
+    var res = $('results'), c = counts(r.findings), url = $('url').value.trim().toLowerCase();
+    $('xt-count').textContent = String(c.fail + c.warn); // fail + warn over ALL findings: the filter radios do not change it
+    $('xt-count-sr').textContent = ' issues (' + c.fail + ' failed, ' + plural(c.warn, 'warning', 'warnings') + ')';
+    tabEl('findings').title = c.fail + ' failed, ' + plural(c.warn, 'warning', 'warnings');
+    try { tabsFix(c); tabsLinkCats(); } catch (e) { /* the tabs work without them */ }
+    document.documentElement.classList.add('xt');
+    var same = TV.lastUrl !== null && url === TV.lastUrl;
+    TV.lastUrl = url;
+    var v = TV.first ? hashView() || 'overview' : deep ? 'findings' : same && res.dataset.view ? res.dataset.view : 'overview';
+    TV.first = false;
+    TV.after = deep ? { scroll: true, focus: true } : null;
+    tabSelect(v, false, false);
+  }
+  function tabsDone() {
+    var a = TV.after;
+    TV.after = null;
+    tabsMeasure();
+    if (!a) return;
+    if (a.scroll) tabsToStrip();
+    // the deep scan button (outside the tab it landed on) is hidden now and focus fell to <body>: hand it to the tab
+    var cur = document.activeElement;
+    if (a.focus && (!cur || cur === document.body)) tabEl($('results').dataset.view).focus({ preventScroll: true });
+  }
+  function initTabs() {
+    var res = $('results');
+    $('report').setAttribute('role', 'tabpanel');
+    VIEWS.forEach(function (v) { tabEl(v).addEventListener('click', function () { tabSelect(v, false, true); }); });
+    $('xt').querySelector('.xt-list').addEventListener('keydown', function (ev) {
+      if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+      var i = VIEWS.indexOf(res.dataset.view), k = ev.key, n;
+      if (k === 'ArrowRight') n = (i + 1) % VIEWS.length;
+      else if (k === 'ArrowLeft') n = (i + VIEWS.length - 1) % VIEWS.length;
+      else if (k === 'Home') n = 0;
+      else if (k === 'End') n = VIEWS.length - 1;
+      else return;
+      ev.preventDefault();
+      tabSelect(VIEWS[n], true, true); // automatic activation: switching is a CSS toggle, nothing to load
+    });
+    if (window.ResizeObserver) new ResizeObserver(tabsMeasure).observe($('xt'));
+    window.addEventListener('hashchange', function () {
+      var v = hashView();
+      if (v && res.dataset.view && v !== res.dataset.view) tabSelect(v, false, true, true);
+    });
+  }
+
+  // ---- Phones (<= 640px): the donut, heat and radar cards (existing nodes, ids unchanged) move into one swipeable strip with
+  // position dots; above 640px they go back to their place. If this throws the cards simply stay stacked.
+  var stripSync = function () {};
+  function initStrip() {
+    if (!window.matchMedia) return;
+    var cards = ['donut-card', 'heat-card', 'radar-card'].map($), mq = matchMedia('(max-width: 640px)');
+    var strip = h('div'), dots = h('div', 'strip-dots');
+    strip.id = 'strip';
+    strip.setAttribute('role', 'region');
+    strip.setAttribute('aria-label', 'Charts');
+    strip.tabIndex = 0;
+    dots.setAttribute('role', 'group');
+    dots.setAttribute('aria-label', 'Choose chart');
+    function visible() { return cards.filter(function (c) { return !c.hidden; }); } // the radar card stays hidden where it is not drawn
+    // dot i is "on" when card i is the one nearest to the strip's start edge
+    function mark() {
+      var vis = visible(), kids = dots.children, best = 0, bd = Infinity;
+      var edge = strip.getBoundingClientRect().left + (parseFloat(getComputedStyle(strip).paddingLeft) || 0);
+      vis.forEach(function (c, i) {
+        var d = Math.abs(c.getBoundingClientRect().left - edge);
+        if (d < bd) { bd = d; best = i; }
+      });
+      for (var i = 0; i < kids.length; i++) kids[i].setAttribute('aria-current', String(i === best));
+    }
+    function go(i) { // scroll the strip itself (not the page) so card i sits at the start edge
+      var c = visible()[i];
+      if (!c) return;
+      var pad = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+      var left = c.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft - pad;
+      var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      strip.scrollTo({ left: left, behavior: calm ? 'auto' : 'smooth' });
+      for (var k = 0; k < dots.children.length; k++) dots.children[k].setAttribute('aria-current', String(k === i));
+    }
+    function draw() {
+      var n = visible().length;
+      while (dots.children.length > n) dots.removeChild(dots.lastChild);
+      while (dots.children.length < n) {
+        var b = h('button', 'strip-dot');
+        b.type = 'button';
+        b.addEventListener('click', go.bind(null, dots.children.length));
+        dots.appendChild(b);
+      }
+      for (var j = 0; j < n; j++) dots.children[j].setAttribute('aria-label', 'Show chart ' + (j + 1) + ' of ' + n);
+      dots.hidden = n < 2;
+      mark();
+    }
+    strip.addEventListener('scroll', mark, { passive: true }); // 3 rect reads: cheap enough without rAF throttling
+    function wrap() {
+      var host = cards[0].parentNode;
+      if (strip.parentNode || !host) return;
+      host.insertBefore(strip, cards[0]);
+      cards.forEach(function (c) { strip.appendChild(c); });
+      host.insertBefore(dots, strip.nextSibling);
+      strip.scrollLeft = 0;
+      draw();
+    }
+    function unwrap() {
+      var host = strip.parentNode;
+      if (!host) return;
+      cards.forEach(function (c) { host.insertBefore(c, strip); });
+      host.removeChild(strip);
+      if (dots.parentNode) dots.parentNode.removeChild(dots);
+    }
+    function sync() { if (mq.matches) wrap(); else unwrap(); }
+    if (mq.addEventListener) mq.addEventListener('change', sync); else if (mq.addListener) mq.addListener(sync);
+    stripSync = function () { strip.scrollLeft = 0; draw(); }; // a new report starts at the first card; the radar card may have appeared
+    sync();
   }
 
   async function runScan(deep) {
@@ -3129,7 +4069,7 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
-      show(r);
+      show(r, deep);
       setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
     } catch (e) {
@@ -3293,6 +4233,9 @@ html:not(.cp) #results[data-state="done"] .gauge:not(.gauge-sm):not([data-g="ski
   }
   enhance(initLegendHover);
   enhance(initFilterFlow);
+  enhance(initRows);
+  enhance(initTabs);
+  enhance(initStrip);
 
   syncFilters();
 })();
