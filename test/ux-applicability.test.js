@@ -431,3 +431,23 @@ describe('pageType is linear on hostile input', () => {
     assert.equal(f['ux-privacy-policy'].status, 'fail'); // empty forms stay lead forms
   });
 });
+
+describe('minimal pages', () => {
+  const MIN = '<!doctype html><html lang="en"><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>This domain is for use in examples.</p><p><a href="https://www.iana.org/domains/example">More information</a></p></body></html>';
+  test('a placeholder page skips the business-site rules instead of failing them', async () => {
+    assert.equal(pageType(MIN, URL0).isMinimal, true);
+    const f = await htmlRun(MIN);
+    for (const id of ['ux-internal-links', 'ux-cta-above-fold', 'ux-faq']) assert.equal(f[id].status, 'skipped', id);
+    assert.equal(f['ux-privacy-policy'].status, 'info');
+  });
+  test('minimal needs all of: little text, no other page, no form, no shop', () => {
+    assert.equal(pageType(page(''), URL0).isMinimal, false); // long prose
+    assert.equal(pageType(MIN.replace('</body>', '<a href="/about">About</a></body>'), URL0).isMinimal, false);
+    assert.equal(pageType(MIN.replace('</body>', '<form><input name=email></form></body>'), URL0).isMinimal, false);
+    assert.equal(pageType(MIN.replace('</body>', '<a href="/cart">Cart</a></body>'), URL0).isMinimal, false);
+  });
+  test('other analytics still fail the privacy rule', async () => {
+    const f = await htmlRun(page('<a href="/a">A</a>', '<script src="https://www.googletagmanager.com/gtm.js?id=GTM-ABC123"></script>'));
+    assert.equal(f['ux-privacy-policy'].status, 'fail');
+  });
+});

@@ -11,10 +11,12 @@ import { run as headersRun } from '../lib/checks/headers.js';
 import { run as dnsRun } from '../lib/checks/dns.js';
 import { run as tlsRun } from '../lib/checks/tls.js';
 import { fakeCtx, stubResolve } from './fixture-server.js';
+// Unit-test pages are tiny; real pages carry more text. Padding keeps them out of the minimal-page class (pageType.isMinimal).
+const PAD = '<p>' + 'Filler prose for the unit test page. '.repeat(8) + '</p>';
 
 const st = (fs, id) => fs.find((f) => f.id === id);
 const status = async (run, ctx, id) => st(await run(ctx), id).status;
-const html = (body, extra = {}) => fakeCtx({ body, ...extra });
+const html = (body, extra = {}) => fakeCtx({ body: body + PAD, ...extra });
 const H = (body, id, extra) => status(htmlRun, html(body, extra), id);
 const res = (o) => ({ status: 200, headers: {}, body: '', redirects: [], truncated: false, timingMs: 1, ...o });
 

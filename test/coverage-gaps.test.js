@@ -8,6 +8,8 @@ import { run as runSite } from '../lib/checks/site.js';
 import { run as runTls } from '../lib/checks/tls.js';
 import { run as runProbes } from '../lib/checks/probes.js';
 import { fakeCtx } from './fixture-server.js';
+// Unit-test pages are tiny; real pages carry more text. Padding keeps them out of the minimal-page class (pageType.isMinimal).
+const PAD = '<p>' + 'Filler prose for the unit test page. '.repeat(8) + '</p>';
 
 const by = (fs) => Object.fromEntries(fs.map((f) => [f.id, f]));
 const res = (status, headers = {}, body = '') => ({ status, headers, body, finalUrl: '', timingMs: 1, redirects: [], truncated: false });
@@ -54,7 +56,7 @@ describe('tls.js', () => {
 // ---------------------------------------------------------------- html.js
 describe('html.js: UX heuristics', () => {
   const ok = async (u) => res(200, {}, '<html>privacy policy text</html>');
-  const H = async (body, fetch = ok) => by(await runHtml(fakeCtx({ body, fetch })));
+  const H = async (body, fetch = ok) => by(await runHtml(fakeCtx({ body: body + PAD, fetch })));
   const st = async (id, body, fetch) => (await H(body, fetch))[id].status;
   const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o)}</script>`;
 
