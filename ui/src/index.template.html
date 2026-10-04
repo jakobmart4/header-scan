@@ -34,7 +34,21 @@
 
 <section id="results" data-state="idle" data-err="false" aria-label="Scan results" aria-busy="false">
   <div id="skeleton" aria-hidden="true">
-    <div class="skel skel-gauges"></div><div class="skel skel-donut"></div><div class="skel skel-heat"></div><div class="skel skel-cats"></div><div class="skel skel-list"></div>
+    <div class="skel skel-gauges"></div><div class="skel skel-donut"></div><div class="skel skel-heat"></div><div class="skel skel-cats flow-on">
+    <p class="flow-head">Category scores</p>
+    <ol class="flow-stages">
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">Headers</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">Cookies</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">TLS</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">DNS</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">Mail</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">Content</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">SEO</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">AI visibility</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">UX hygiene</span><span class="flow-bar"><i></i></span></li>
+      <li class="flow-stage"><span class="flow-dot"></span><span class="flow-name">Exposure</span><span class="flow-bar"><i></i></span></li>
+    </ol>
+  </div><div class="skel skel-list"></div>
   </div>
   <div id="error-box" role="alert"><p id="error-msg"></p></div>
 
@@ -54,7 +68,7 @@
 
       <section id="donut-card" class="card" aria-label="Pass, warn and fail split">
         <h2 class="eyebrow">Findings split</h2>
-        <div class="donut" id="donut" data-empty="true" role="img"><span class="donut-total" id="donut-total">0</span><span class="donut-cap" id="donut-cap">checks</span></div>
+        <div class="donut" id="donut" data-empty="true" role="img"><span class="donut-total" id="donut-total">0</span><span class="donut-cap" id="donut-cap">checks</span><span class="dn-t" data-s="warn" aria-hidden="true"></span><span class="dn-t" data-s="fail" aria-hidden="true"></span><span class="dn-depth" aria-hidden="true"></span></div>
         <dl class="legend">
           <div class="lg" data-s="pass"><dt><i class="sw"></i>&#10004; Pass</dt><dd id="lg-pass">0</dd></div>
           <div class="lg" data-s="warn"><dt><i class="sw"></i>&#9888; Warn</dt><dd id="lg-warn">0</dd></div>
@@ -66,8 +80,36 @@
 
       <section id="heat-card" class="card" aria-label="Severity heat grid">
         <h2 class="eyebrow">Fail + warn by severity</h2>
+        <div class="sevstack" id="sevstack" role="img" hidden></div>
         <div class="heat-wrap"><table id="heat" class="heat"></table></div>
-        <p class="muted heat-legend"><span>fewer</span><i aria-hidden="true"></i><span>more</span></p>
+        <p class="muted heat-legend"><span id="heat-min">fewer</span><i aria-hidden="true"></i><span id="heat-max">more</span></p>
+      </section>
+
+      <section id="radar-card" class="card" aria-labelledby="radar-title" data-g="skip" hidden>
+        <h2 id="radar-title" class="eyebrow">Score radar</h2>
+        <div class="radar" id="radar" aria-hidden="true">
+          <div class="radar-grid"><i class="radar-ring" data-l="25"></i><i class="radar-ring" data-l="55"></i><i class="radar-ring" data-l="80"></i><i class="radar-ring" data-l="100"></i><i class="radar-spokes"></i></div>
+          <div class="radar-data"></div>
+          <div class="radar-pts"><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i><i class="radar-pt"></i></div>
+          <div class="radar-lbs">
+          <span class="radar-lb"><span class="radar-code">HDR</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">COK</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">TLS</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">DNS</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">MAL</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">CNT</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">SEO</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">AI</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">UX</span><b class="radar-val"></b></span>
+          <span class="radar-lb"><span class="radar-code">EXP</span><b class="radar-val"></b></span>
+          <span class="radar-rl" data-l="55">55</span><span class="radar-rl" data-l="80">80</span><span class="radar-rl" data-l="100">100</span>
+          </div>
+        </div>
+        <ul class="radar-key" aria-hidden="true">
+          <li data-g="pass"><i></i>pass 80 and up</li><li data-g="warn"><i></i>warn 55 to 79</li><li data-g="fail"><i></i>fail below 55</li><li data-na><i></i>n/a not measured</li>
+        </ul>
+        <p class="radar-note muted">Rings mark 25, 55 and 80 out of 100. A not measured axis sits on the straight line between its neighbours.</p>
+        <p class="radar-codes muted" aria-hidden="true">HDR = Headers · COK = Cookies · MAL = Mail · CNT = Content · AI = AI visibility · UX = UX hygiene · EXP = Exposure</p>
       </section>
     </aside>
 

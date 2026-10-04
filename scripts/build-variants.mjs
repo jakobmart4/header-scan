@@ -1,4 +1,4 @@
-// 'current' = the real UI incl. ui/src/skin.css; 'editorial' = the old baseline without the skin.
+// 'current' = the real UI incl. ui/src/skin*.css; 'editorial' = the old baseline without the skin.
 // Builds design/preview/<variant>.html from the real UI + ui/variants/<variant>.css, with fetch stubbed to design/sample.json,
 // plus design/preview/index.html (side-by-side board). Preview only: not deployed (dist/ and public/ are untouched).
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
@@ -8,8 +8,11 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const rd = (...p) => readFileSync(join(root, ...p), 'utf8').replace(/\r\n?/g, '\n');
 const BASE = ['tokens.css', 'base.css', 'layout.css', 'gauge.css', 'charts.css', 'findings.css', 'panels.css'];
+// the real skin = skin.css + the skin-*.css layers, same order as scripts/build-ui.mjs
+const SKIN = ['skin.css', 'skin-charts.css', 'skin-flow.css', 'skin-motion.css', 'skin-radar.css'];
 const sample = JSON.stringify(JSON.parse(rd('design', 'sample.json')));
-const vdir = join(root, 'ui', 'variants');
+const vdir = join(root, 'ui', 'variants'); // experiments only: x-<name>.css (+ optional x-<name>.js) layered over the skin (ui/DESIGN.md)
+if (!existsSync(vdir)) mkdirSync(vdir, { recursive: true });
 const variants = ['current', 'editorial', ...readdirSync(vdir).filter((f) => f.endsWith('.css')).map((f) => f.slice(0, -4)).sort(), ...(readdirSync(vdir).some((f) => f.startsWith('x-')) ? ['x-all'] : [])];
 const layers = readdirSync(vdir).filter((f) => f.startsWith('x-') && f.endsWith('.css')).map((f) => f.slice(0, -4));
 mkdirSync(join(root, 'design', 'preview'), { recursive: true });
@@ -20,7 +23,7 @@ addEventListener('DOMContentLoaded',function(){setTimeout(function(){var i=docum
 for (const v of variants) {
   const layerOf = v === 'x-all' ? layers : v.startsWith('x-') ? [v] : [];
   const lay = (ext) => layerOf.filter((n) => existsSync(join(vdir, n + ext))).map((n) => rd('ui', 'variants', n + ext));
-  const skin = v === 'editorial' ? [] : v.startsWith('x-') || v === 'current' ? [rd('ui', 'src', 'skin.css')] : [rd('ui', 'variants', v + '.css')];
+  const skin = v === 'editorial' ? [] : v.startsWith('x-') || v === 'current' ? SKIN.map((f) => rd('ui', 'src', f)) : [rd('ui', 'variants', v + '.css')];
   const css = BASE.map((f) => rd('ui', 'src', f)).concat(skin, lay('.css')).join('\n');
   const extraJs = lay('.js').map((j) => '<script>\n' + j + '\n</script>').join('\n');
   const html = rd('ui', 'src', 'index.template.html')

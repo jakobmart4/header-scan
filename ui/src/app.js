@@ -57,9 +57,49 @@
     if (!b && busyFocus && !busyFocus.disabled && (!a || a === document.body || a === busyFocus)) busyFocus.focus();
     if (!b) busyFocus = null;
   }
-  function setState(s) {
-    $('results').dataset.state = s;
-    $('results').setAttribute('aria-busy', String(s === 'loading'));
+  // Enhancement-only code (charts extras, radar, view transitions) must never break the report: failures are swallowed.
+  function enhance(fn, a) { try { fn(a); } catch (e) { /* the plain report stays */ } }
+
+  // ---- View Transitions (progressive enhancement). Without the API, under reduced motion or in a hidden tab every change
+  // applies at once. startViewTransition snapshots the OLD page at the next frame and only then calls the callback, so the
+  // change itself must happen inside the callback. One transition at a time (vt.busy).
+  var vt = { busy: false, cur: null, rm: window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null };
+  function vtOn() {
+    return typeof document.startViewTransition === 'function' && !(vt.rm && vt.rm.matches) && !vt.busy && !document.hidden;
+  }
+  function viewTransition(cls, update) {
+    var applied = false, root = document.documentElement;
+    function apply() { if (applied) return; applied = true; update(); }
+    if (!vtOn()) { apply(); return; }
+    vt.busy = true;
+    root.classList.add(cls);
+    function end() { vt.busy = false; vt.cur = null; root.classList.remove(cls); }
+    try {
+      var t = vt.cur = document.startViewTransition(apply);
+      t.ready.catch(function () {});
+      t.finished.then(end, end);
+      setTimeout(apply, 500); // never leave the page waiting if the callback is delayed
+    } catch (e) { end(); apply(); }
+  }
+
+  // #results state (+ data-err). setState records the wanted state; the transition callback applies the LATEST wanted one,
+  // so a reply that arrives before the first frame cannot leave the page stuck on "loading".
+  var want = null, stateVT = false;
+  function applyState(v) {
+    var res = $('results');
+    if (v.s === 'done' && res.dataset.state === 'done') res.dataset.state = 'loading'; // same state again: restart the reveal animations
+    void res.offsetWidth; // reflow so the reveal animations restart on every scan
+    res.dataset.state = v.s;
+    res.dataset.err = v.err;
+    res.setAttribute('aria-busy', String(v.s === 'loading'));
+  }
+  function flushState() { var v = want; want = null; if (v) applyState(v); }
+  function setState(s, err) {
+    want = { s: s, err: err };
+    if (stateVT) return;
+    if (!vtOn()) { flushState(); return; }
+    stateVT = true;
+    viewTransition('flow-vt-state', function () { stateVT = false; flushState(); });
   }
   function setVerify(v) { $('deep').dataset.v = v; }
 
@@ -165,12 +205,92 @@
       tr.appendChild(rh);
       CATS.forEach(function (c) {
         var n = grid[sev + ':' + c] || 0, td = h('td', 'hc', n || '·');
+        if (!n) td.dataset.z = ''; // zero cell: muted numeral (skin-charts.css)
         num(td, '--k', max ? n / max : 0, 2);
         tr.appendChild(td);
       });
       body.appendChild(tr);
     }
     t.appendChild(body);
+    $('heat-min').textContent = '0'; // the legend ramp ends are real values
+    $('heat-max').textContent = 'max ' + max;
+  }
+
+  // Fail + warn per severity (5 to 1) as a slim stacked bar plus a text key; role=img label carries every count.
+  function renderStack(findings) {
+    var box = $('sevstack'), by = {}, sev, total = 0, parts = [];
+    for (sev = 1; sev <= 5; sev++) by[sev] = { fail: 0, warn: 0 };
+    findings.forEach(function (f) {
+      if ((f.status === 'fail' || f.status === 'warn') && by[f.severity]) { by[f.severity][f.status]++; total++; }
+    });
+    var bar = h('div', 'ss-bar'), key = h('ol', 'ss-key');
+    for (sev = 5; sev >= 1; sev--) {
+      var fl = by[sev].fail, wn = by[sev].warn, n = fl + wn;
+      if (n) {
+        var seg = h('i', 'ss-seg');
+        seg.dataset.sev = String(sev);
+        seg.style.setProperty('--n', String(n));
+        seg.style.setProperty('--si', String(5 - sev));
+        bar.appendChild(seg);
+      }
+      var li = h('li', 'ss-k'), l = h('span', 'ss-l'), sw = h('i', 'ss-sw');
+      if (!n) li.dataset.z = '';
+      sw.dataset.sev = String(sev);
+      l.appendChild(sw);
+      l.appendChild(txt('Sev ' + sev));
+      li.appendChild(l);
+      li.appendChild(h('b', 'ss-v', n));
+      li.appendChild(h('span', 'ss-s', n ? (fl ? ICON.fail + fl : '') + (fl && wn ? ' ' : '') + (wn ? ICON.warn + wn : '') : 'none'));
+      key.appendChild(li);
+      parts.push('severity ' + sev + ': ' + n + (n ? ' (' + fl + ' fail, ' + wn + ' warn)' : ''));
+    }
+    clear(box);
+    box.appendChild(bar);
+    box.appendChild(key);
+    box.setAttribute('aria-label', 'Fail and warn findings by severity, ' + total + ' in total. ' + parts.join('; '));
+    box.hidden = false;
+  }
+
+  // Radar of the ten category scores (static markup in the template, drawn by skin-radar.css). Only where CSS can do
+  // sin()/cos() in calc(); elsewhere the card stays hidden. The numbers are already announced by #cats, so it is aria-hidden.
+  var RADAR_OK = !!(window.CSS && CSS.supports && CSS.supports('width', 'calc(sin(1rad) * 1px)'));
+  // Value drawn for a not-measured axis: where its spoke crosses the straight chord between the nearest measured neighbours
+  // (circular), so the outline bridges the gap without claiming a value. Linear blend when the chord misses the spoke
+  // (neighbours 180deg or more apart).
+  function radarValue(sc, i) {
+    if (sc[i].s !== null) return sc[i].s;
+    var n = sc.length, a = 1, b = 1;
+    while (a < n && sc[(i - a + n) % n].s === null) a++;
+    while (b < n && sc[(i + b) % n].s === null) b++;
+    if (a >= n) return 0; // nothing measured at all
+    var va = sc[(i - a + n) % n].s, vb = sc[(i + b) % n].s;
+    var ta = a * Math.PI / 5, tb = b * Math.PI / 5; // 36deg per axis; the spoke of axis i is the y axis
+    var ax = -va * Math.sin(ta), ay = va * Math.cos(ta), bx = vb * Math.sin(tb), by = vb * Math.cos(tb);
+    if (a + b < 5 && bx - ax > 1e-9) return Math.max(0, ay + (by - ay) * (-ax / (bx - ax)));
+    return (va * b + vb * a) / (a + b);
+  }
+  function renderRadar(r) {
+    var card = $('radar-card'), radar = $('radar');
+    if (!RADAR_OK || !card || !radar) return;
+    var sc = CATS.map(function (c) {
+      var s = r.score.categories[c];
+      return s && typeof s.score === 'number' ? { s: clamp(s.score, 0, 100), g: scoreBand(s.score) } : { s: null, g: 'skip' };
+    });
+    var any = sc.filter(function (x) { return x.s !== null; }).length >= 3; // fewer measured axes would draw an invented shape
+    card.hidden = !any;
+    if (!any) return;
+    card.dataset.g = gradeBand(r.score.security.grade);
+    var pts = radar.querySelectorAll('.radar-pt'), lbs = radar.querySelectorAll('.radar-lb');
+    sc.forEach(function (x, i) {
+      var v = Math.round(radarValue(sc, i) * 10) / 10, na = x.s === null;
+      radar.style.setProperty('--v' + (i + 1), String(v));
+      pts[i].style.setProperty('--v', String(v));
+      [pts[i], lbs[i]].forEach(function (e) {
+        e.dataset.g = x.g;
+        if (na) e.dataset.na = ''; else delete e.dataset.na;
+      });
+      lbs[i].querySelector('.radar-val').textContent = na ? 'n/a' : Math.round(x.s);
+    });
   }
 
   function renderCats(r) {
@@ -188,7 +308,18 @@
       g.appendChild(h('span', 'gauge-num'));
       fillGauge(g, s.score, CAT_NAME[c] + ' score', band);
       li.appendChild(g);
-      li.appendChild(h('span', 'crow-name', CAT_NAME[c]));
+      var name = h('span', 'crow-name', CAT_NAME[c]), nums = h('span', 'xc-n');
+      nums.setAttribute('aria-hidden', 'true'); // larger status numerals shown on hover (skin-charts.css); crow-tag has the words
+      ['fail', 'warn', 'pass'].forEach(function (k) {
+        if (!s[k]) return;
+        var b = h('b');
+        b.dataset.s = k;
+        b.appendChild(h('i', '', ICON[k]));
+        b.appendChild(txt(s[k]));
+        nums.appendChild(b);
+      });
+      if (nums.firstChild) name.appendChild(nums);
+      li.appendChild(name);
       li.appendChild(h('span', 'crow-tag', ['fail', 'warn', 'pass', 'info', 'skipped'].filter(function (k) { return s[k]; }).map(function (k) { return s[k] + ' ' + k; }).join(', ') || 'no checks'));
       var bar = h('div', 'bar');
       bar.setAttribute('aria-hidden', 'true');
@@ -305,6 +436,8 @@
     result = r;
     renderRaw(r);
     renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
+    enhance(renderStack, r.findings);
+    enhance(renderRadar, r);
     // Follow the latest scan unless the user typed their own host.
     if (!$('host').value || $('host').value === autoHost) {
       $('host').value = autoHost = r.host || '';
@@ -316,21 +449,18 @@
     var url = $('url').value.trim();
     if (!url) { say($('status'), 'Enter a URL first.', 'err'); return; }
     setBusy(true);
-    $('results').dataset.err = 'false';
     delete $('results').dataset.refilter; // a fresh report gets the full staggered reveal again
-    setState('loading');
+    setState('loading', 'false');
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
       show(r);
-      void $('results').offsetWidth; // reflow so the reveal animations restart on every scan
-      setState('done');
+      setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
     } catch (e) {
       $('error-msg').textContent = e.message;
       // Keep the previous report (and its Copy/Download buttons); the error box sits above it.
-      $('results').dataset.err = String(!!result);
-      setState(result ? 'done' : 'error');
+      setState(result ? 'done' : 'error', String(!!result));
       say($('status'), 'Scan failed.', 'err');
     }
     setBusy(false);
@@ -421,6 +551,73 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
+
+  // Without CSS :has() the donut arc highlight follows the legend rows through data-hl (hover only: the rows are not controls).
+  function initLegendHover() {
+    if (window.CSS && CSS.supports && CSS.supports('selector(:has(*))')) return;
+    var d = $('donut');
+    Array.prototype.forEach.call(document.querySelectorAll('.legend > .lg[data-s]:not(.plain)'), function (row) {
+      row.addEventListener('mouseenter', function () { d.dataset.hl = row.dataset.s; });
+      row.addEventListener('mouseleave', function () { delete d.dataset.hl; });
+    });
+  }
+
+  // Filter changes run inside a view transition: the capture-phase handlers stop the native change, let the browser snapshot the
+  // old page, then replay the press inside the callback (the :has() filtering stays the source of truth). Names live only
+  // while html.flow-vt-filter is set (skin-flow.css). Only wired when startViewTransition exists.
+  function initFilterFlow() {
+    if (typeof document.startViewTransition !== 'function') return;
+    var doc = document, root = doc.documentElement, replay = false, fgen = 0;
+    root.classList.add('flow-vt-ok');
+    function press(node, focusFirst) { // our own synthetic click must pass the capture handlers below
+      replay = true;
+      try { if (focusFirst) node.focus(); node.click(); } finally { replay = false; }
+    }
+    // while a transition runs the ::view-transition overlay swallows clicks (hit-testing lands on <html>): end it on the first
+    // press and replay that press on whatever control is underneath
+    doc.addEventListener('pointerdown', function (ev) {
+      if (!vt.busy || !vt.cur || ev.target !== root) return;
+      try {
+        vt.cur.skipTransition();
+        var hit = doc.elementFromPoint(ev.clientX, ev.clientY), l = hit && hit.closest ? hit.closest('#filters label, #reset-filters') : null;
+        if (l) l.click();
+      } catch (e) { /* the click is simply lost, as without the transition */ }
+    }, true);
+    // a click that goes through natively (a transition is running) must beat any earlier click still waiting for its transition
+    doc.addEventListener('change', function (ev) {
+      if (!replay && ev.target && ev.target.matches && ev.target.matches('#filters input.rb')) fgen++;
+    }, true);
+    // pointer / touch click on a chip label or the reset button
+    doc.addEventListener('click', function (ev) {
+      if (replay || ev.defaultPrevented || ev.button || !vtOn()) return;
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var l = t.closest('#filters label');
+      var radio = l && l.control && l.control.type === 'radio' ? l.control : null;
+      var reset = !radio && t.closest('#reset-filters'), tk = fgen;
+      if (radio) {
+        if (radio.checked) return;
+        ev.preventDefault(); // the label would flip the radio before the old state is captured
+        viewTransition('flow-vt-filter', function () { if (tk === fgen) press(radio, true); });
+      } else if (reset) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        viewTransition('flow-vt-filter', function () { if (tk === fgen) press(reset, false); });
+      }
+    }, true);
+    // arrow keys move + check a radio in the group natively; reproduce that (wrap-around) inside the transition
+    doc.addEventListener('keydown', function (ev) {
+      if (replay || ev.defaultPrevented || ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey || !vtOn()) return;
+      var k = ev.key, d = k === 'ArrowRight' || k === 'ArrowDown' ? 1 : k === 'ArrowLeft' || k === 'ArrowUp' ? -1 : 0, r = ev.target;
+      if (!d || !r || !r.matches || !r.matches('#filters input.rb')) return;
+      var set = Array.prototype.slice.call(r.closest('fieldset').querySelectorAll('input.rb'));
+      var n = set[(set.indexOf(r) + d + set.length) % set.length], tk = fgen;
+      if (!n || n === r) return;
+      ev.preventDefault();
+      viewTransition('flow-vt-filter', function () { if (tk === fgen) press(n, true); });
+    }, true);
+  }
+  enhance(initLegendHover);
+  enhance(initFilterFlow);
 
   syncFilters();
 })();

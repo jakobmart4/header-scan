@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = (f) => join(root, 'ui', 'src', f);
-const CSS = ['tokens.css', 'base.css', 'layout.css', 'gauge.css', 'charts.css', 'findings.css', 'panels.css', 'skin.css'];
+const CSS = ['tokens.css', 'base.css', 'layout.css', 'gauge.css', 'charts.css', 'findings.css', 'panels.css', 'skin.css', 'skin-charts.css', 'skin-flow.css', 'skin-motion.css', 'skin-radar.css'];
 const lf = (s) => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
 const fail = (m) => { console.error('build-ui: ' + m); process.exit(1); };
 
