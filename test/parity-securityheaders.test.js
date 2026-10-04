@@ -1,5 +1,5 @@
 // Parity with SecurityHeaders.com: the real headers of securityheaders.com (grade A+ there) run through
-// headers + cookies + csp. Expectations = docs/PARITY-SPEC.md section 4 (statuses) and 5/6 (score, rawHeaders).
+// headers + cookies + csp. Expectations = docs/specs/PARITY-SPEC.md section 4 (statuses) and 5/6 (score, rawHeaders).
 process.env.HEADERSCAN_ALLOW_PRIVATE = '1';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

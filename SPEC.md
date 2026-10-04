@@ -2,7 +2,7 @@
 
 Node >= 20, ESM (`"type":"module"`), ZERO npm deps, `node:test`. Code + comments in English. Ponytail: small, boring, no speculative features. Windows: use `py` never `python`. Never use port 34872 (Rojo) or 1000 (UA dashboard); default port 8787 (`PORT` env). Never leave a server running after checks.
 Where this spec is silent, choose the simplest option; where it speaks, obey it literally (other builders rely on it).
-SecurityHeaders.com parity round (6 new IDs, changed coop/coep/corp, `rawHeaders`): `docs/PARITY-SPEC.md`.
+SecurityHeaders.com parity round (6 new IDs, changed coop/coep/corp, `rawHeaders`): `docs/specs/PARITY-SPEC.md`.
 
 ## 1. File layout and ownership
 

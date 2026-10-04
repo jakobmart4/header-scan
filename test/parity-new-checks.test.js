@@ -1,4 +1,4 @@
-// New/changed checks of the SecurityHeaders.com parity round (docs/PARITY-SPEC.md): every new id has a pass and a non-pass case.
+// New/changed checks of the SecurityHeaders.com parity round (docs/specs/PARITY-SPEC.md): every new id has a pass and a non-pass case.
 process.env.HEADERSCAN_ALLOW_PRIVATE = '1';
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';

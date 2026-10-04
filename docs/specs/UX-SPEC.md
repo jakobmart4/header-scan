@@ -1,6 +1,6 @@
 # UX applicability contract (2026-09-30)
 
-Sources: docs/ux-corpus.md (12 real sites), docs/ux-audit.md, docs/ux-research.md. Contract for 3 parallel builders (A code, B tests+docs, C share image).
+Sources: docs/research/ux-corpus.md (12 real sites), docs/research/ux-audit.md, docs/research/ux-research.md. Contract for 3 parallel builders (A code, B tests+docs, C share image).
 Goal: page-type aware `ux-*` rules. A check that cannot apply returns `skipped` or `info`, never a misleading `fail`/`warn`. Genuine marketing / lead-gen pages stay exactly as strict as today.
 Rules: no deps, passive only, IDs/severities/checklist numbers unchanged (SPEC counts 31/16/144/119/25 stay true), no commits, no servers left running, never port 34872.
 

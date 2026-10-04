@@ -1,4 +1,4 @@
-// Applicability-aware ux-* rules (docs/UX-SPEC.md): page-type signals, skipped/info for tools, strict for marketing.
+// Applicability-aware ux-* rules (docs/specs/UX-SPEC.md): page-type signals, skipped/info for tools, strict for marketing.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

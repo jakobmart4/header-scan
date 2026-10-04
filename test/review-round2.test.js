@@ -1,4 +1,4 @@
-// Regression tests for the second review round (docs/PARITY-SPEC.md section 10): each fix has a pass and a non-pass case.
+// Regression tests for the second review round (docs/specs/PARITY-SPEC.md section 10): each fix has a pass and a non-pass case.
 process.env.HEADERSCAN_ALLOW_PRIVATE = '1';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

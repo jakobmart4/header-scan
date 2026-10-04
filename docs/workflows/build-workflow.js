@@ -35,7 +35,7 @@ const BRIEFS = [
 
 phase('Briefs')
 const briefs = await parallel(BRIEFS.map(b => () =>
-  agent(`${COMMON}\n\nTASK: ${b.t}\nWrite a dense brief (max ~150 lines) to ${ROOT}\\docs\\brief-${b.k}.md with: (1) skills you read (paths), (2) concrete rules/patterns to follow, (3) concrete check ideas for the scanner, (4) pitfalls. Return a 5-line summary.`,
+  agent(`${COMMON}\n\nTASK: ${b.t}\nWrite a dense brief (max ~150 lines) to ${ROOT}\\docs\\briefs\\brief-${b.k}.md with: (1) skills you read (paths), (2) concrete rules/patterns to follow, (3) concrete check ideas for the scanner, (4) pitfalls. Return a 5-line summary.`,
     { label: `brief:${b.k}`, phase: 'Briefs', schema: BRIEF_SCHEMA })))
 log(`briefs done: ${briefs.filter(Boolean).length}/${BRIEFS.length}`)
 
@@ -43,7 +43,7 @@ log(`briefs done: ${briefs.filter(Boolean).length}/${BRIEFS.length}`)
 phase('Architect')
 const arch = await agent(`${COMMON}
 
-Read all ${ROOT}\\docs\\brief-*.md, the checklist, and the skill ${POWERS}\\agent-skills\\spec-driven-development\\SKILL.md and ${POWERS}\\agent-skills\\api-and-interface-design\\SKILL.md.
+Read all ${ROOT}\\docs\\briefs\\brief-*.md, the checklist, and the skill ${POWERS}\\agent-skills\\spec-driven-development\\SKILL.md and ${POWERS}\\agent-skills\\api-and-interface-design\\SKILL.md.
 Write ${ROOT}\\SPEC.md: the single contract 7 parallel builders will code against WITHOUT talking to each other. It MUST fix exactly:
 - File layout (Node ESM): server.js, lib/ssrf.js (safeFetch + assertPublicHost), lib/verify.js (DNS TXT ownership: token, challenge name "_headerscan-verify.<host>", HMAC-signed stateless token), lib/scan.js (orchestrator), lib/score.js, lib/checks/headers.js, cookies.js, csp.js, tls.js, dns.js, html.js (head/SEO/a11y/structured data), site.js (robots/sitemap/llms.txt/security.txt/404/favicon/source maps), probes.js (ACTIVE, gated by ctx.verified), public/index.html, test/*.test.js, test/fixture-server.js, package.json (scripts: start, test), README.md.
 - Exact exported function signatures. Every check module exports: async function run(ctx) -> Finding[].

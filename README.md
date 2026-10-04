@@ -89,6 +89,22 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 | 20 | ux-js-bundle-size | 39 | ux-analytics |
 | | | 40 | ux-team-photo |
 
+## Layout
+
+| Path | What |
+|---|---|
+| `lib/` | Scanner: `scan.js`, `score.js`, checks in `lib/checks/`, data lists in `lib/data/` |
+| `server.js` | Node backend (the only part that makes outbound scan requests) |
+| `worker/`, `wrangler.toml` | Cloudflare Worker: proxies `/api/*` to the backend, adds security headers |
+| `ui/src/` | UI sources (CSS layers, `app.js`, template); `npm run build:ui` writes `public/index.html` |
+| `public/` | Static site (built UI, privacy page, robots, sitemap, llms.txt, og.png); `npm run build` copies it to `dist/` with the CSP |
+| `scripts/` | Build scripts and the design-variant preview tooling (`ui/DESIGN.md`) |
+| `design/` | Archived design variants and the sample report used by the previews |
+| `test/` | `npm test` (node:test, local fixture server) |
+| `docs/specs/` | Contracts of past rounds (parity, UX) |
+| `docs/research/` | Research notes and the UX corpus |
+| `docs/briefs/`, `docs/workflows/` | Agent briefs and the workflow scripts that produced the rounds above |
+
 ## Limitations
 
 - No headless browser: console errors and sticky mobile CTA are always `skipped`; SPA content that only exists after JavaScript runs is judged on the raw HTML.
