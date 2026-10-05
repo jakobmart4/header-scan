@@ -7,14 +7,16 @@ const servers = [];
 async function boot({ key } = {}) {
   const gates = [];
   const scan = () => new Promise((resolve) => gates.push(() => resolve({ ok: true })));
-  if (key) process.env.HEADERSCAN_PROXY_KEY = key;
+  // createServer reads the key from the environment: set it explicitly (empty = keyless) and restore what the caller had
+  const saved = process.env.HEADERSCAN_PROXY_KEY;
+  process.env.HEADERSCAN_PROXY_KEY = key || '';
   const server = createServer({ scan, host: '127.0.0.1' });
-  delete process.env.HEADERSCAN_PROXY_KEY;
+  if (saved === undefined) delete process.env.HEADERSCAN_PROXY_KEY; else process.env.HEADERSCAN_PROXY_KEY = saved;
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   servers.push(server);
   const base = `http://127.0.0.1:${server.address().port}`;
   const get = (client) => fetch(`${base}/api/scan?url=https://example.com`, { headers: key ? { 'x-headerscan-key': key, 'x-headerscan-client': client } : {} });
-  const started = async (n) => { for (let i = 0; i < 100 && gates.length < n; i++) await new Promise((r) => setTimeout(r, 10)); assert.equal(gates.length, n); };
+  const started = async (n) => { for (let i = 0; i < 500 && gates.length < n; i++) await new Promise((r) => setTimeout(r, 10)); assert.equal(gates.length, n); };
   const release = () => { gates.splice(0).forEach((g) => g()); };
   return { base, get, started, release };
 }

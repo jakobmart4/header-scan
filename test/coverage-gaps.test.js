@@ -89,7 +89,7 @@ describe('html.js: UX heuristics', () => {
     assert.equal(await st('ux-response-time', '<p>We reply within 24 hours.</p>'), 'pass');
     assert.equal(await st('ux-response-time', '<p>Vastame kiiresti</p>'), 'pass');
     assert.equal(await st('ux-response-time', '<p>Contact us anytime.</p>'), 'info');
-    // suspected bug: "24 ?h" matches the "24 H" of "2024 Home"
+    // "24 ?h" must not match the "24 H" of "2024 Home" ( before the 24)
     assert.equal(await st('ux-response-time', '<p>Copyright 2024 Home Ltd</p>'), 'info');
   });
   test('ux-maps', async () => {
@@ -237,7 +237,7 @@ const PROBE_ID = {
 };
 
 describe('probes.js: remaining probe ids (hit / no hit)', () => {
-  let hit, miss;
+  let hit, miss, plain200;
   const probeCtx = (handler) => {
     const fetch = async (u) => {
       const [status, body, headers] = handler(new URL(u).pathname);
@@ -246,10 +246,12 @@ describe('probes.js: remaining probe ids (hit / no hit)', () => {
     return fakeCtx({ verified: true, fetch });
   };
   before(async () => {
-    [hit, miss] = await Promise.all([
+    [hit, miss, plain200] = await Promise.all([
       runProbes(probeCtx((p) => (HIT_BODY[p] ? [200, HIT_BODY[p]] : [404, '']))).then(by),
       // nothing exists; /admin is behind auth (403 -> "protected")
       runProbes(probeCtx((p) => (p === '/admin' ? [403, ''] : [404, '']))).then(by),
+      // /admin answers 200 with a page that has no password form
+      runProbes(probeCtx((p) => (p === '/admin' ? [200, '<html><body>Welcome</body></html>'] : [404, '']))).then(by),
     ]);
   });
 
@@ -264,5 +266,7 @@ describe('probes.js: remaining probe ids (hit / no hit)', () => {
   }
   test('exp-probe-admin: 403 reads as protected; 200 without password form is ignored', async () => {
     assert.equal(miss['exp-probe-admin'].evidence, 'protected');
+    assert.equal(plain200['exp-probe-admin'].status, 'pass');
+    assert.equal(plain200['exp-probe-admin'].evidence, '200 without signature, ignored');
   });
 });
