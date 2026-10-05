@@ -29,7 +29,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius
 <article>
 <p><a href="/">&larr; header-scan</a></p>
 <h1>Privacy</h1>
-<p class="muted">Last updated 4 October 2026</p>
+<p class="muted">Last updated 5 October 2026</p>
 
 <h2>What this service does</h2>
 <p>header-scan is a free website scanner run as a personal project. You enter a web address, our server fetches that site (headers, the home page, a few well-known files, TLS and DNS information) and returns a graded report to you.</p>
@@ -37,7 +37,8 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius
 <h2>What is processed</h2>
 <ul>
 <li><strong>The address you enter</strong> (or the host name for owner verification). It is used to run the scan and is not stored.</li>
-<li><strong>Your IP address.</strong> The server keeps it in memory for about a minute to limit how many scans one visitor can start, and to cap parallel scans. It is not written to disk.</li>
+<li><strong>Your IP address.</strong> The server keeps it in memory for one to two minutes to limit how many scans one visitor can start, and to cap parallel scans. It is not written to disk.</li>
+<li><strong>DNS lookups.</strong> To check DNSSEC, the host name of the site you scan is sent from our backend to Cloudflare's public DNS-over-HTTPS resolver (<code>cloudflare-dns.com</code>). Your own IP address is not sent. Other DNS lookups use the backend's normal resolver.</li>
 <li><strong>The scan result.</strong> It is sent back to your browser and is not stored on the server. The Copy and Download buttons work locally in your browser.</li>
 </ul>
 
@@ -45,11 +46,11 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius
 <ul>
 <li>No cookies, no local storage, no accounts.</li>
 <li>No analytics, advertising or tracking, and no third-party requests from the page (fonts, scripts and images are all local).</li>
-<li>The application server logs only internal error messages, not scanned addresses or visitor IP addresses.</li>
+<li>The application server logs only internal error messages and one start-up line, not scanned addresses or visitor IP addresses.</li>
 </ul>
 
 <h2>Hosting providers</h2>
-<p>The site is delivered through Cloudflare and the scanning backend runs on Render. Like any host, they process connection data (such as IP addresses and request metadata) to run and secure their services, under their own policies: <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">Cloudflare</a> and <a href="https://render.com/privacy" rel="noopener noreferrer">Render</a>.</p>
+<p>The site is delivered through Cloudflare (a Worker that passes your IP address on to the backend so the limits above apply per visitor) and the scanning backend runs on Render. Like any host, they process connection data (such as IP addresses and request metadata) to run and secure their services, under their own policies. A passive scan is a GET request, so the address you enter is part of the request URL and can appear in their request logs: <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">Cloudflare</a> and <a href="https://render.com/privacy" rel="noopener noreferrer">Render</a>.</p>
 
 <h2>Sites you scan</h2>
 <p>A scan sends ordinary web requests to the address you entered, from our hosting provider's network, so they can appear in that site's logs. Scans are passive by default. Active checks (for example looking for exposed <code>/.git/</code> or <code>/.env</code> files) run only after the domain owner proves control with a DNS TXT record. Only scan sites you own or are allowed to test.</p>

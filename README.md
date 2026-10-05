@@ -8,7 +8,7 @@ Node >= 20, ESM, **zero npm dependencies**, one static HTML page. 144 findings i
 
 ```
 npm start          # http://127.0.0.1:8787  (PORT / HOST env override; HOST defaults to 127.0.0.1)
-npm test           # node --test test/
+npm test           # node --test "test/*.test.js" (456 tests, about 40 s)
 ```
 
 Open the page, type a URL, press Scan. Two grades are shown: **security** (headers, cookies, tls, dns, mail, content, exposure) and **quality** (seo, ai, ux). Only `pass`/`warn`/`fail` count; `info` and `skipped` never affect the score.
@@ -31,7 +31,7 @@ All responses are JSON (`application/json; charset=utf-8`). Errors: `{"error":{"
 | `POST /api/verify/check` | `{host}` | 200 `{host, verified, txtName}` | stateless, DNS lookup on every call |
 | `GET /api/health` | - | 200 `{ok:true, version}` | |
 
-Error codes: `BAD_URL` 400, `BAD_REQUEST` 400, `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After`), `INTERNAL` 500, `SCAN_FAILED` 502, `BUSY` 503 (> 4 concurrent scans); `RATE_LIMITED` 429 is also returned when one client already has 2 scans running, `TIMEOUT` 504.
+Error codes: `BAD_URL` 400, `BAD_REQUEST` 400, `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `FORBIDDEN` 403 (behind the proxy: `/api/*` without the proxy key), `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After`), `INTERNAL` 500, `SCAN_FAILED` 502, `BUSY` 503 (> 4 concurrent scans); `RATE_LIMITED` 429 is also returned when one client already has 2 scans running, `TIMEOUT` 504.
 
 Result: `{url, host, scannedAt, durationMs, verified, deep, rawHeaders:[{name,value}], score:{security,quality,categories}, findings:[Finding], errors:[{module,message}]}`. `rawHeaders` = the page's response headers for a raw-headers table (Set-Cookie values, Domain and non-root Path redacted, cookie lines capped, long values cut).
 Finding: `{id, category, title, status: pass|warn|fail|info|skipped, severity: 1-5, evidence (<=300 chars), fix, ref?, checklist?}`.
@@ -95,9 +95,9 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 |---|---|
 | `lib/` | Scanner: `scan.js`, `score.js`, checks in `lib/checks/`, data lists in `lib/data/` |
 | `server.js` | Node backend (the only part that makes outbound scan requests) |
-| `worker/`, `wrangler.toml` | Cloudflare Worker: proxies `/api/*` to the backend, adds security headers |
+| `worker/`, `wrangler.toml` | Cloudflare Worker: proxies `/api/*` to the backend (key + real client IP), security headers on every response it produces, `http://` -> 308 on Worker-handled paths (static assets are served by the platform and are not redirected: known limit, acceptable because `.dev` is HSTS-preloaded; see `DEPLOY.md`) |
 | `ui/src/` | UI sources (CSS layers, `app.js`, template); `npm run build:ui` writes `public/index.html` |
-| `public/` | Static site (built UI, privacy page, robots, sitemap, llms.txt, og.png); `npm run build` copies it to `dist/` with the CSP |
+| `public/` | Static site (built UI, privacy page, robots, sitemap, llms.txt, og.png; deliberately no `security.txt` and no contact details); `npm run build` copies it to `dist/` with the CSP |
 | `scripts/` | Build scripts and the design-variant preview tooling (`ui/DESIGN.md`) |
 | `design/` | Archived design variants and the sample report used by the previews |
 | `test/` | `npm test` (node:test, local fixture server) |
@@ -113,5 +113,5 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 - DNSSEC is best effort (DoH to a fixed host); SPF lookup counting is approximate; DKIM selectors cannot be enumerated, so it is informational.
 - Rate limiting is in-memory and resets on restart.
 - Heuristic checks (CTA above the fold, team photo, reviews) are labelled as such in their evidence.
-- UX checks are page-type aware: on a single-page tool (one JS-only search/URL form or app JSON-LD, at most one other page besides legal/utility links, no contact or lead form, no shop) internal links, CTA, FAQ and thank-you are `skipped` and privacy/404 are `info` instead of fail/warn; marketing, lead-gen, shop and SPA-shell pages stay as strict as before. Unknown forms count as lead forms; login and button-only forms (logout, consent) are not lead forms.
+- UX checks are page-type aware: on a single-page tool (one JS-only search/URL form or app JSON-LD, at most one other page besides legal/utility links, no contact or lead form, no shop) internal links, CTA, FAQ and thank-you are `skipped` and privacy/404 are `info` instead of fail/warn; marketing, lead-gen, shop and SPA-shell pages stay as strict as before. Unknown forms count as lead forms; login and button-only forms (logout, consent) are not lead forms. A minimal page (placeholder or parked page: `isMinimal`, under 250 characters of text, no other page to link to, no form, no shop, no app shell) gets `skipped` for `ux-internal-links`, `ux-cta-above-fold` and `ux-faq`, and `info` for `ux-privacy-policy` unless a form, tracker or checkout link is present.
 - The tests use a local fixture server (`test/fixture-server.js`, plain http on a random localhost port) and set `HEADERSCAN_ALLOW_PRIVATE=1` per test file; that variable must never be set in production because it disables the SSRF private-range and port rules.
