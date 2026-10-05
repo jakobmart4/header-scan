@@ -1,0 +1,1261 @@
+{
+ "sample": true,
+ "url": "https://sample.invalid/",
+ "host": "sample.invalid",
+ "scannedAt": "2026-10-05T09:00:00.000Z",
+ "durationMs": 0,
+ "verified": false,
+ "deep": false,
+ "rawHeaders": [
+  {
+   "name": "content-type",
+   "value": "text/html; charset=utf-8"
+  },
+  {
+   "name": "strict-transport-security",
+   "value": "max-age=63072000; includeSubDomains; preload"
+  },
+  {
+   "name": "x-content-type-options",
+   "value": "nosniff"
+  },
+  {
+   "name": "x-frame-options",
+   "value": "DENY"
+  },
+  {
+   "name": "referrer-policy",
+   "value": "strict-origin-when-cross-origin"
+  },
+  {
+   "name": "permissions-policy",
+   "value": "camera=()"
+  },
+  {
+   "name": "cross-origin-opener-policy",
+   "value": "same-origin"
+  },
+  {
+   "name": "cross-origin-embedder-policy",
+   "value": "require-corp"
+  },
+  {
+   "name": "cross-origin-resource-policy",
+   "value": "same-origin"
+  },
+  {
+   "name": "cache-control",
+   "value": "private, max-age=0, must-revalidate"
+  },
+  {
+   "name": "content-security-policy",
+   "value": "default-src 'none'; script-src 'self' https://plausible.io; style-src 'self'; img-src 'self'; frame-src https://www.openstreetmap.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+  },
+  {
+   "name": "set-cookie",
+   "value": "__Host-sid=<redacted>; Path=/; Secure; HttpOnly; SameSite=Lax"
+  }
+ ],
+ "score": {
+  "security": {
+   "score": 100,
+   "grade": "A+"
+  },
+  "quality": {
+   "score": 100,
+   "grade": "A+"
+  },
+  "categories": {
+   "headers": {
+    "score": 100,
+    "pass": 34,
+    "warn": 0,
+    "fail": 0,
+    "info": 1,
+    "skipped": 0
+   },
+   "cookies": {
+    "score": 100,
+    "pass": 8,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "tls": {
+    "score": 100,
+    "pass": 11,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "dns": {
+    "score": 100,
+    "pass": 4,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "mail": {
+    "score": 100,
+    "pass": 11,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "content": {
+    "score": 100,
+    "pass": 3,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "seo": {
+    "score": 100,
+    "pass": 19,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "ai": {
+    "score": 100,
+    "pass": 3,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   },
+   "ux": {
+    "score": 100,
+    "pass": 18,
+    "warn": 0,
+    "fail": 0,
+    "info": 1,
+    "skipped": 2
+   },
+   "exposure": {
+    "score": 100,
+    "pass": 4,
+    "warn": 0,
+    "fail": 0,
+    "info": 0,
+    "skipped": 0
+   }
+  }
+ },
+ "findings": [
+  {
+   "id": "hdr-reporting",
+   "category": "headers",
+   "title": "Reporting endpoints",
+   "status": "info",
+   "severity": 1,
+   "evidence": "no reporting configured (optional)",
+   "fix": "Optional: add Reporting-Endpoints and CSP report-to to receive violation reports."
+  },
+  {
+   "id": "cors-null-origin",
+   "category": "headers",
+   "title": "CORS null origin",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "null origin not allowed",
+   "fix": ""
+  },
+  {
+   "id": "cors-reflected-origin",
+   "category": "headers",
+   "title": "CORS reflected origin",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "Origin not reflected",
+   "fix": ""
+  },
+  {
+   "id": "cors-wildcard-credentials",
+   "category": "headers",
+   "title": "CORS credentials with wildcard/reflected origin",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "no CORS headers",
+   "fix": ""
+  },
+  {
+   "id": "cors-wildcard-public",
+   "category": "headers",
+   "title": "CORS wildcard on public content",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "no ACAO",
+   "fix": ""
+  },
+  {
+   "id": "csp-base-uri",
+   "category": "headers",
+   "title": "CSP base-uri",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "present",
+   "fix": ""
+  },
+  {
+   "id": "csp-data-uri",
+   "category": "headers",
+   "title": "CSP data: sources",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "not allowed",
+   "fix": ""
+  },
+  {
+   "id": "csp-default-src",
+   "category": "headers",
+   "title": "CSP default-src",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "present",
+   "fix": ""
+  },
+  {
+   "id": "csp-frame-ancestors",
+   "category": "headers",
+   "title": "CSP frame-ancestors",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "present",
+   "fix": ""
+  },
+  {
+   "id": "csp-object-src",
+   "category": "headers",
+   "title": "CSP object-src",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "object-src 'none'",
+   "fix": ""
+  },
+  {
+   "id": "csp-present",
+   "category": "headers",
+   "title": "Content-Security-Policy",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "enforced header present",
+   "fix": ""
+  },
+  {
+   "id": "csp-report-only",
+   "category": "headers",
+   "title": "CSP report-only",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "no report-only policy",
+   "fix": ""
+  },
+  {
+   "id": "csp-script-bypass-hosts",
+   "category": "headers",
+   "title": "CSP script allowlist bypass hosts",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "no known bypass hosts in script sources",
+   "fix": ""
+  },
+  {
+   "id": "csp-style-unsafe-inline",
+   "category": "headers",
+   "title": "CSP style 'unsafe-inline'",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "no effective unsafe-inline in styles",
+   "fix": ""
+  },
+  {
+   "id": "csp-unsafe-eval",
+   "category": "headers",
+   "title": "CSP 'unsafe-eval'",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "not allowed",
+   "fix": ""
+  },
+  {
+   "id": "csp-unsafe-inline",
+   "category": "headers",
+   "title": "CSP 'unsafe-inline'",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "no effective unsafe-inline in scripts",
+   "fix": ""
+  },
+  {
+   "id": "csp-upgrade-insecure",
+   "category": "headers",
+   "title": "CSP upgrade-insecure-requests",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "present",
+   "fix": ""
+  },
+  {
+   "id": "csp-wildcard",
+   "category": "headers",
+   "title": "CSP wildcard sources",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "no wildcard script sources",
+   "fix": ""
+  },
+  {
+   "id": "hdr-cache-control-html",
+   "category": "headers",
+   "title": "Cache-Control on HTML",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "Cache-Control: private, max-age=0, must-revalidate",
+   "fix": ""
+  },
+  {
+   "id": "hdr-coep",
+   "category": "headers",
+   "title": "COEP",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "cross-origin-embedder-policy: require-corp",
+   "fix": ""
+  },
+  {
+   "id": "hdr-compression",
+   "category": "headers",
+   "title": "Compression",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "Content-Encoding: br",
+   "fix": ""
+  },
+  {
+   "id": "hdr-coop",
+   "category": "headers",
+   "title": "COOP",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "cross-origin-opener-policy: same-origin",
+   "fix": ""
+  },
+  {
+   "id": "hdr-corp",
+   "category": "headers",
+   "title": "CORP",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "cross-origin-resource-policy: same-origin",
+   "fix": ""
+  },
+  {
+   "id": "hdr-frame-protection",
+   "category": "headers",
+   "title": "Clickjacking protection",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "CSP frame-ancestors",
+   "fix": ""
+  },
+  {
+   "id": "hdr-generator-leak",
+   "category": "headers",
+   "title": "Generator meta version",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "no versioned generator tag",
+   "fix": ""
+  },
+  {
+   "id": "hdr-hsts",
+   "category": "headers",
+   "title": "HSTS",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "max-age=63072000",
+   "fix": ""
+  },
+  {
+   "id": "hdr-hsts-preload",
+   "category": "headers",
+   "title": "HSTS preload",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "preload-eligible",
+   "fix": ""
+  },
+  {
+   "id": "hdr-hsts-subdomains",
+   "category": "headers",
+   "title": "HSTS includeSubDomains",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "present",
+   "fix": ""
+  },
+  {
+   "id": "hdr-legacy-headers",
+   "category": "headers",
+   "title": "Legacy headers",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "none present",
+   "fix": ""
+  },
+  {
+   "id": "hdr-permissions-policy",
+   "category": "headers",
+   "title": "Permissions-Policy",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "present",
+   "fix": ""
+  },
+  {
+   "id": "hdr-powered-by",
+   "category": "headers",
+   "title": "X-Powered-By leak",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "absent",
+   "fix": ""
+  },
+  {
+   "id": "hdr-referrer-policy",
+   "category": "headers",
+   "title": "Referrer-Policy",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "strict-origin-when-cross-origin",
+   "fix": ""
+  },
+  {
+   "id": "hdr-server-leak",
+   "category": "headers",
+   "title": "Server version leak",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "no Server header",
+   "fix": ""
+  },
+  {
+   "id": "hdr-xcto",
+   "category": "headers",
+   "title": "X-Content-Type-Options",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "nosniff",
+   "fix": ""
+  },
+  {
+   "id": "hdr-xss-protection",
+   "category": "headers",
+   "title": "X-XSS-Protection",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "absent",
+   "fix": ""
+  },
+  {
+   "id": "cookie-cache-control",
+   "category": "cookies",
+   "title": "Cookies on publicly cacheable page",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "not public",
+   "fix": ""
+  },
+  {
+   "id": "cookie-domain",
+   "category": "cookies",
+   "title": "Cookie Domain scope",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "no Domain on session cookies",
+   "fix": ""
+  },
+  {
+   "id": "cookie-httponly",
+   "category": "cookies",
+   "title": "Cookie HttpOnly flag",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "all HttpOnly",
+   "fix": ""
+  },
+  {
+   "id": "cookie-lifetime",
+   "category": "cookies",
+   "title": "Session cookie lifetime",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "ok",
+   "fix": ""
+  },
+  {
+   "id": "cookie-prefix",
+   "category": "cookies",
+   "title": "Cookie name prefixes",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "valid: __Host-sid",
+   "fix": ""
+  },
+  {
+   "id": "cookie-samesite",
+   "category": "cookies",
+   "title": "Cookie SameSite",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "all set",
+   "fix": ""
+  },
+  {
+   "id": "cookie-samesite-none",
+   "category": "cookies",
+   "title": "SameSite=None requires Secure",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "ok",
+   "fix": ""
+  },
+  {
+   "id": "cookie-secure",
+   "category": "cookies",
+   "title": "Cookie Secure flag",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "1 cookie(s) all Secure",
+   "fix": ""
+  },
+  {
+   "id": "tls-alpn-h2",
+   "category": "tls",
+   "title": "HTTP/2 negotiated",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "ALPN: h2",
+   "fix": ""
+  },
+  {
+   "id": "tls-cert-chain",
+   "category": "tls",
+   "title": "Certificate chain trusted",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "chain trusted",
+   "fix": ""
+  },
+  {
+   "id": "tls-cert-expiry",
+   "category": "tls",
+   "title": "Certificate not expiring soon",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "expires in 61 days",
+   "fix": ""
+  },
+  {
+   "id": "tls-cert-host",
+   "category": "tls",
+   "title": "Certificate matches hostname",
+   "status": "pass",
+   "severity": 5,
+   "evidence": "covers sample.invalid",
+   "fix": ""
+  },
+  {
+   "id": "tls-cert-key",
+   "category": "tls",
+   "title": "Certificate key size",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "EC 256 bits",
+   "fix": ""
+  },
+  {
+   "id": "tls-cert-sigalg",
+   "category": "tls",
+   "title": "Certificate signature algorithm",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "ecdsa-with-SHA256",
+   "fix": ""
+  },
+  {
+   "id": "tls-http-redirect",
+   "category": "tls",
+   "title": "HTTP redirects to HTTPS",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "HTTP 301 to https",
+   "fix": ""
+  },
+  {
+   "id": "tls-https",
+   "category": "tls",
+   "title": "HTTPS available",
+   "status": "pass",
+   "severity": 5,
+   "evidence": "HTTPS reachable",
+   "fix": ""
+  },
+  {
+   "id": "tls-legacy-protocols",
+   "category": "tls",
+   "title": "Legacy TLS 1.0/1.1 rejected",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "TLS 1.0/1.1 rejected",
+   "fix": ""
+  },
+  {
+   "id": "tls-protocol",
+   "category": "tls",
+   "title": "Negotiated TLS version is modern",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "negotiated TLSv1.3",
+   "fix": ""
+  },
+  {
+   "id": "tls-redirect-permanent",
+   "category": "tls",
+   "title": "HTTPS redirect is permanent",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "status 301",
+   "fix": ""
+  },
+  {
+   "id": "dns-caa",
+   "category": "dns",
+   "title": "CAA records restrict certificate issuance",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "1 CAA record(s): issue",
+   "fix": ""
+  },
+  {
+   "id": "dns-dnssec",
+   "category": "dns",
+   "title": "DNSSEC enabled",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "zone is signed",
+   "fix": ""
+  },
+  {
+   "id": "dns-ipv6",
+   "category": "dns",
+   "title": "IPv6 (AAAA) record",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "AAAA present",
+   "fix": ""
+  },
+  {
+   "id": "dns-ns-count",
+   "category": "dns",
+   "title": "At least two nameservers",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "2 nameserver(s)",
+   "fix": ""
+  },
+  {
+   "id": "mail-dkim",
+   "category": "mail",
+   "title": "DKIM selector found",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "selector(s): default",
+   "fix": ""
+  },
+  {
+   "id": "mail-dmarc-policy",
+   "category": "mail",
+   "title": "DMARC policy enforced",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "p=reject",
+   "fix": ""
+  },
+  {
+   "id": "mail-dmarc-present",
+   "category": "mail",
+   "title": "DMARC record present",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "found at _dmarc.sample.invalid",
+   "fix": ""
+  },
+  {
+   "id": "mail-dmarc-rua",
+   "category": "mail",
+   "title": "DMARC aggregate reports (rua)",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "rua present",
+   "fix": ""
+  },
+  {
+   "id": "mail-mta-sts",
+   "category": "mail",
+   "title": "MTA-STS policy",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "MTA-STS TXT present",
+   "fix": ""
+  },
+  {
+   "id": "mail-mx",
+   "category": "mail",
+   "title": "MX records",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "1 MX record(s)",
+   "fix": ""
+  },
+  {
+   "id": "mail-spf-all",
+   "category": "mail",
+   "title": "SPF ends with a strict all",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "-all",
+   "fix": ""
+  },
+  {
+   "id": "mail-spf-lookups",
+   "category": "mail",
+   "title": "SPF DNS lookups within limit",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "~1 DNS-lookup mechanism(s), limit 10 (approximate)",
+   "fix": ""
+  },
+  {
+   "id": "mail-spf-present",
+   "category": "mail",
+   "title": "SPF record present",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "SPF record found",
+   "fix": ""
+  },
+  {
+   "id": "mail-spf-single",
+   "category": "mail",
+   "title": "Single SPF record",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "1 SPF record(s)",
+   "fix": ""
+  },
+  {
+   "id": "mail-tls-rpt",
+   "category": "mail",
+   "title": "TLS-RPT reporting",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "TLS-RPT TXT present",
+   "fix": ""
+  },
+  {
+   "id": "mixed-active",
+   "category": "content",
+   "title": "Mixed active content",
+   "status": "pass",
+   "severity": 5,
+   "evidence": "none found",
+   "fix": ""
+  },
+  {
+   "id": "mixed-passive",
+   "category": "content",
+   "title": "Mixed passive content",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "none found",
+   "fix": ""
+  },
+  {
+   "id": "sri-external",
+   "category": "content",
+   "title": "Subresource Integrity",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "all cross-origin resources have integrity, or none",
+   "fix": ""
+  },
+  {
+   "id": "seo-canonical",
+   "category": "seo",
+   "title": "Canonical URL is absolute and same-host",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "https://sample.invalid",
+   "fix": "",
+   "checklist": 11
+  },
+  {
+   "id": "seo-duplicate-titles",
+   "category": "seo",
+   "title": "Titles and descriptions are unique across pages",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "6 pages, all unique",
+   "fix": "",
+   "checklist": 5
+  },
+  {
+   "id": "seo-h1",
+   "category": "seo",
+   "title": "Exactly one <h1>",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "1 <h1>",
+   "fix": "",
+   "checklist": 9
+  },
+  {
+   "id": "seo-heading-order",
+   "category": "seo",
+   "title": "Heading levels do not skip",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "2 headings",
+   "fix": ""
+  },
+  {
+   "id": "seo-lang",
+   "category": "seo",
+   "title": "<html lang> is valid",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "en",
+   "fix": "",
+   "checklist": 16
+  },
+  {
+   "id": "seo-meta-desc-length",
+   "category": "seo",
+   "title": "Meta description is 70-160 characters",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "98 characters",
+   "fix": "",
+   "checklist": 6
+  },
+  {
+   "id": "seo-meta-description",
+   "category": "seo",
+   "title": "Meta description present",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "present",
+   "fix": "",
+   "checklist": 6
+  },
+  {
+   "id": "seo-noindex",
+   "category": "seo",
+   "title": "Page is not noindexed",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "indexable",
+   "fix": ""
+  },
+  {
+   "id": "seo-og-basic",
+   "category": "seo",
+   "title": "og:title and og:description present",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "both present",
+   "fix": ""
+  },
+  {
+   "id": "seo-og-image",
+   "category": "seo",
+   "title": "og:image present",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "absolute URL",
+   "fix": "",
+   "checklist": 7
+  },
+  {
+   "id": "seo-robots-sensitive",
+   "category": "seo",
+   "title": "robots.txt does not advertise sensitive paths",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "none",
+   "fix": ""
+  },
+  {
+   "id": "seo-robots-txt",
+   "category": "seo",
+   "title": "robots.txt exists and is valid",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "robots.txt found with User-agent rules",
+   "fix": "",
+   "checklist": 30
+  },
+  {
+   "id": "seo-sitemap",
+   "category": "seo",
+   "title": "sitemap.xml is present and valid",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "6 <loc> entries",
+   "fix": "",
+   "checklist": 15
+  },
+  {
+   "id": "seo-spa-shell",
+   "category": "seo",
+   "title": "Raw HTML has real content (no empty SPA shell)",
+   "status": "pass",
+   "severity": 4,
+   "evidence": "229 chars of visible text",
+   "fix": "",
+   "checklist": 2
+  },
+  {
+   "id": "seo-structured-data",
+   "category": "seo",
+   "title": "Valid JSON-LD structured data",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "types: LocalBusiness, PostalAddress, AggregateRating, BreadcrumbList, ListItem, FAQPage",
+   "fix": "",
+   "checklist": 8
+  },
+  {
+   "id": "seo-title",
+   "category": "seo",
+   "title": "Page has a <title>",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "\"Sample Site: a perfectly configured demo\"",
+   "fix": "",
+   "checklist": 31
+  },
+  {
+   "id": "seo-title-length",
+   "category": "seo",
+   "title": "Title length is 10-60 characters",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "40 characters",
+   "fix": "",
+   "checklist": 31
+  },
+  {
+   "id": "seo-twitter-card",
+   "category": "seo",
+   "title": "twitter:card present",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "summary_large_image",
+   "fix": ""
+  },
+  {
+   "id": "seo-viewport",
+   "category": "seo",
+   "title": "Viewport meta tag present",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "width=device-width",
+   "fix": ""
+  },
+  {
+   "id": "ai-llms-txt",
+   "category": "ai",
+   "title": "llms.txt present (optional standard)",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "llms.txt found",
+   "fix": "",
+   "checklist": 12
+  },
+  {
+   "id": "ai-robots-blocks-all",
+   "category": "ai",
+   "title": "robots.txt does not block all crawlers",
+   "status": "pass",
+   "severity": 5,
+   "evidence": "not blocked",
+   "fix": ""
+  },
+  {
+   "id": "ai-robots-blocks-bots",
+   "category": "ai",
+   "title": "AI crawlers are not blocked (may be intentional)",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "no AI crawler blocked",
+   "fix": "",
+   "checklist": 13
+  },
+  {
+   "id": "ux-team-photo",
+   "category": "ux",
+   "title": "Team / about photo (low confidence)",
+   "status": "info",
+   "severity": 1,
+   "evidence": "team-like image found (low confidence)",
+   "fix": "",
+   "checklist": 40
+  },
+  {
+   "id": "ux-404-page",
+   "category": "ux",
+   "title": "Custom 404 page returns a real 404",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "HTTP 404 with a custom page",
+   "fix": "",
+   "checklist": 3
+  },
+  {
+   "id": "ux-alt-text",
+   "category": "ux",
+   "title": "Images have alt text",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "1 images, all with alt",
+   "fix": "",
+   "checklist": 17
+  },
+  {
+   "id": "ux-analytics",
+   "category": "ux",
+   "title": "Analytics present",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "analytics detected",
+   "fix": "",
+   "checklist": 39
+  },
+  {
+   "id": "ux-breadcrumbs",
+   "category": "ux",
+   "title": "Breadcrumbs",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "breadcrumbs found",
+   "fix": "",
+   "checklist": 25
+  },
+  {
+   "id": "ux-case-studies",
+   "category": "ux",
+   "title": "Case studies / portfolio link",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "link to /case-studies",
+   "fix": "",
+   "checklist": 26
+  },
+  {
+   "id": "ux-cta-above-fold",
+   "category": "ux",
+   "title": "Call to action near the top (heuristic)",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "CTA-like link/button in first 3000 chars of body (heuristic)",
+   "fix": "",
+   "checklist": 22
+  },
+  {
+   "id": "ux-default-hostname",
+   "category": "ux",
+   "title": "Site is not on a default hosting hostname",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "sample.invalid",
+   "fix": "",
+   "checklist": 1
+  },
+  {
+   "id": "ux-faq",
+   "category": "ux",
+   "title": "FAQ content",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "5 FAQ items",
+   "fix": "",
+   "checklist": 27
+  },
+  {
+   "id": "ux-favicon",
+   "category": "ux",
+   "title": "Favicon present",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "<link rel=icon> found",
+   "fix": "",
+   "checklist": 14
+  },
+  {
+   "id": "ux-internal-links",
+   "category": "ux",
+   "title": "Internal links present",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "6 internal links",
+   "fix": "",
+   "checklist": 23
+  },
+  {
+   "id": "ux-js-bundle-size",
+   "category": "ux",
+   "title": "JavaScript bundles are small and compressed",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "1 script(s), 2 KB total",
+   "fix": "",
+   "checklist": 20
+  },
+  {
+   "id": "ux-local-schema",
+   "category": "ux",
+   "title": "LocalBusiness schema is complete",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "address, telephone, opening hours present",
+   "fix": "",
+   "checklist": 37
+  },
+  {
+   "id": "ux-maps",
+   "category": "ux",
+   "title": "Map / location embed or link",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "map embed/link found",
+   "fix": "",
+   "checklist": 34
+  },
+  {
+   "id": "ux-privacy-policy",
+   "category": "ux",
+   "title": "Privacy policy link works",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "/privacy returns 200",
+   "fix": "",
+   "checklist": 38
+  },
+  {
+   "id": "ux-response-time",
+   "category": "ux",
+   "title": "Response-time promise",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "response-time promise found",
+   "fix": "",
+   "checklist": 28
+  },
+  {
+   "id": "ux-reviews",
+   "category": "ux",
+   "title": "Reviews / ratings markup or widget",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "review markup/widget found (authenticity not verified)",
+   "fix": "",
+   "checklist": 35
+  },
+  {
+   "id": "ux-thank-you",
+   "category": "ux",
+   "title": "Thank-you page exists",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "thank-you page found",
+   "fix": "",
+   "checklist": 24
+  },
+  {
+   "id": "ux-theme-color",
+   "category": "ux",
+   "title": "theme-color meta tag",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "#ffffff",
+   "fix": ""
+  },
+  {
+   "id": "ux-console-errors",
+   "category": "ux",
+   "title": "No console errors",
+   "status": "skipped",
+   "severity": 1,
+   "evidence": "needs a headless browser (not in v1)",
+   "fix": "",
+   "checklist": 19
+  },
+  {
+   "id": "ux-sticky-mobile-cta",
+   "category": "ux",
+   "title": "Sticky mobile CTA",
+   "status": "skipped",
+   "severity": 1,
+   "evidence": "needs a headless browser (not in v1)",
+   "fix": "",
+   "checklist": 29
+  },
+  {
+   "id": "exp-error-leak",
+   "category": "exposure",
+   "title": "404 page does not leak stack traces or paths",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "no stack/path patterns",
+   "fix": ""
+  },
+  {
+   "id": "exp-security-txt",
+   "category": "exposure",
+   "title": "security.txt (RFC 9116) present",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "/.well-known/security.txt found",
+   "fix": ""
+  },
+  {
+   "id": "exp-security-txt-fields",
+   "category": "exposure",
+   "title": "security.txt has Contact and a future Expires",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "Contact and Expires valid",
+   "fix": ""
+  },
+  {
+   "id": "exp-source-maps",
+   "category": "exposure",
+   "title": "Source maps are not public",
+   "status": "pass",
+   "severity": 3,
+   "evidence": "none referenced or reachable",
+   "fix": "",
+   "checklist": 18
+  }
+ ],
+ "errors": []
+}

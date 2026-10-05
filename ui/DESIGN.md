@@ -87,3 +87,8 @@ Sample report (119 findings, default filter "Issues" = 34 rows), page height in 
 | 375 x 812 | 10707 (13.2) | 2402 (3.0) | 3137 (3.9) | 976 (1.2) |
 
 Findings list alone at 1200: 4749 -> 1948 (15 failed rows open, average closed row 52, open row 121); 375: 15 failed rows -> 3 open (average closed row 54, tallest 60), list 2499. With "Expand all" the 1200 page is 3343. Overview at 375 is the chart strip (436) instead of three stacked cards (about 1400). No horizontal scroll at 375 / 768 / 1200 (320 and 1600 were checked on the layers before the merge). Not measurable in the Browser pane (hidden document: no rAF, no scroll events): view transitions, scroll-driven dot highlight, reduced-motion output, real print, find-in-page, screen readers.
+
+## Sample reports
+`scripts/sample-reports.mjs` runs the real `scan()` against an in-memory fake site (injected fetch + DNS stub; only the TLS handshake rows are a fixed table) and writes `public/samples/perfect.json` (security and quality A+ 100) and `mixed.json` (both about 50); scores are recomputed by `lib/score.js`, files carry `"sample": true`, host `sample.invalid`. Re-run it after a check changes (`test/sample-reports.test.js` fails when ids or scores drift).
+UI: under the scan form two buttons (`#samples`, `data-sample`) fetch `/samples/<name>.json` (connect-src 'self') and render it with the same `show()` as a scan; `#sample=perfect|mixed` loads one on page load (kept next to `view=` in the hash). `#sample-banner` (`role="note"`, class `cap-note`) says "Sample report, not a real site" and stays until a real scan finishes.
+Not served by `server.js` (the Node backend only serves `index.html`); production serves them as static assets from `dist/`.

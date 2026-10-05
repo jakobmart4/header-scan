@@ -6,7 +6,7 @@
   var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
   var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
-  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null;
+  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null, sampleName = '';
 
   // Progressive enhancement gate: count-up via a registered custom property needs @property.
   if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
@@ -54,6 +54,7 @@
     $('verify-start').disabled = b;
     $('verify-check').disabled = b;
     $('deep-btn').disabled = b || !verifiedHost;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (x) { x.disabled = b; });
     if (!b && busyFocus && !busyFocus.disabled && (!a || a === document.body || a === busyFocus)) busyFocus.focus();
     if (!b) busyFocus = null;
   }
@@ -456,7 +457,7 @@
     enhance(stripSync);
     enhance(function () { tabsRender(r, deep); });
     // Follow the latest scan unless the user typed their own host.
-    if (!$('host').value || $('host').value === autoHost) {
+    if (!r.sample && (!$('host').value || $('host').value === autoHost)) { // a sample's host is not a real one to verify
       $('host').value = autoHost = r.host || '';
       $('host').dispatchEvent(new Event('input'));
     }
@@ -579,7 +580,7 @@
     tabsMeasure();
     if (focus) tabEl(v).focus({ preventScroll: true });
     if (scroll) tabsToStrip();
-    if (!noHash) { try { history.replaceState(null, '', '#view=' + v); } catch (e) { /* sandboxed */ } }
+    if (!noHash) { try { history.replaceState(null, '', '#' + (sampleName ? 'sample=' + sampleName + '&' : '') + 'view=' + v); } catch (e) { /* sandboxed */ } }
   }
   function hashView() {
     var m = /(?:^#|&)view=(overview|findings|details)(?:&|$)/.exec(location.hash);
@@ -779,6 +780,8 @@
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
+      sampleName = '';
+      $('sample-banner').hidden = true;
       show(r, deep);
       setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
@@ -790,6 +793,31 @@
     }
     setBusy(false);
   }
+
+  // Sample reports: static JSON from /samples (made by scripts/sample-reports.mjs with the real scoring engine), shown through
+  // the same show() as a scan. The banner stays until a real scan finishes.
+  async function loadSample(name) {
+    setBusy(true);
+    delete $('results').dataset.refilter;
+    setState('loading', 'false');
+    say($('status'), 'Loading sample report…');
+    try {
+      var r = await api('/samples/' + name + '.json');
+      sampleName = name;
+      $('sample-banner').hidden = false;
+      show(r, false);
+      setState('done', 'false');
+      say($('status'), 'Showing a sample report, not a real site.');
+    } catch (e) {
+      $('error-msg').textContent = e.message;
+      setState(result ? 'done' : 'error', String(!!result));
+      say($('status'), 'Sample report failed to load.', 'err');
+    }
+    setBusy(false);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (b) {
+    b.addEventListener('click', function () { if (!busy) loadSample(b.dataset.sample); });
+  });
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
   $('filters').addEventListener('change', function (ev) {
@@ -948,4 +976,6 @@
   enhance(initStrip);
 
   syncFilters();
+  var sm = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
+  if (sm) loadSample(sm[1]);
 })();

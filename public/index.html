@@ -279,6 +279,10 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
 /* the loadbar (panels.css) sits directly under the form; #status reserves one line so it never shifts */
 #status { min-height: 1.5rem; margin: var(--s2) 0 var(--s4); }
 
+/* sample buttons: wrap with a gap instead of stranding the separator dot; the banner keeps clear of the report card below */
+#samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font-size: var(--fs-2); }
+#sample-banner { margin-bottom: var(--s3); }
+
 #results { margin-bottom: var(--s5); }
 
 /* report: one column on mobile (rail cards, then main); state visibility is panels.css */
@@ -1715,7 +1719,6 @@ input[type="text"] {
 /* site footer: privacy link (links must exist on the page: ux-privacy-policy check) */
 #site-foot { margin: var(--s6) 0 var(--s5); text-align: center; font-size: var(--fs-2); }
 #site-foot a { padding: var(--s2); }
-@media (max-width: 640px) { #site-foot { margin-bottom: 6rem; } } /* clear the docked tab bar */
 /* skin-charts: chart interaction + polish layered on the highend skin.
    Owns: donut (legend highlight, textured arcs, depth, tick bezel), heat grid (crosshair, legend), category rows
    (segment draw, hover numerals), severity stack. Base = final state; keyframes hold only the from-side;
@@ -3137,6 +3140,10 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
 </form>
 <div id="loadbar" aria-hidden="true"></div>
 <p id="status" class="muted" role="status" aria-live="polite" data-tone="muted"></p>
+<p id="samples" class="muted">Sample reports:
+  <button type="button" class="btn" data-sample="perfect">A+ 100/100</button> &middot;
+  <button type="button" class="btn" data-sample="mixed">mixed 50/100</button></p>
+<p id="sample-banner" class="cap-note" role="note" hidden><strong>Sample report, not a real site.</strong> Produced by the real scoring engine from a made-up site (sample.invalid).</p>
 <noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
 <section id="results" data-state="idle" data-err="false" aria-label="Scan results" aria-busy="false">
@@ -3306,7 +3313,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
   var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
-  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null;
+  var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null, sampleName = '';
 
   // Progressive enhancement gate: count-up via a registered custom property needs @property.
   if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
@@ -3354,6 +3361,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     $('verify-start').disabled = b;
     $('verify-check').disabled = b;
     $('deep-btn').disabled = b || !verifiedHost;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (x) { x.disabled = b; });
     if (!b && busyFocus && !busyFocus.disabled && (!a || a === document.body || a === busyFocus)) busyFocus.focus();
     if (!b) busyFocus = null;
   }
@@ -3756,7 +3764,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     enhance(stripSync);
     enhance(function () { tabsRender(r, deep); });
     // Follow the latest scan unless the user typed their own host.
-    if (!$('host').value || $('host').value === autoHost) {
+    if (!r.sample && (!$('host').value || $('host').value === autoHost)) { // a sample's host is not a real one to verify
       $('host').value = autoHost = r.host || '';
       $('host').dispatchEvent(new Event('input'));
     }
@@ -3879,7 +3887,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     tabsMeasure();
     if (focus) tabEl(v).focus({ preventScroll: true });
     if (scroll) tabsToStrip();
-    if (!noHash) { try { history.replaceState(null, '', '#view=' + v); } catch (e) { /* sandboxed */ } }
+    if (!noHash) { try { history.replaceState(null, '', '#' + (sampleName ? 'sample=' + sampleName + '&' : '') + 'view=' + v); } catch (e) { /* sandboxed */ } }
   }
   function hashView() {
     var m = /(?:^#|&)view=(overview|findings|details)(?:&|$)/.exec(location.hash);
@@ -4079,6 +4087,8 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
+      sampleName = '';
+      $('sample-banner').hidden = true;
       show(r, deep);
       setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
@@ -4090,6 +4100,31 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     }
     setBusy(false);
   }
+
+  // Sample reports: static JSON from /samples (made by scripts/sample-reports.mjs with the real scoring engine), shown through
+  // the same show() as a scan. The banner stays until a real scan finishes.
+  async function loadSample(name) {
+    setBusy(true);
+    delete $('results').dataset.refilter;
+    setState('loading', 'false');
+    say($('status'), 'Loading sample report…');
+    try {
+      var r = await api('/samples/' + name + '.json');
+      sampleName = name;
+      $('sample-banner').hidden = false;
+      show(r, false);
+      setState('done', 'false');
+      say($('status'), 'Showing a sample report, not a real site.');
+    } catch (e) {
+      $('error-msg').textContent = e.message;
+      setState(result ? 'done' : 'error', String(!!result));
+      say($('status'), 'Sample report failed to load.', 'err');
+    }
+    setBusy(false);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (b) {
+    b.addEventListener('click', function () { if (!busy) loadSample(b.dataset.sample); });
+  });
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
   $('filters').addEventListener('change', function (ev) {
@@ -4248,6 +4283,8 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   enhance(initStrip);
 
   syncFilters();
+  var sm = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
+  if (sm) loadSample(sm[1]);
 })();
 </script>
 </body>

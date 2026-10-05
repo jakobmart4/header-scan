@@ -20,6 +20,10 @@
 /* the loadbar (panels.css) sits directly under the form; #status reserves one line so it never shifts */
 #status { min-height: 1.5rem; margin: var(--s2) 0 var(--s4); }
 
+/* sample buttons: wrap with a gap instead of stranding the separator dot; the banner keeps clear of the report card below */
+#samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font-size: var(--fs-2); }
+#sample-banner { margin-bottom: var(--s3); }
+
 #results { margin-bottom: var(--s5); }
 
 /* report: one column on mobile (rail cards, then main); state visibility is panels.css */
