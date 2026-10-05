@@ -20,9 +20,12 @@
 /* the loadbar (panels.css) sits directly under the form; #status reserves one line so it never shifts */
 #status { min-height: 1.5rem; margin: var(--s2) 0 var(--s4); }
 
-/* sample buttons: wrap with a gap instead of stranding the separator dot; the banner keeps clear of the report card below */
-#samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font-size: var(--fs-2); }
-#sample-banner { margin-bottom: var(--s3); }
+/* sample row + banner: one compact row, the banner drops below when it does not fit (and always on phones, where the buttons
+   keep a 44px tap target); wrapping uses gaps, no separator glyph; the bar keeps clear of the report card below */
+#sample-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin: 0 0 var(--s3); }
+#samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0; font-size: var(--fs-2); }
+#samples .btn { min-height: 2.25rem; padding: var(--s1) var(--s3); } /* beats the skin's .btn (48px): 36px, well over the 24px minimum */
+#sample-banner { flex: 1 1 18rem; margin: 0; padding: var(--s1) var(--s2); line-height: 1.4; } /* beside the buttons from about 40rem up, on one line from about 60rem */
 
 #results { margin-bottom: var(--s5); }
 
@@ -41,6 +44,7 @@
   #scan-form { flex-direction: column; align-items: stretch; }
   #scan-form .grow { flex: 0 0 auto; }
   #scan-form .btn { width: 100%; }
+  #samples .btn { min-height: 2.75rem; } /* phones: full 44px tap target */
 }
 
 @media (min-width: 640px) {

@@ -137,3 +137,79 @@ Only rows whose status changed or that expose a new problem are listed. Everythi
 | mdn, smashing, wikipedia, hacker news, err.ee, notion, eesti.ee | ux-cta-above-fold | warn | warn | unchanged: docs/news/forum/wiki page types deliberately stay strict, word list/window out of scope |
 
 Irrelevant fail/warn results removed: the 6 own-site rows, 3 thank-you warns (err.ee, HN, Wikipedia; Allbirds and Summit stay), 3 false case-study passes (err.ee, HN, Wikipedia) and 1 Notion 404 warn. New or worse: eesti.ee privacy warn to fail. Still wrong and out of scope here: excalidraw (app shell), example.com, all cta warns on non-marketing pages, err.ee FAQ/response-time, Notion case-studies, HN privacy pass.
+
+## Regression run 2026-10-05 (after hardening and minimal-page rules)
+
+Code under test: `main` at 3b40365 (isMinimal, linear tokenizer, stricter privacy-link rule, search-box classes, path-normalised duplicate titles, RFC 9309 robots.txt). Method: `scan()` from `lib/scan.js` called from a node script (`allowPrivate` off, real DNS, no server, not deep), the 11 public corpus sites in the same order as above, 11 s apart, bare domains as the target (8 of them redirect to `www.` or to a language/start path). Every scan returned 119 findings and no module errors. The own workers.dev site is skipped (still the old deploy). Baseline: the scanner's own results from the 2026-10-04 rescan (code of 58fdc62: every `ux-*` finding and `seo-spa-shell`, plus both scores) and, for the other `seo-*` / `ai-*` rows, the tables above.
+
+To tell code changes from site drift, each home page was fetched once more with the scanner's own fetch, and the `html.js` of 58fdc62, of 91dfc69 (first isMinimal) and of HEAD were run on that identical body; `headers.js`, `cookies.js` and `csp.js` of 58fdc62 against HEAD on the same bodies and headers. Verdicts that looked wrong were checked against raw HTML or a plain GET (3 s or more between requests to one host, same User-Agent as the scanner): the duplicate-title crawl of err.ee, notion.com, eesti.ee, smashingmagazine.com and news.ycombinator.com, the robots.txt of excalidraw.com and wikipedia.org, Wikipedia's listed sitemap, the sitemap and three routes of eesti.ee, `/s.js` and a random path on example.com.
+
+### Result in one paragraph
+
+Every `ux-*`, `seo-*` and `ai-*` status is identical to the 2026-10-04 table except three status changes and one evidence-only change (below). The A/B shows no other code-caused change: `headers`, `cookies` and `csp` give identical findings on all 11 bodies, and apart from visible-text lengths `html.js` differs from 58fdc62 only on eesti.ee (shell roots) and err.ee (privacy link choice). The `exposure` category did not move on any site. Category counts that moved in `dns`, `mail` and `tls` (allbirds, smashing, eesti.ee, notion) are live DNS/TLS drift in modules that did not change since 58fdc62. No verdict got worse because of the new code. One intended fix does not take effect on its target, example.com (see "Regressions").
+
+### Changed rows
+
+| site | check id | before | after | verdict | evidence |
+|---|---|---|---|---|---|
+| err.ee | ux-privacy-policy | fail (tracker, no link) | pass (`info.err.ee/982665/isikuandmete-tootlemise-...` returns 200) | improvement | The footer has a real link "Isikuandmete töötlemisest" (personal-data processing) that was not in the 2026-10-04 body, so the flip itself is content drift. The code effect: on today's body the 58fdc62 rule picks a news-article link first (slug contains `isikuandmeid`, the aria-label is a headline); the new rule rejects it (slug over 2 words, not a short link text) and finds the real policy |
+| eesti.ee | seo-spa-shell | pass (15 chars) | fail (0 chars, root present) | improvement (FN fixed) | Same body, old code passes, HEAD fails. Raw HTML is a splash div plus `<app-root></app-root>`: 0 links, 0 `<h1>`, 0 visible text. 58fdc62 only knew `div#root/app/__next`; HEAD also knows `app-root`, `__nuxt`, `___gatsby`, `svelte`. Quality score 75 D to 69 D |
+| eesti.ee | ux-internal-links, seo-h1 | fail | fail | improvement (evidence only) | evidence now says "SPA shell, links rendered by JS" / "empty SPA shell", as excalidraw already did (error class 5 inconsistency closed) |
+| hacker news | ux-privacy-policy | pass (`/user`) | warn (no link) | neutral (not a code effect) | The accidental pass was a front-page username link. On today's body the 58fdc62 rule also finds nothing, so this is content drift. The real state is "no privacy link on a forum". The latent false negative is still there: a synthetic `<a href="user?id=privacyisntdead">privacyisntdead</a>` passes with HEAD too (one short word that contains the topic is a policy link by the documented limit) |
+
+Evidence-only drift not counted as changes: err.ee `ux-internal-links` 108 to 129 links and `ux-alt-text` 1 of 146 to 1 of 166, Hacker News `ux-alt-text` 3 of 3 to 2 of 2, excalidraw bundle 2174 KB to 2182 KB. `seo-spa-shell` visible text is exactly 16 characters shorter on the same body for every site (the doctype no longer counts as text).
+
+### Scores (security / quality, 2026-10-04 to now)
+
+| site | security | quality | note |
+|---|---|---|---|
+| excalidraw | 90 C to 90 C | 70 D to 70 D | |
+| mdn | 95 A to 95 A | 97 A+ to 97 A+ | |
+| smashing | 92 C to 92 C | 94 A to 94 A | |
+| allbirds | 89 C to 88 C | 90 A to 90 A | dns-dnssec and one mail check moved (DNS answers), no code change |
+| err.ee | 87 C to 87 C | 76 D to 79 C | ux 53 to 64: privacy fail to pass |
+| eesti.ee | 97 A to 97 A | 75 D to 69 D | seo 80 to 70: spa-shell pass to fail (correct) |
+| notion | 83 C to 83 C | 93 A to 93 A | |
+| summit dental | 80 D to 80 D | 94 A to 94 A | |
+| hacker news | 87 C to 87 C | 69 D to 68 D | ux 71 to 65: privacy pass to warn |
+| wikipedia | 86 C to 86 C | 84 B to 84 B | |
+| example.com | 80 D to 80 D | 67 D to 67 D | would be 70 C if the minimal-page rule applied |
+
+### Regressions
+
+1. **example.com, minimal-page rule does not apply** (`ux-internal-links`, `ux-cta-above-fold`, `ux-privacy-policy`, `ux-faq`). Last corpus table: fail / warn / warn (unchanged now). What 91dfc69 gives on today's body: skipped / skipped / info / skipped. HEAD: fail / warn / warn / info. Why: the real page changed on 2026-10-02 and now ends with `<script src=/s.js></script>`; `/s.js` is a small first-party script that inserts the localized paragraphs and the "Learn more" link. HEAD's `isMinimal` (SPEC: no `<script src>` other than a known tracker) therefore refuses the canonical placeholder page, the one page the rule was written for. The raw HTML has 156 characters of text, no link, no form, no shell root. Not a bug in the rule as specified; owner decision whether a single first-party script on an otherwise tiny page may still count as minimal.
+
+No other verdict is worse than in the last table. For context, 91dfc69 alone treated the eesti.ee Angular shell as a minimal page (skipping `ux-internal-links`, `ux-cta-above-fold`, `ux-faq`); HEAD does not, so the hardening fixed that intermediate over-skip.
+
+### Verified verdicts that were unverified or new in this run
+
+| site | check id | status | verdict | evidence |
+|---|---|---|---|---|
+| wikipedia | seo-sitemap | fail (listed, HTTP 403) | correct | robots.txt lists `/w/rest.php/site/v1/sitemap/0`; it answers 403 "Sitemap Restricted" to the scanner's UA and to a browser UA alike, so it is not a bot-UA artefact |
+| smashing | seo-duplicate-titles | warn (1 duplicated description) | correct | the home page and `/person-of-the-week/matej-latin/` share the site-wide description; titles differ |
+| notion | seo-duplicate-titles | fail (2) | correct | `/product/wikis` and `/product/projects` share "Your connected workspace for wiki, docs & projects"; `/` and `/product` share "The AI workspace that works for you." |
+| eesti.ee | seo-duplicate-titles | fail (1 title) | correct | raw HTML has no links, so the crawl runs on sitemap URLs; the three routes fetched all return the same 196 KB shell titled "Eesti.ee" |
+| err.ee | seo-duplicate-titles | fail (1 title) | correct outcome, partly bogus input | `/aastahitt/ajalugu` really carries the home title "uudised \| ERR" and all 9 crawled pages share the description "ERR uudised.". One crawled "page" is the literal template href `https://www.err.ee/%7B%7BenvLink(infoLink[langCode].href)%7D%7D` from the raw HTML, which the site answers with a 200 front page |
+| hacker news | seo-duplicate-titles | fail (1 title) | FP | `/` and `/news` are the same front page (title "Hacker News", bodies of 34 932 and 35 109 characters); the same-body guard cannot equate them because per-request tokens differ |
+
+### Remaining false positives and negatives
+
+False positives, by impact:
+
+1. **excalidraw `ai-robots-blocks-all` fail (severity 5)**. robots.txt has `User-agent: *` with `Allow: /`, `Allow: /$`, `Allow: /sitemap.xml` and `Disallow: /`. Under RFC 9309 the longest match wins and an equal-length tie goes to Allow, so the whole site is crawlable. `parseRobots` keeps only Disallow lines and the check only looks for `Disallow: /`. Fixing it moves the score 70 to 78; the grade stays D (4 other fails). Not new: the same id was in the 2026-10-04 cap list, but it was not in the tables.
+2. **`ux-cta-above-fold` warns on 11 of 11 sites**, including the three marketing pages (allbirds, notion, summit dental) that have an obvious CTA past the 3000-character window. Still no signal (error class 2, deliberately out of scope).
+3. **App shells keep the marketing rules** (excalidraw, eesti.ee): `ux-internal-links` fail, `ux-cta-above-fold` warn, `ux-privacy-policy` warn/fail and the `ux-404-page` soft-404 fail all stack on one root cause that `seo-spa-shell` already reports.
+4. **example.com**: see Regressions (4 rows).
+5. **err.ee** `ux-faq` pass (8 items: the 11 `<details>` are UI collapsibles) and `ux-response-time` pass (nav label "24h uudised"): unchanged known limits.
+6. **notion** `ux-case-studies` pass on `/product/projects` (a product feature): unchanged known limit. `ux-privacy-policy` passes on a help-page id link while `/trust/privacy-policy` exists: weak pass.
+7. **eesti.ee** `ux-privacy-policy` fail: the only "tracker" is Cloudflare's `cloudflareinsights` beacon injected for the scanner's Accept header; open owner decision from the last run.
+8. **allbirds** `ux-privacy-policy` fail / `ux-thank-you` warn: the raw HTML has no privacy link at all (footer rendered client-side); the contact form is a real lead form, so the strict result follows the contract but is likely wrong for the live page.
+9. **hacker news** `ux-privacy-policy` warn, `ux-alt-text` fail (2 of 2 images), `ux-404-page` warn (tiny default body): correct as facts, low value on a forum; `seo-duplicate-titles` is a FP (above).
+
+False negatives:
+
+1. **`ux-privacy-policy` accepts short link text that only contains the word**: `privacyisntdead` (a username link) and a 3-word headline such as "Privacy-friendly analytics" both pass on synthetic pages. Documented limit in SPEC, still a latent HN-style FN.
+2. **example.com `ux-404-page` pass**: a random path returns HTTP 404 with the same 577-byte placeholder page, which counts as a "custom page" (body at least 300 bytes, not a server default).
+3. The err.ee `ux-faq` / `ux-response-time` and notion `ux-case-studies` false passes in items 5 and 6 above.
+
+Checks that held up on this run: `seo-spa-shell` (now correct on all 11 sites, eesti.ee included), `ux-thank-you` skipped on the three search-box sites (err.ee, HN, Wikipedia), `ux-case-studies` info on err.ee, HN and Wikipedia, `ux-404-page` info on notion, `seo-sitemap` fail on Wikipedia, and the duplicate-title crawl (4 of 5 non-trivial verdicts correct in outcome, HN is the FP).

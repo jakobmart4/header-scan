@@ -29,12 +29,14 @@ CLI alternative: `npx wrangler login && npm run deploy`, then `npx wrangler secr
 
 ## 3. Check
 - `https://header-scan.<your-subdomain>.workers.dev` loads and scans work.
+- `/privacy`, `/samples/perfect.json` and `/samples/mixed.json` on the same host answer 200 (static assets from `dist/`), and the two "Sample reports" buttons in the UI open a report.
 - `curl https://<render-url>/api/scan?url=https://example.com` -> 403 and `curl https://<render-url>/` -> 404 (backend only answers via the proxy; `/api/health` stays open).
 - `curl -i http://header-scan.<your-subdomain>.workers.dev/api/health` -> 308 to `https://` (Worker-handled path).
 - Scan your own site with it: it should grade well.
 
 ## Limits / notes
-- Rate limit is in memory per instance (per real client IP via the proxy; IPv6 per /64), plus at most 2 running scans per client and 4 in total. Add a Cloudflare WAF rate-limiting rule on `/api/*` for public use (dashboard, not in this repo).
+- Rate limit is in memory per instance (per real client IP via the proxy; IPv6 per /64), plus at most 2 running scans per client and 4 in total. **Known limit:** a /64 bucket does not stop someone who holds a /48 (65,536 /64 networks, each with its own quota), and once the map holds more than 50,000 keys a request with a new key gets 429 for 60 s. The real defence for public use is a Cloudflare WAF rate-limiting rule on `/api/*` (dashboard setting, not in this repo; paid, not used by the current deployment).
+- **Known limit:** `/privacy` and `/samples/*.json` (the sample reports behind the UI's "Sample reports" buttons) are static assets of the Worker deployment. The standalone `server.js` serves only `/` and the API (`other public files -> 404`), so a local `npm start` has a dead footer Privacy link and failing sample buttons (`test/api.test.js` pins "other public files -> 404").
 - The Worker sets the security headers on every response it produces itself (proxied `/api/*` answers, its JSON errors and the 308); `dist/_headers` covers static files only. Plain `http://` gets a 308 to `https://` on Worker-handled paths only (`/api/*` and paths without a static file).
 - **Known limit:** static assets (`/`, `/privacy`, ...) are served by the platform and are NOT redirected from `http://`, because the Worker does not run for them (`run_worker_first = ["/api/*"]`). Acceptable because the `.dev` TLD is HSTS-preloaded, so browsers never send plain HTTP to `workers.dev`; on a custom domain use "Always Use HTTPS".
 - No `security.txt` is published on purpose (it needs a contact address and the owner publishes no personal data); `test/static-pages.test.js` guards this. The privacy page (`public/privacy.html`) must stay in line with `server.js` and `worker/index.js`; re-read it when logging, storage or third-party calls change.
