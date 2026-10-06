@@ -95,6 +95,14 @@ describe('minimal pages: shells, sales pages and data collectors keep the strict
     // an analytics script alone does not make a placeholder page an app
     assert.equal(pageType(short('<p>Coming soon</p><script src="https://www.googletagmanager.com/gtm.js?id=GTM-ABC123"></script>'), URL0).isMinimal, true);
   });
+  test('one small first-party script on a text-only placeholder (example.com since 2026-10) stays minimal; with a link or a second script it does not', async () => {
+    const text = '<p>This domain is for use in documentation examples without needing permission. This is not a service.</p>';
+    assert.equal(pageType(short(text + '<script src=/s.js></script>'), URL0).isMinimal, true);
+    assert.equal((await htmlRun(short(text + '<script src=/s.js></script>')))['ux-internal-links'].status, 'skipped');
+    assert.equal(pageType(short(text + '<a href="https://www.iana.org/">More</a><script src=/s.js></script>'), URL0).isMinimal, false);
+    assert.equal(pageType(short(text + '<script src=/s.js></script><script src=/t.js></script>'), URL0).isMinimal, false);
+    assert.equal(pageType(short('<p>Loading</p><script src=/s.js></script>'), URL0).isMinimal, false); // too little text: app shell
+  });
   test('a root div with 200-249 characters of text is neither an empty shell nor minimal', async () => {
     const inner = `<div id="root"><p>${'a'.repeat(220)}</p></div>`;
     const t = pageType(short(inner), URL0);
