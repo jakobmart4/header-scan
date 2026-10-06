@@ -30,7 +30,7 @@
 
 ## Backlog (priority order)
 1. Deploy (Render redeploy for lib/, Cloudflare builds main), run the DEPLOY.md smoke checks (health, scan, headers, `/privacy`, `/samples/*.json`), re-scan example.com.
-4. `ai-robots-blocks-all`: apply RFC 9309 longest-match (`Allow: /` beats `Disallow: /` of equal length) with a test.
-5. `seo-duplicate-titles`: treat `/` and its canonical/redirect target as one page.
-6. Add `.workers.dev` to the default-hostname list (`ux-default-hostname`, see `docs/research/ux-audit.md`).
-7. Decide items 1-3 above.
+2. `ai-robots-blocks-all`: apply RFC 9309 longest-match (`Allow: /` beats `Disallow: /` of equal length) with a test.
+3. `seo-duplicate-titles`: treat `/` and its canonical/redirect target as one page.
+4. Add `.workers.dev` to the default-hostname list (`ux-default-hostname`, see `docs/research/ux-audit.md`).
+5. Decide items 1-3 above.
