@@ -807,7 +807,7 @@
       $('sample-banner').hidden = false;
       show(r, false);
       setState('done', 'false');
-      say($('status'), 'Showing a sample report, not a real site.');
+      say($('status'), 'Sample report loaded: ' + name + '.'); // short and per sample: the banner says "not a real site", and a changed text is re-announced
     } catch (e) {
       $('error-msg').textContent = e.message;
       setState(result ? 'done' : 'error', String(!!result));

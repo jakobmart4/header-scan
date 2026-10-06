@@ -279,9 +279,12 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
 /* the loadbar (panels.css) sits directly under the form; #status reserves one line so it never shifts */
 #status { min-height: 1.5rem; margin: var(--s2) 0 var(--s4); }
 
-/* sample buttons: wrap with a gap instead of stranding the separator dot; the banner keeps clear of the report card below */
-#samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font-size: var(--fs-2); }
-#sample-banner { margin-bottom: var(--s3); }
+/* sample row + banner: one compact row, the banner drops below when it does not fit (and always on phones, where the buttons
+   keep a 44px tap target); wrapping uses gaps, no separator glyph; the bar keeps clear of the report card below */
+#sample-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin: 0 0 var(--s3); }
+#samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0; font-size: var(--fs-2); }
+#samples .btn { min-height: 2.25rem; padding: var(--s1) var(--s3); } /* beats the skin's .btn (48px): 36px, well over the 24px minimum */
+#sample-banner { flex: 1 1 18rem; margin: 0; padding: var(--s1) var(--s2); line-height: 1.4; } /* beside the buttons from about 40rem up, on one line from about 60rem */
 
 #results { margin-bottom: var(--s5); }
 
@@ -300,6 +303,7 @@ input[type="text"]:focus-visible { border-color: var(--accent); }
   #scan-form { flex-direction: column; align-items: stretch; }
   #scan-form .grow { flex: 0 0 auto; }
   #scan-form .btn { width: 100%; }
+  #samples .btn { min-height: 2.75rem; } /* phones: full 44px tap target */
 }
 
 @media (min-width: 640px) {
@@ -3140,10 +3144,12 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
 </form>
 <div id="loadbar" aria-hidden="true"></div>
 <p id="status" class="muted" role="status" aria-live="polite" data-tone="muted"></p>
-<p id="samples" class="muted">Sample reports:
-  <button type="button" class="btn" data-sample="perfect">A+ 100/100</button> &middot;
-  <button type="button" class="btn" data-sample="mixed">mixed 50/100</button></p>
-<p id="sample-banner" class="cap-note" role="note" hidden><strong>Sample report, not a real site.</strong> Produced by the real scoring engine from a made-up site (sample.invalid).</p>
+<div id="sample-bar">
+  <p id="samples" class="muted">Try a sample:
+    <button type="button" class="btn" data-sample="perfect">A+ 100/100</button>
+    <button type="button" class="btn" data-sample="mixed">mixed 50/100</button></p>
+  <p id="sample-banner" class="cap-note" role="note" hidden><strong>Sample report, not a real site.</strong> Real scoring engine, made-up site (sample.invalid).</p>
+</div>
 <noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
 <section id="results" data-state="idle" data-err="false" aria-label="Scan results" aria-busy="false">
@@ -4114,7 +4120,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
       $('sample-banner').hidden = false;
       show(r, false);
       setState('done', 'false');
-      say($('status'), 'Showing a sample report, not a real site.');
+      say($('status'), 'Sample report loaded: ' + name + '.'); // short and per sample: the banner says "not a real site", and a changed text is re-announced
     } catch (e) {
       $('error-msg').textContent = e.message;
       setState(result ? 'done' : 'error', String(!!result));
