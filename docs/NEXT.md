@@ -26,12 +26,10 @@
 1. eesti.ee loads Cloudflare's `cloudflareinsights` beacon; by spec that is a tracker, so `ux-privacy-policy` fails there. Keep or allow-list?
 2. `http://` on static pages (`/`, `/privacy`) is not redirected (platform serves assets, `.dev` is HSTS-preloaded). Accept, or custom domain with "Always Use HTTPS"?
 3. The workers.dev subdomain contains the account name; publish under a custom domain instead?
-4. The repo is now private, but old commits (and the previous version of this file) carry the owner e-mail. Keep, or rewrite history before ever making it public (destructive)?
+4. The repo is PUBLIC by the owner's choice (Render needs it); old commits carry the owner e-mail, accepted. New commits use the GitHub noreply address (repo-local git config).
 
 ## Backlog (priority order)
-1. Docs follow a197518: SPEC.md 6.6 page-type signals and README UX paragraph still say "no `<script src>` other than a tracker"; the corpus doc still says the example.com regression stands.
-2. Review the working-tree diff (DEPLOY.md was also changed by the docs sync), commit in logical chunks, push.
-3. Deploy, run the DEPLOY.md smoke checks (health, scan, headers, `/privacy`, `/samples/*.json`), re-scan example.com.
+1. Deploy (Render redeploy for lib/, Cloudflare builds main), run the DEPLOY.md smoke checks (health, scan, headers, `/privacy`, `/samples/*.json`), re-scan example.com.
 4. `ai-robots-blocks-all`: apply RFC 9309 longest-match (`Allow: /` beats `Disallow: /` of equal length) with a test.
 5. `seo-duplicate-titles`: treat `/` and its canonical/redirect target as one page.
 6. Add `.workers.dev` to the default-hostname list (`ux-default-hostname`, see `docs/research/ux-audit.md`).
