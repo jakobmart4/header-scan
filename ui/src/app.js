@@ -697,6 +697,8 @@
     });
     if (window.ResizeObserver) new ResizeObserver(tabsMeasure).observe($('xt'));
     window.addEventListener('hashchange', function () {
+      var s = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
+      if (s && s[1] !== sampleName && !busy) { loadSample(s[1]); return; } // a sample typed into the address bar
       var v = hashView();
       if (v && res.dataset.view && v !== res.dataset.view) tabSelect(v, false, true, true);
     });
