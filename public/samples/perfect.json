@@ -929,7 +929,7 @@
    "title": "Raw HTML has real content (no empty SPA shell)",
    "status": "pass",
    "severity": 4,
-   "evidence": "229 chars of visible text",
+   "evidence": "213 chars of visible text",
    "fix": "",
    "checklist": 2
   },

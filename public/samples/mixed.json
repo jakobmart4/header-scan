@@ -46,7 +46,7 @@
    "grade": "E"
   },
   "quality": {
-   "score": 50,
+   "score": 47,
    "grade": "E"
   },
   "categories": {
@@ -107,20 +107,20 @@
     "skipped": 2
    },
    "ai": {
-    "score": 31,
-    "pass": 1,
-    "warn": 1,
+    "score": 19,
+    "pass": 0,
+    "warn": 2,
     "fail": 1,
     "info": 0,
     "skipped": 0
    },
    "ux": {
-    "score": 67,
+    "score": 56,
     "pass": 3,
-    "warn": 1,
-    "fail": 1,
+    "warn": 3,
+    "fail": 2,
     "info": 11,
-    "skipped": 5
+    "skipped": 2
    },
    "exposure": {
     "score": 100,
@@ -941,7 +941,7 @@
    "title": "Raw HTML has real content (no empty SPA shell)",
    "status": "pass",
    "severity": 4,
-   "evidence": "37 chars of visible text",
+   "evidence": "21 chars of visible text",
    "fix": "",
    "checklist": 2
   },
@@ -971,7 +971,7 @@
    "title": "robots.txt does not block all crawlers",
    "status": "fail",
    "severity": 5,
-   "evidence": "User-agent: * has Disallow: /",
+   "evidence": "User-agent: * disallows the whole site",
    "fix": "Remove \"Disallow: /\" from the wildcard group unless the site is meant to be private."
   },
   {
@@ -988,10 +988,10 @@
    "id": "ai-robots-blocks-bots",
    "category": "ai",
    "title": "AI crawlers are not blocked (may be intentional)",
-   "status": "pass",
+   "status": "warn",
    "severity": 2,
-   "evidence": "no AI crawler blocked",
-   "fix": "",
+   "evidence": "disallowed: GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, Claude-Web, anthropic-ai, PerplexityBot, Google-Extended, CCBot, Bytespider (10 via User-agent: *)",
+   "fix": "Allow AI crawlers in robots.txt if you want to be visible in AI search.",
    "checklist": 13
   },
   {
@@ -1005,6 +1005,26 @@
    "checklist": 17
   },
   {
+   "id": "ux-internal-links",
+   "category": "ux",
+   "title": "Internal links present",
+   "status": "fail",
+   "severity": 2,
+   "evidence": "0 internal links",
+   "fix": "Link to your other key pages with plain <a href> links.",
+   "checklist": 23
+  },
+  {
+   "id": "ux-cta-above-fold",
+   "category": "ux",
+   "title": "Call to action near the top (heuristic)",
+   "status": "warn",
+   "severity": 1,
+   "evidence": "no CTA-like link/button in first 3000 chars of body (heuristic)",
+   "fix": "Put a clear call-to-action near the top of the page.",
+   "checklist": 22
+  },
+  {
    "id": "ux-favicon",
    "category": "ux",
    "title": "Favicon present",
@@ -1013,6 +1033,16 @@
    "evidence": "no <link rel=icon> and no /favicon.ico",
    "fix": "Add a favicon.",
    "checklist": 14
+  },
+  {
+   "id": "ux-privacy-policy",
+   "category": "ux",
+   "title": "Privacy policy link works",
+   "status": "warn",
+   "severity": 2,
+   "evidence": "no privacy policy link",
+   "fix": "Publish a privacy policy and link it from every page.",
+   "checklist": 38
   },
   {
    "id": "ux-analytics",
@@ -1045,6 +1075,16 @@
    "checklist": 26
   },
   {
+   "id": "ux-faq",
+   "category": "ux",
+   "title": "FAQ content",
+   "status": "info",
+   "severity": 1,
+   "evidence": "no FAQ content",
+   "fix": "",
+   "checklist": 27
+  },
+  {
    "id": "ux-local-schema",
    "category": "ux",
    "title": "LocalBusiness schema is complete",
@@ -1063,16 +1103,6 @@
    "evidence": "no map found",
    "fix": "",
    "checklist": 34
-  },
-  {
-   "id": "ux-privacy-policy",
-   "category": "ux",
-   "title": "Privacy policy link works",
-   "status": "info",
-   "severity": 2,
-   "evidence": "minimal page with no form and no tracker: no privacy policy needed",
-   "fix": "",
-   "checklist": 38
   },
   {
    "id": "ux-response-time",
@@ -1162,36 +1192,6 @@
    "evidence": "needs a headless browser (not in v1)",
    "fix": "",
    "checklist": 19
-  },
-  {
-   "id": "ux-cta-above-fold",
-   "category": "ux",
-   "title": "Call to action near the top (heuristic)",
-   "status": "skipped",
-   "severity": 1,
-   "evidence": "minimal page: no sales content to call to action on",
-   "fix": "",
-   "checklist": 22
-  },
-  {
-   "id": "ux-faq",
-   "category": "ux",
-   "title": "FAQ content",
-   "status": "skipped",
-   "severity": 1,
-   "evidence": "minimal page: FAQ content not expected",
-   "fix": "",
-   "checklist": 27
-  },
-  {
-   "id": "ux-internal-links",
-   "category": "ux",
-   "title": "Internal links present",
-   "status": "skipped",
-   "severity": 2,
-   "evidence": "minimal page: nothing to link to",
-   "fix": "",
-   "checklist": 23
   },
   {
    "id": "ux-sticky-mobile-cta",
