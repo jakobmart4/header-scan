@@ -5,9 +5,18 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { run as runHtml, pageType } from '../lib/checks/html.js';
 import { run as runSite } from '../lib/checks/site.js';
-import { run as runCsp, stripInert } from '../lib/checks/csp.js';
+import { run as runCsp, stripInert, bypassHits } from '../lib/checks/csp.js';
 import { run as runHeaders } from '../lib/checks/headers.js';
+import { isVerified } from '../lib/verify.js';
+import { safeFetch } from '../lib/ssrf.js';
+import net from 'node:net';
+import v8 from 'node:v8';
+import vm from 'node:vm';
 import { fakeCtx } from './fixture-server.js';
+
+v8.setFlagsFromString('--expose-gc');
+const gc = vm.runInNewContext('gc');
+const heapMB = () => { gc(); gc(); return process.memoryUsage().heapUsed / 1048576; };
 
 const URL0 = 'https://example.test/';
 const by = (fs) => Object.fromEntries(fs.map((f) => [f.id, f]));
@@ -80,12 +89,15 @@ describe('minimal pages: shells, sales pages and data collectors keep the strict
     for (const id of LINK_RULES) assert.notEqual(f[id].status, 'skipped', id);
     return f;
   };
-  test('client-app roots other than #root are shells (never skipped)', async () => {
+  test('client-app roots other than #root are shells (internal links never skipped; CTA skipped: nothing in the raw HTML to judge)', async () => {
     for (const root of ['<app-root></app-root>', '<div id="__nuxt"></div>', '<div id="___gatsby"></div>', '<div id="svelte"></div>', '<div id="app"></div>']) {
       const body = short(`${root}<script src="/main.js"></script>`);
       assert.equal(pageType(body, URL0).isAppShell, true, root);
       assert.equal(pageType(body, URL0).isMinimal, false, root);
-      assert.equal((await strict(`${root}<script src="/main.js"></script>`))['ux-internal-links'].status, 'fail', root);
+      const f = await htmlRun(short(`${root}<script src="/main.js"></script>`));
+      assert.equal(f['ux-internal-links'].status, 'fail', root);
+      assert.equal(f['ux-faq'].status, 'info', root);
+      assert.equal(f['ux-cta-above-fold'].status, 'skipped', root);
     }
   });
   test('a generic #main div plus a first-party bundle is not minimal', async () => {
@@ -94,6 +106,14 @@ describe('minimal pages: shells, sales pages and data collectors keep the strict
     assert.equal((await strict(inner))['ux-internal-links'].status, 'fail');
     // an analytics script alone does not make a placeholder page an app
     assert.equal(pageType(short('<p>Coming soon</p><script src="https://www.googletagmanager.com/gtm.js?id=GTM-ABC123"></script>'), URL0).isMinimal, true);
+  });
+  test('one small first-party script on a text-only placeholder (example.com since 2026-10) stays minimal; with a link or a second script it does not', async () => {
+    const text = '<p>This domain is for use in documentation examples without needing permission. This is not a service.</p>';
+    assert.equal(pageType(short(text + '<script src=/s.js></script>'), URL0).isMinimal, true);
+    assert.equal((await htmlRun(short(text + '<script src=/s.js></script>')))['ux-internal-links'].status, 'skipped');
+    assert.equal(pageType(short(text + '<a href="https://www.iana.org/">More</a><script src=/s.js></script>'), URL0).isMinimal, false);
+    assert.equal(pageType(short(text + '<script src=/s.js></script><script src=/t.js></script>'), URL0).isMinimal, false);
+    assert.equal(pageType(short('<p>Loading</p><script src=/s.js></script>'), URL0).isMinimal, false); // too little text: app shell
   });
   test('a root div with 200-249 characters of text is neither an empty shell nor minimal', async () => {
     const inner = `<div id="root"><p>${'a'.repeat(220)}</p></div>`;
@@ -246,5 +266,86 @@ describe('thank-you shell comparison', () => {
     };
     const f = by(await runSite(fakeCtx({ url: URL0, body: home, fetch })));
     assert.equal(f['ux-thank-you'].status, 'warn');
+  });
+});
+
+describe('review round 3: hostile input', () => {
+  const MiB = 1048576;
+  test('a JSON-LD @type object with a non-callable toString does not turn every HTML finding into skipped', async () => {
+    const body = '<html><body><script type="application/ld+json">{"@type":{"toString":1}}</script><p>Some text about us.</p>'
+      + '<img src=a.png><form action=/c method=post><input name=email></form></body></html>';
+    const f = await htmlRun(body);
+    assert.equal(f['seo-title'].status, 'fail');
+    assert.equal(f['seo-h1'].status, 'fail');
+    assert.equal(f['seo-structured-data'].status, 'warn'); // a non-string @type is no type
+    assert.equal(pageType(body, URL0).hasLeadForm, true);
+    assert.ok(Object.values(f).filter((x) => x.status === 'skipped').length < 10);
+    // string types in arrays still count, other values are ignored
+    assert.match((await htmlRun(short('<script type="application/ld+json">{"@type":["Organization",5,{"a":1}]}</script>')))['seo-structured-data'].evidence, /^types: Organization$/);
+  });
+  test('a 1 MiB page of "<p>" does not keep hundreds of thousands of tag objects alive', () => {
+    const body = ('<a href=/privacy>Privacy</a>' + '<p>'.repeat(MiB / 3)).slice(0, MiB - 8) + Math.random().toString(36).slice(2, 8);
+    const before = heapMB();
+    const t = pageType(body, URL0); // the parse stays in the module cache
+    const grown = heapMB() - before;
+    assert.equal(t.internalLinks, 1);
+    assert.ok(grown < 15, `${grown.toFixed(1)} MB retained`); // was ~43 MB
+  });
+  test('link text, labels and headings drop comments, script bodies and quoted ">" like the page parse', async () => {
+    const LONGP = `<p>${'Plain prose that is long enough to keep the page out of the minimal class. '.repeat(4)}</p>`;
+    const cta = await htmlRun(short(`<a href="/services">Services<!-- <span class="pill">Get a quote</span> --></a><h1>X</h1>${LONGP}<a href="/about">About</a>`));
+    assert.equal(cta['ux-cta-above-fold'].status, 'warn');
+    const q = ['How long?', 'How much?', 'Where?', 'When?', 'Why?'].map((x) => `<h3>${x}<!-- <span class="new">New</span> --></h3><p>Answer.</p>`).join('');
+    assert.equal((await htmlRun(short(`<h2>FAQ</h2>${q}`)))['ux-faq'].status, 'pass');
+    for (const inner of ['<img src="i.png" alt="Home > Legal > Data"> Privacy policy', '<script>window.track && track("footer link click")</script>Privacy policy']) {
+      const f = await htmlRun(short(`<a href="/en/legal">${inner}</a><h1>X</h1>`));
+      assert.equal(f['ux-privacy-policy'].status, 'pass', inner);
+    }
+  });
+  test('generator meta: a long digit run and an unclosed tag full of name=generator stay fast; real tags still warn', async () => {
+    for (const body of [`<meta name=generator content="${'1'.repeat(256 * 1024)}">`, '<meta ' + 'name=generator '.repeat(MiB / 15)]) {
+      const t0 = performance.now();
+      await runHeaders(fakeCtx({ body }));
+      assert.ok(performance.now() - t0 < 3000, `${Math.round(performance.now() - t0)} ms`); // was 28 s and 32 s
+    }
+    const gen = async (body) => by(await runHeaders(fakeCtx({ body })))['hdr-generator-leak'].status;
+    assert.equal(await gen('<meta content="Hugo 0.120.4" name=generator>'), 'warn');
+    assert.equal(await gen('<meta name="generator" content="WordPress">'), 'pass');
+    assert.equal(await gen('<meta name="description" content="v1.2"><meta name="generator" content="Joomla! 4.1">'), 'warn');
+  });
+  test('bypassHits matches at most 1000 distinct sources, each once', () => {
+    const many = Array.from({ length: 1e6 }, (_, i) => `a${i}.example.net`);
+    const t0 = performance.now();
+    assert.deepEqual(bypassHits([...many, 'unpkg.com']), []);
+    assert.ok(performance.now() - t0 < 1000, `${Math.round(performance.now() - t0)} ms`); // was several seconds
+    assert.deepEqual(bypassHits(['unpkg.com', 'unpkg.com', 'cdnjs.cloudflare.com']).map((h) => h.source), ['unpkg.com', 'cdnjs.cloudflare.com']);
+  });
+  test('isVerified skips oversized TXT records before any regex (a 64 KB quote run used to stall ~1.5 s each)', async () => {
+    const rec = 'a' + '"'.repeat(65000) + 'a';
+    const t0 = performance.now();
+    assert.equal(await isVerified('example.com', async () => [rec, rec, rec]), false);
+    assert.ok(performance.now() - t0 < 1000, `${Math.round(performance.now() - t0)} ms`);
+  });
+  test('safeFetch does not keep one buffer per HTTP chunk (1-byte chunks used to cost ~200 bytes of heap per byte)', async () => {
+    const N = 256 * 1024;
+    let release, flushed;
+    const sent = new Promise((r) => { flushed = r; });
+    const srv = net.createServer((s) => {
+      s.on('error', () => {});
+      s.write('HTTP/1.1 200 OK\r\ncontent-type: text/html\r\ntransfer-encoding: chunked\r\n\r\n' + '1\r\nx\r\n'.repeat(N), () => flushed());
+      release = () => s.end('0\r\n\r\n');
+    });
+    await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+    try {
+      const before = heapMB();
+      const p = safeFetch(`http://127.0.0.1:${srv.address().port}/`, { allowPrivate: true, maxBytes: MiB });
+      await sent;
+      await new Promise((r) => setTimeout(r, 1000)); // let the client read what is buffered
+      const grown = heapMB() - before;
+      release();
+      const r = await p;
+      assert.equal(r.body.length, N);
+      assert.ok(grown < 15, `${grown.toFixed(1)} MB retained mid-body`); // was ~60 MB for 256 KiB
+    } finally { srv.close(); }
   });
 });

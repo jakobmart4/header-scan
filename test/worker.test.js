@@ -86,3 +86,22 @@ test('backend waking up: network error or upstream HTML 502/503/504 -> JSON 502 
     assert.ok(hasSecurityHeaders(r));
   } finally { globalThis.fetch = orig; }
 });
+
+test('health is forwarded with the proxy key and answered no-store with the security headers (page-load prewarm)', async () => {
+  const orig = globalThis.fetch; let seen;
+  globalThis.fetch = async (u, init) => { seen = { u: String(u), init }; return new Response('{"ok":true,"version":"1"}', { status: 200, headers: { 'content-type': 'application/json' } }); };
+  try {
+    const r = await call('https://s.test/api/health');
+    assert.equal(seen.u, 'https://backend.example/api/health');
+    assert.equal(seen.init.headers.get('x-headerscan-key'), 'k');
+    assert.equal(r.status, 200);
+    assert.ok(hasSecurityHeaders(r));
+    assert.deepEqual(await r.json(), { ok: true, version: '1' });
+  } finally { globalThis.fetch = orig; }
+});
+
+test('no cron keep-alive: no scheduled handler, no [triggers] in wrangler.toml (750 free Render hours per workspace, see DEPLOY.md)', async () => {
+  assert.equal(worker.scheduled, undefined);
+  const { readFileSync } = await import('node:fs');
+  assert.doesNotMatch(readFileSync('wrangler.toml', 'utf8'), /^\s*\[triggers\]/m);
+});

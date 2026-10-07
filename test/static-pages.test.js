@@ -40,3 +40,10 @@ test('build-pages writes one site-wide CSP that allows the inline style of every
   assert.equal((headers.match(/^\s*Content-Security-Policy:/gm) || []).length, 1, 'exactly one CSP rule (Cloudflare joins multiple matching rules)');
   assert.match(headers, /default-src 'none'/);
 });
+
+test('cold start: the UI prewarms the backend via /api/health and says when a free host is waking; privacy page discloses it', () => {
+  const ui = read('public/index.html');
+  assert.match(ui, /fetch\('\/api\/health'/);
+  assert.match(ui, /Waking up the scanner/);
+  assert.match(read('public/privacy.html'), /wake up/i);
+});

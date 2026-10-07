@@ -929,7 +929,7 @@
    "title": "Raw HTML has real content (no empty SPA shell)",
    "status": "pass",
    "severity": 4,
-   "evidence": "229 chars of visible text",
+   "evidence": "213 chars of visible text",
    "fix": "",
    "checklist": 2
   },
@@ -1076,7 +1076,7 @@
    "title": "Call to action near the top (heuristic)",
    "status": "pass",
    "severity": 1,
-   "evidence": "CTA-like link/button in first 3000 chars of body (heuristic)",
+   "evidence": "CTA-like link/button in the first 2000 characters of visible text (heuristic)",
    "fix": "",
    "checklist": 22
   },

@@ -16,6 +16,7 @@ Deploy order: Render first (the Worker needs its URL), then Cloudflare.
    `HEADERSCAN_SECRET` is generated once and persists (needed so ownership tokens survive restarts).
 3. Copy the service URL, e.g. `https://header-scan-backend.onrender.com`.
 Free tier sleeps after ~15 min idle. Measured: the first request just waits (about 15 s, documented up to 60 s); it is not answered with a 502. If the host does answer 502/503/504 while waking, the Worker turns it into a JSON 502 `BACKEND_UNREACHABLE` with a "waking up, retry in about 30 seconds" message and `Retry-After: 30`.
+To hide most of the wait, the UI sends one `GET /api/health` on page load (health never counts against the scan limit) and, if a scan is still pending after 5 s and the backend has not answered in the last 10 min, says it is waking up. There is deliberately no cron keep-alive: Render gives 750 free instance hours per workspace per month and staying awake 24/7 costs ~744 h, so one more service or restart would suspend the backend for the rest of the month (`test/worker.test.js` guards against a `scheduled()` handler or `[triggers]`).
 With `HEADERSCAN_PROXY_KEY` set, the backend's own `/` is 404 (the UI is served by the Worker only), every `/api/*` route except `/api/health` answers 403 `FORBIDDEN` without the key, and `/api/health` stays open. The Dockerfile sets `HEADERSCAN_TRUST_PROXY=1` (rightmost `X-Forwarded-For` entry, Render's proxy) as the fallback client IP; behind the Worker the IP comes from `x-headerscan-client`.
 
 ## 2. Frontend (Cloudflare Workers Builds, free)

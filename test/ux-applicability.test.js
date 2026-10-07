@@ -115,7 +115,7 @@ const MATRIX = {
   leadgen: [['pass', 'pass', 'warn', 'fail'], ['warn', 'warn']],
   shop: [['pass', 'warn', 'info', 'fail'], ['skipped', 'warn']],
   blog: [['pass', 'warn', 'info', 'warn'], ['info', 'warn']],
-  'spa-shell': [['fail', 'warn', 'info', 'warn'], ['info', 'fail']],
+  'spa-shell': [['fail', 'skipped', 'info', 'warn'], ['info', 'fail']], // cta: an empty shell has nothing to judge
 };
 const HTML_IDS = ['ux-internal-links', 'ux-cta-above-fold', 'ux-faq', 'ux-privacy-policy'];
 
@@ -166,7 +166,7 @@ describe('fixture matrix', () => {
   });
 
   test('marketing fixtures keep byte-identical quality scores', async () => {
-    const OLD = { leadgen: [['pass', 'pass', 'warn', 'fail']], blog: [['pass', 'warn', 'info', 'warn']], 'spa-shell': [['fail', 'warn', 'info', 'warn']] };
+    const OLD = { leadgen: [['pass', 'pass', 'warn', 'fail']], blog: [['pass', 'warn', 'info', 'warn']] };
     for (const [name, [old]] of Object.entries(OLD)) {
       const fs = await runHtml(fakeCtx({ url: URL0, body: fx(name), fetch: ok200 }));
       const before = fs.map((x) => (HTML_IDS.includes(x.id) ? { ...x, status: old[HTML_IDS.indexOf(x.id)] } : x));

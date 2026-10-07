@@ -1312,6 +1312,19 @@ html.cp #results[data-state="done"] .gauge:not(.gauge-sm) .gauge-num {
 
 /* grade cap explanation under the gauges */
 .cap-note { margin: var(--s2) 0 0; padding: var(--s2); border-left: 3px solid var(--warn, currentColor); background: color-mix(in srgb, var(--surface), var(--ink) 4%); font-size: var(--fs-2); overflow-wrap: anywhere; }
+
+/* ---------- share link banner and the compare card (Details tab) ---------- */
+#share-banner { flex: 1 1 18rem; margin: 0; padding: var(--s1) var(--s2); line-height: 1.4; } /* same place and size as #sample-banner */
+#cmp-card { display: grid; gap: var(--s3); }
+#cmp-card > *, #cmp-out > * { margin: 0; min-width: 0; }
+#cmp-file { max-width: 100%; font: inherit; font-size: var(--fs-2); }
+#cmp-out { display: grid; gap: var(--s2); overflow-wrap: anywhere; }
+#cmp-out .cmp-h { font-size: var(--fs-2); }
+#cmp-out .cmp-list { padding-left: 1.25rem; }
+#cmp-msg:empty { display: none; }
+#cmp-msg[data-tone="ok"] { color: var(--pass); }
+#cmp-msg[data-tone="err"] { color: var(--fail); }
+@media screen { #results[data-view="findings"] #cmp-card { display: none; } } /* Details only (skin-tabs.css groups) */
 /* highend: "Soft Structuralism" - cool silver paper (light) / OLED near-black (dark), one indigo accent.
    Every card is a double-bezel: the card is the inner core, a spread box-shadow ring is the outer tray (no DOM change);
    pill controls with a nested arrow disc, wide tight-tracked grotesk, tinted tiles, heavy-spring cubic-bezier motion. */
@@ -3149,6 +3162,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     <button type="button" class="btn" data-sample="perfect">A+ 100/100</button>
     <button type="button" class="btn" data-sample="mixed">mixed 50/100</button></p>
   <p id="sample-banner" class="cap-note" role="note" hidden><strong>Sample report, not a real site.</strong> Real scoring engine, made-up site (sample.invalid).</p>
+  <p id="share-banner" class="cap-note" role="note" hidden><strong>Shared report (from the link, not re-scanned).</strong> Scanned <span id="share-when"></span>. Contents are not verified.</p>
 </div>
 <noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
@@ -3190,7 +3204,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
         </div>
         <p class="cap-note" id="cap-note" hidden></p>
         <p class="muted" id="meta"></p>
-        <div class="row" id="actions"><button type="button" id="copy-json" class="btn">Copy JSON report</button><button type="button" id="dl-json" class="btn">Download JSON report</button></div>
+        <div class="row" id="actions"><button type="button" id="share-link" class="btn" hidden>Copy share link</button><button type="button" id="copy-json" class="btn">Copy JSON report</button><button type="button" id="dl-json" class="btn">Download JSON report</button></div>
       </section>
 
       <section id="donut-card" class="card" aria-label="Pass, warn and fail split">
@@ -3284,6 +3298,17 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
           <div class="raw-wrap"><table class="raw"><thead><tr><th scope="col">Header</th><th scope="col">Value</th></tr></thead><tbody id="raw-body"></tbody></table></div>
         </details>
       </section>
+      <section id="cmp-card" class="card" aria-labelledby="cmp-h">
+        <h2 id="cmp-h" class="eyebrow">Compare with an earlier report</h2>
+        <p class="muted">Pick a downloaded JSON report or paste a share link. Both are read only in this browser.</p>
+        <div class="field"><label for="cmp-file">Earlier JSON report</label><input id="cmp-file" type="file" accept=".json,application/json"></div>
+        <div class="row">
+          <div class="field grow"><label for="cmp-link">Or a share link</label><input id="cmp-link" type="text" autocomplete="off" spellcheck="false" placeholder="https://…#r=…"></div>
+          <button type="button" id="cmp-btn" class="btn">Compare</button>
+        </div>
+        <p id="cmp-msg" role="status" aria-live="polite" data-tone="muted"></p>
+        <div id="cmp-out"></div>
+      </section>
     </div>
   </div>
 </section>
@@ -3311,6 +3336,135 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
 </main>
 <div id="toast" role="status" aria-live="polite" data-show="false" data-tone="ok"></div>
 <script>
+// Share links and compare (no server storage). The whole report travels in the URL fragment (#r=<token>), which the browser
+// never sends to a server: token = base64url(deflate-raw(JSON)). Everything decoded here is untrusted: parse() rebuilds a fresh
+// object with only the fields the UI renders, so ref links and raw headers from a link or file are never shown.
+// Kept free of DOM code and at the top level (var HS) so test/share.test.js can load it in a vm context.
+var HS = (function () {
+  'use strict';
+  var MAX_TOKEN = 32768, MAX_JSON = 262144, MAX_FINDINGS = 300;
+  var STATUS = ['fail', 'warn', 'info', 'pass', 'skipped'];
+  var CATS = ['headers', 'cookies', 'tls', 'dns', 'mail', 'content', 'seo', 'ai', 'ux', 'exposure'];
+  var GRADES = ['A+', 'A', 'B', 'C', 'D', 'E', 'F', 'N/A'];
+  // messages never echo the input
+  function bad(m) { throw new Error(m); }
+  function str(v, max, what) { if (typeof v !== 'string' || v.length > max) bad('bad ' + what); return v; }
+  function int(v, lo, hi, what) { if (!Number.isInteger(v) || v < lo || v > hi) bad('bad ' + what); return v; }
+  function pick(v, list, what) { if (list.indexOf(v) < 0) bad('bad ' + what); return v; }
+  function obj(v, what) { if (!v || typeof v !== 'object' || Array.isArray(v)) bad('bad ' + what); return v; }
+  function list(v, max, what) { if (!Array.isArray(v) || v.length > max) bad('bad ' + what); return v; }
+  function group(v) {
+    obj(v, 'score');
+    var o = { score: v.score === null ? null : int(v.score, 0, 100, 'score'), grade: pick(v.grade, GRADES, 'grade') };
+    if (v.cappedBy !== undefined) o.cappedBy = list(v.cappedBy, MAX_FINDINGS, 'score').map(function (x) { return str(x, 64, 'score'); });
+    return o;
+  }
+
+  // untrusted report (scan JSON, downloaded file or decoded link) -> new object; throws Error('bad ...') on anything off-shape
+  function parse(r) {
+    obj(r, 'report');
+    var s = obj(r.score, 'score'), cats = obj(s.categories, 'score');
+    var out = {
+      url: str(r.url, 2048, 'url'), host: str(r.host, 253, 'host'), scannedAt: str(r.scannedAt, 40, 'time'),
+      durationMs: int(r.durationMs, 0, 3600000, 'duration'), verified: false, deep: r.deep === true, rawHeaders: [],
+      score: { security: group(s.security), quality: group(s.quality), categories: {} }, findings: [], errors: [], shared: true
+    };
+    CATS.forEach(function (c) {
+      if (cats[c] === undefined) return;
+      var x = obj(cats[c], 'score'), o = out.score.categories[c] = { score: x.score === null ? null : int(x.score, 0, 100, 'score') };
+      STATUS.forEach(function (k) { o[k] = int(x[k], 0, 1000, 'score'); });
+    });
+    if (r.errors !== undefined) {
+      out.errors = list(r.errors, 20, 'errors').map(function (e) {
+        obj(e, 'errors');
+        return { module: str(e.module, 40, 'errors'), message: str(e.message, 200, 'errors') };
+      });
+    }
+    var seen = Object.create(null);
+    out.findings = list(r.findings, MAX_FINDINGS, 'findings').map(function (f) {
+      obj(f, 'finding');
+      var id = str(f.id, 64, 'id');
+      if (seen[id]) bad('duplicate id');
+      seen[id] = 1;
+      var o = {
+        id: id, category: pick(f.category, CATS, 'category'), title: str(f.title, 200, 'title'), status: pick(f.status, STATUS, 'status'),
+        severity: int(f.severity, 1, 5, 'severity'),
+        evidence: f.evidence === undefined ? '' : str(f.evidence, 400, 'evidence'), fix: f.fix === undefined ? '' : str(f.fix, 400, 'fix')
+      };
+      if (f.checklist !== undefined) o.checklist = int(f.checklist, 1, 999, 'checklist');
+      return o;
+    });
+    return out;
+  }
+
+  function b64u(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  // report -> token. Throws when the report would not decode again (off-shape or over the size limit).
+  async function encode(r) {
+    var c = Object.assign({}, r);
+    delete c.rawHeaders; delete c.shared; delete c.sample;
+    c.findings = (r.findings || []).map(function (f) { var g = Object.assign({}, f); delete g.ref; return g; });
+    var json = JSON.stringify(c), bytes = new TextEncoder().encode(json);
+    if (bytes.length > MAX_JSON) bad('too large');
+    parse(JSON.parse(json));
+    var z = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    var tok = b64u(new Uint8Array(await new Response(z).arrayBuffer()));
+    if (tok.length > MAX_TOKEN) bad('too large');
+    return tok;
+  }
+  // token -> parse()d report. The decompressed size is counted while reading, so a deflate bomb stops at MAX_JSON.
+  async function decode(tok) {
+    if (typeof tok !== 'string' || !tok || tok.length > MAX_TOKEN || tok.length % 4 === 1 || !/^[A-Za-z0-9_-]+$/.test(tok)) bad('bad link');
+    var bin = atob(tok.replace(/-/g, '+').replace(/_/g, '/')), u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    var rd = new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = [], n = 0;
+    for (;;) {
+      var x = await rd.read();
+      if (x.done) break;
+      n += x.value.length;
+      if (n > MAX_JSON) { rd.cancel().catch(function () {}); bad('too large'); }
+      parts.push(x.value);
+    }
+    var all = new Uint8Array(n), o = 0;
+    parts.forEach(function (p) { all.set(p, o); o += p.length; });
+    return parse(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(all)));
+  }
+  // pasted text or location.hash -> token: the r= part of a fragment, '' when a fragment has none, else the text itself
+  // (a bare token). Split, not a regex: linear on any input.
+  function token(text) {
+    var s = String(text).trim(), i = s.indexOf('#');
+    if (i < 0) return s;
+    var parts = s.slice(i + 1).split('&');
+    for (var k = 0; k < parts.length; k++) if (parts[k].slice(0, 2) === 'r=') return parts[k].slice(2);
+    return '';
+  }
+
+  function problem(s) { return s === 'fail' || s === 'warn'; }
+  // old = earlier report, cur = current one; findings matched by id. fixed: fail/warn -> pass/info; added: a new fail/warn;
+  // changed: fail <-> warn; same: status unchanged; other: any other move (skipped is never "fixed"); gone: only in old.
+  function compare(old, cur) {
+    var m = Object.create(null), out = { fixed: [], added: [], changed: [], same: 0, other: 0, gone: 0 };
+    old.findings.forEach(function (f) { m[f.id] = f; });
+    cur.findings.forEach(function (f) {
+      var o = m[f.id];
+      delete m[f.id];
+      if (!o) { if (problem(f.status)) out.added.push({ f: f, from: '' }); else out.other++; return; }
+      if (o.status === f.status) { out.same++; return; }
+      var row = { f: f, from: o.status };
+      if (problem(o.status) && (f.status === 'pass' || f.status === 'info')) out.fixed.push(row);
+      else if (!problem(o.status) && problem(f.status)) out.added.push(row);
+      else if (problem(o.status) && problem(f.status)) out.changed.push(row);
+      else out.other++;
+    });
+    out.gone = Object.keys(m).length;
+    return out;
+  }
+
+  return { parse: parse, encode: encode, decode: decode, token: token, compare: compare };
+})();
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -3320,6 +3474,8 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
   var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
   var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null, sampleName = '';
+  // share links (ui/src/share.js, global HS): shareTok = token of the shared report on screen, kept in the hash on tab changes
+  var shareTok = '', CAN_SHARE = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
 
   // Progressive enhancement gate: count-up via a registered custom property needs @property.
   if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
@@ -3428,6 +3584,10 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   function post(path, body) {
     return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
+  // Cold start: the free backend sleeps after 15 min idle. lastOk = when it last answered; within 10 min it is surely awake,
+  // so a slow scan is the target being slow, not the host waking up.
+  var lastOk = 0;
+  function awake() { return Date.now() - lastOk < 600000; }
 
   // Grade band: A+/A/B pass, C/D warn, E/F fail, N/A skip.
   function gradeBand(g) {
@@ -3769,8 +3929,9 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     enhance(renderRadar, r);
     enhance(stripSync);
     enhance(function () { tabsRender(r, deep); });
-    // Follow the latest scan unless the user typed their own host.
-    if (!r.sample && (!$('host').value || $('host').value === autoHost)) { // a sample's host is not a real one to verify
+    clear($('cmp-out')); say($('cmp-msg'), ''); $('cmp-file').value = ''; // a comparison belongs to the previous report
+    // Follow the latest scan unless the user typed their own host. A sample's or a share link's host is not one to verify.
+    if (!r.sample && !r.shared && (!$('host').value || $('host').value === autoHost)) {
       $('host').value = autoHost = r.host || '';
       $('host').dispatchEvent(new Event('input'));
     }
@@ -3893,7 +4054,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     tabsMeasure();
     if (focus) tabEl(v).focus({ preventScroll: true });
     if (scroll) tabsToStrip();
-    if (!noHash) { try { history.replaceState(null, '', '#' + (sampleName ? 'sample=' + sampleName + '&' : '') + 'view=' + v); } catch (e) { /* sandboxed */ } }
+    if (!noHash) { try { history.replaceState(null, '', '#' + (shareTok ? 'r=' + shareTok + '&' : '') + (sampleName ? 'sample=' + sampleName + '&' : '') + 'view=' + v); } catch (e) { /* sandboxed */ } }
   }
   function hashView() {
     var m = /(?:^#|&)view=(overview|findings|details)(?:&|$)/.exec(location.hash);
@@ -4010,6 +4171,10 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     });
     if (window.ResizeObserver) new ResizeObserver(tabsMeasure).observe($('xt'));
     window.addEventListener('hashchange', function () {
+      var t = HS.token(location.hash);
+      if (t && t !== shareTok && !busy) { loadShared(t); return; } // a share link pasted into the address bar
+      var s = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
+      if (s && s[1] !== sampleName && !busy) { loadSample(s[1]); return; } // a sample typed into the address bar
       var v = hashView();
       if (v && res.dataset.view && v !== res.dataset.view) tabSelect(v, false, true, true);
     });
@@ -4091,10 +4256,12 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     delete $('results').dataset.refilter; // a fresh report gets the full staggered reveal again
     setState('loading', 'false');
     say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
+    var wake = setTimeout(function () { if (!awake()) say($('status'), 'Waking up the scanner (free host), up to a minute…'); }, 5000);
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
-      sampleName = '';
-      $('sample-banner').hidden = true;
+      lastOk = Date.now();
+      sampleName = shareTok = '';
+      $('sample-banner').hidden = $('share-banner').hidden = true;
       show(r, deep);
       setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
@@ -4104,6 +4271,7 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
       setState(result ? 'done' : 'error', String(!!result));
       say($('status'), 'Scan failed.', 'err');
     }
+    clearTimeout(wake);
     setBusy(false);
   }
 
@@ -4117,7 +4285,9 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
     try {
       var r = await api('/samples/' + name + '.json');
       sampleName = name;
+      shareTok = '';
       $('sample-banner').hidden = false;
+      $('share-banner').hidden = true;
       show(r, false);
       setState('done', 'false');
       say($('status'), 'Sample report loaded: ' + name + '.'); // short and per sample: the banner says "not a real site", and a changed text is re-announced
@@ -4130,6 +4300,78 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (b) {
     b.addEventListener('click', function () { if (!busy) loadSample(b.dataset.sample); });
+  });
+
+  // Share links (#r=<token>): the report is decoded in this browser from the URL fragment, which is never sent to a server.
+  // Same show() as a scan; the banner says it is not re-scanned and not verified. The failure message never echoes the link.
+  async function loadShared(tok) {
+    setBusy(true);
+    delete $('results').dataset.refilter;
+    setState('loading', 'false');
+    say($('status'), 'Opening shared report…');
+    try {
+      if (!CAN_SHARE) throw new Error('This browser cannot open share links.');
+      var r = await HS.decode(tok);
+      shareTok = tok;
+      sampleName = '';
+      $('sample-banner').hidden = true;
+      $('share-when').textContent = when(r.scannedAt);
+      $('share-banner').hidden = false;
+      show(r, false);
+      setState('done', 'false');
+      say($('status'), 'Shared report opened.');
+    } catch (e) {
+      $('error-msg').textContent = CAN_SHARE ? 'This share link is damaged, too large or from an incompatible version.' : e.message;
+      setState(result ? 'done' : 'error', String(!!result));
+      say($('status'), 'Share link failed.', 'err');
+    }
+    setBusy(false);
+  }
+
+  // Compare with an earlier report (Details tab): a downloaded JSON file or a share link, read only in this browser.
+  function cmpScore(s) { return (s.score === null ? 'n/a' : s.score) + ' ' + s.grade; }
+  function cmpList(box, title, rows) {
+    if (!rows.length) return;
+    box.appendChild(h('h3', 'cmp-h', title + ' (' + rows.length + ')'));
+    var ul = h('ul', 'cmp-list');
+    rows.forEach(function (x) { ul.appendChild(h('li', '', x.f.title + ' (' + (x.from ? x.from + ' → ' : 'new: ') + x.f.status + ')')); });
+    box.appendChild(ul);
+  }
+  function renderCompare(old) {
+    var cur = result, c = HS.compare(old, cur), box = $('cmp-out'), notes = [];
+    clear(box);
+    var sc = h('ul', 'cmp-list');
+    [['security', 'Security'], ['quality', 'Quality']].forEach(function (p) {
+      var a = old.score[p[0]], b = cur.score[p[0]], d = a.score !== null && b.score !== null ? b.score - a.score : null;
+      sc.appendChild(h('li', '', p[1] + ' ' + cmpScore(a) + ' → ' + cmpScore(b) + (d === null ? '' : ' (' + (d > 0 ? '+' : '') + d + ')')));
+    });
+    box.appendChild(sc);
+    if (old.host !== cur.host) notes.push('Different site: ' + old.host + ' vs ' + cur.host + '.');
+    if (new Date(old.scannedAt) > new Date(cur.scannedAt)) notes.push('The previous report is newer than the current one.');
+    if (notes.length) box.appendChild(h('p', 'cap-note', notes.join(' ')));
+    cmpList(box, 'Fixed', c.fixed);
+    cmpList(box, 'New problems', c.added);
+    cmpList(box, 'Changed (fail ↔ warn)', c.changed);
+    box.appendChild(h('p', 'muted', 'Unchanged: ' + c.same + ' • Other changes: ' + c.other + ' • Only in previous: ' + c.gone));
+    say($('cmp-msg'), 'Compared with the report of ' + when(old.scannedAt) + '.', 'ok');
+  }
+  function cmpFail() {
+    clear($('cmp-out'));
+    say($('cmp-msg'), 'Could not read that report: it is not a header-scan JSON report or share link, or it is too large.', 'err');
+  }
+  $('cmp-file').addEventListener('change', async function () {
+    var f = this.files && this.files[0];
+    if (!f || !result) return;
+    try {
+      if (f.size > 1048576) throw new Error('too large'); // checked before reading
+      renderCompare(HS.parse(JSON.parse(await f.text())));
+    } catch (e) { cmpFail(); }
+  });
+  $('cmp-btn').addEventListener('click', async function () {
+    var v = $('cmp-link').value;
+    if (!result || !v.trim()) return;
+    if (!CAN_SHARE) { say($('cmp-msg'), 'This browser cannot open share links.', 'err'); return; }
+    try { renderCompare(await HS.decode(HS.token(v))); } catch (e) { cmpFail(); }
   });
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
@@ -4201,11 +4443,25 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   });
 
   async function copy(text, done) {
-    try { await navigator.clipboard.writeText(text); toast(done, 'ok'); }
-    catch (e) { toast('Copy failed: select the text and copy it manually.', 'err'); }
+    try { await navigator.clipboard.writeText(text); toast(done, 'ok'); return true; }
+    catch (e) { toast('Copy failed: select the text and copy it manually.', 'err'); return false; }
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (b) {
     b.addEventListener('click', function () { copy($(b.getAttribute('data-copy')).textContent, 'Copied.'); });
+  });
+  $('share-link').hidden = !CAN_SHARE;
+  $('share-link').addEventListener('click', async function () {
+    if (!result) return;
+    var tok;
+    try { tok = await HS.encode(result); }
+    catch (e) { toast('This report is too large for a share link. Use Download JSON report.', 'err'); return; }
+    var url = location.href.split('#')[0] + '#r=' + tok;
+    if (await copy(url, url.length > 2000 ? 'Share link copied. It is long: some chat apps cut it, use Download JSON there.' : 'Share link copied.')) return;
+    // no clipboard access: put the link in the address bar instead (tab changes keep it, a new scan removes it)
+    shareTok = tok;
+    sampleName = '';
+    tabSelect($('results').dataset.view || 'overview', false, false);
+    toast('Copy failed: the share link is now in the address bar, copy it from there.', 'err');
   });
   $('copy-json').addEventListener('click', function () { if (result) copy(JSON.stringify(result, null, 2), 'JSON report copied.'); });
   $('dl-json').addEventListener('click', function () {
@@ -4289,8 +4545,10 @@ html.xt #scorecard { position: static; } /* the Overview is ~2 screens: a sticky
   enhance(initStrip);
 
   syncFilters();
-  var sm = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
-  if (sm) loadSample(sm[1]);
+  // prewarm: wake a sleeping backend while the visitor types; silent on failure (a later scan shows the real error)
+  fetch('/api/health', { cache: 'no-store' }).then(function (r) { if (r.ok) lastOk = Date.now(); }).catch(function () {});
+  var sm = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash), st = HS.token(location.hash);
+  if (st) loadShared(st); else if (sm) loadSample(sm[1]);
 })();
 </script>
 </body>

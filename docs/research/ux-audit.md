@@ -134,7 +134,7 @@ Rule: GET random path: 200 -> `fail` (soft 404); 404 with body >=300 bytes and n
 
 ### ux-favicon, ux-default-hostname, ux-js-bundle-size (applicable to every site)
 - `ux-favicon`: rel token exact-match `icon`; data: URI icon is accepted (tool site). No issue.
-- `ux-default-hostname`: `DEFAULT_HOSTS` lacks `.workers.dev` (and `.fly.dev`, `.vercel.app` present, `.surge.sh`, `.glitch.me`), so the tool's own default-hostname site passes: a false negative by list, not page type. Adding it would warn on the tool site itself; decide separately (not part of this task).
+- `ux-default-hostname`: `DEFAULT_HOSTS` previously lacked `.workers.dev`, `.fly.dev`, `.surge.sh`, `.glitch.me` (and other platform defaults), so the tool's own workers.dev site passed: a false negative by list. Fixed: list extended to 26 suffixes and reviewed (see SPEC 6.7); the tool's own report now warns on this check, which is correct.
 - `ux-js-bundle-size`: inline-only pages give `info` ("no same-origin scripts"); correct.
 
 ### ux-theme-color, ux-console-errors, ux-sticky-mobile-cta
