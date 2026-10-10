@@ -86,6 +86,12 @@ describe('pageType classifier', () => {
     assert.equal(pt('<a href="/shop">Shop</a>').hasCommerce, false);
     assert.equal(pt('', ld({ '@type': 'Product', name: 'x' })).hasCommerce, true);
     assert.equal(pt('<a href="/checkout">x</a>').hasCommerce, true);
+    assert.equal(pt('<a href="/en/shopping-cart?x=1">x</a>').hasCommerce, true);
+    assert.equal(pt('<a href="/wiki/Food_cart">x</a>').hasCommerce, false); // a cart path is a whole segment, not a slug ending
+    for (const h of ['/view-cart', '/my-cart', '/mini-cart/', '/shopping_cart', '/viewcart', '/cart.php', '/?page=cart', '/index.php?controller=cart']) {
+      assert.equal(pt(`<a href="${h}">x</a>`).hasCommerce, true, h); // common cart URL shapes (also a query value)
+    }
+    for (const h of ['/wiki/Shopping_cart_theory', '/blog/cart-abandonment', '/cartography']) assert.equal(pt(`<a href="${h}">x</a>`).hasCommerce, false, h);
     assert.equal(pt('<p>Add to cart</p>').hasCommerce, true);
     assert.equal(pt('', '<script src="https://js.stripe.com/v3/"></script>').hasCommerce, true);
   });
@@ -115,7 +121,7 @@ const MATRIX = {
   leadgen: [['pass', 'pass', 'warn', 'fail'], ['warn', 'warn']],
   shop: [['pass', 'warn', 'info', 'fail'], ['skipped', 'warn']],
   blog: [['pass', 'warn', 'info', 'warn'], ['info', 'warn']],
-  'spa-shell': [['fail', 'warn', 'info', 'warn'], ['info', 'fail']],
+  'spa-shell': [['fail', 'skipped', 'info', 'warn'], ['info', 'fail']], // cta: an empty shell has nothing to judge
 };
 const HTML_IDS = ['ux-internal-links', 'ux-cta-above-fold', 'ux-faq', 'ux-privacy-policy'];
 
@@ -166,7 +172,7 @@ describe('fixture matrix', () => {
   });
 
   test('marketing fixtures keep byte-identical quality scores', async () => {
-    const OLD = { leadgen: [['pass', 'pass', 'warn', 'fail']], blog: [['pass', 'warn', 'info', 'warn']], 'spa-shell': [['fail', 'warn', 'info', 'warn']] };
+    const OLD = { leadgen: [['pass', 'pass', 'warn', 'fail']], blog: [['pass', 'warn', 'info', 'warn']] };
     for (const [name, [old]] of Object.entries(OLD)) {
       const fs = await runHtml(fakeCtx({ url: URL0, body: fx(name), fetch: ok200 }));
       const before = fs.map((x) => (HTML_IDS.includes(x.id) ? { ...x, status: old[HTML_IDS.indexOf(x.id)] } : x));

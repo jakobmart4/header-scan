@@ -89,12 +89,15 @@ describe('minimal pages: shells, sales pages and data collectors keep the strict
     for (const id of LINK_RULES) assert.notEqual(f[id].status, 'skipped', id);
     return f;
   };
-  test('client-app roots other than #root are shells (never skipped)', async () => {
+  test('client-app roots other than #root are shells (internal links never skipped; CTA skipped: nothing in the raw HTML to judge)', async () => {
     for (const root of ['<app-root></app-root>', '<div id="__nuxt"></div>', '<div id="___gatsby"></div>', '<div id="svelte"></div>', '<div id="app"></div>']) {
       const body = short(`${root}<script src="/main.js"></script>`);
       assert.equal(pageType(body, URL0).isAppShell, true, root);
       assert.equal(pageType(body, URL0).isMinimal, false, root);
-      assert.equal((await strict(`${root}<script src="/main.js"></script>`))['ux-internal-links'].status, 'fail', root);
+      const f = await htmlRun(short(`${root}<script src="/main.js"></script>`));
+      assert.equal(f['ux-internal-links'].status, 'fail', root);
+      assert.equal(f['ux-faq'].status, 'info', root);
+      assert.equal(f['ux-cta-above-fold'].status, 'skipped', root);
     }
   });
   test('a generic #main div plus a first-party bundle is not minimal', async () => {
@@ -309,6 +312,16 @@ describe('review round 3: hostile input', () => {
     assert.equal(await gen('<meta content="Hugo 0.120.4" name=generator>'), 'warn');
     assert.equal(await gen('<meta name="generator" content="WordPress">'), 'pass');
     assert.equal(await gen('<meta name="description" content="v1.2"><meta name="generator" content="Joomla! 4.1">'), 'warn');
+  });
+  test('ux-cta-above-fold on a 1 MiB link flood: empty labels are not tokenized and at most 2000 links are read', async () => {
+    const body = `<html><body><p>${'word '.repeat(60)}</p>${'<a><b>'.repeat(MiB / 6)}</body></html>`;
+    let best = Infinity;
+    for (let r = 0; r < 3; r++) {
+      const t0 = performance.now();
+      assert.equal((await htmlRun(body + r))['ux-cta-above-fold'].status, 'warn');
+      best = Math.min(best, performance.now() - t0);
+    }
+    assert.ok(best < 100, `${Math.round(best)} ms`); // was ~180 ms (a 600-character label window tokenized per link); now ~15 ms
   });
   test('bypassHits matches at most 1000 distinct sources, each once', () => {
     const many = Array.from({ length: 1e6 }, (_, i) => `a${i}.example.net`);

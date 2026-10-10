@@ -46,7 +46,7 @@
    "grade": "E"
   },
   "quality": {
-   "score": 47,
+   "score": 49,
    "grade": "E"
   },
   "categories": {
@@ -99,9 +99,9 @@
     "skipped": 0
    },
    "seo": {
-    "score": 49,
-    "pass": 5,
-    "warn": 6,
+    "score": 50,
+    "pass": 6,
+    "warn": 5,
     "fail": 5,
     "info": 1,
     "skipped": 2
@@ -115,9 +115,9 @@
     "skipped": 0
    },
    "ux": {
-    "score": 56,
-    "pass": 3,
-    "warn": 3,
+    "score": 62,
+    "pass": 4,
+    "warn": 2,
     "fail": 2,
     "info": 11,
     "skipped": 2
@@ -880,15 +880,6 @@
    "checklist": 8
   },
   {
-   "id": "seo-twitter-card",
-   "category": "seo",
-   "title": "twitter:card present",
-   "status": "warn",
-   "severity": 1,
-   "evidence": "twitter:card missing",
-   "fix": "Add <meta name=\"twitter:card\" content=\"summary_large_image\">."
-  },
-  {
    "id": "seo-duplicate-titles",
    "category": "seo",
    "title": "Titles and descriptions are unique across pages",
@@ -944,6 +935,15 @@
    "evidence": "21 chars of visible text",
    "fix": "",
    "checklist": 2
+  },
+  {
+   "id": "seo-twitter-card",
+   "category": "seo",
+   "title": "twitter:card present",
+   "status": "pass",
+   "severity": 1,
+   "evidence": "summary",
+   "fix": ""
   },
   {
    "id": "seo-meta-desc-length",
@@ -1020,19 +1020,9 @@
    "title": "Call to action near the top (heuristic)",
    "status": "warn",
    "severity": 1,
-   "evidence": "no CTA-like link/button in first 3000 chars of body (heuristic)",
+   "evidence": "no CTA-like link/button in the first 2000 characters of visible text (heuristic)",
    "fix": "Put a clear call-to-action near the top of the page.",
    "checklist": 22
-  },
-  {
-   "id": "ux-favicon",
-   "category": "ux",
-   "title": "Favicon present",
-   "status": "warn",
-   "severity": 2,
-   "evidence": "no <link rel=icon> and no /favicon.ico",
-   "fix": "Add a favicon.",
-   "checklist": 14
   },
   {
    "id": "ux-privacy-policy",
@@ -1172,6 +1162,16 @@
    "evidence": "sample.invalid",
    "fix": "",
    "checklist": 1
+  },
+  {
+   "id": "ux-favicon",
+   "category": "ux",
+   "title": "Favicon present",
+   "status": "pass",
+   "severity": 2,
+   "evidence": "<link rel=icon> found",
+   "fix": "",
+   "checklist": 14
   },
   {
    "id": "ux-js-bundle-size",

@@ -1015,7 +1015,7 @@
    "title": "Call to action near the top (heuristic)",
    "status": "warn",
    "severity": 1,
-   "evidence": "no CTA-like link/button in first 3000 chars of body (heuristic)",
+   "evidence": "no CTA-like link/button in the first 2000 characters of visible text (heuristic)",
    "fix": "Put a clear call-to-action near the top of the page.",
    "checklist": 22
   },

@@ -134,6 +134,19 @@ describe('API rate limit', () => {
     assert.equal(await errCode(last), 'RATE_LIMITED');
     assert.ok(Number(last.headers.get('retry-after')) > 0);
   });
+  test('health never counts against the scan limit (the UI pings it on page load)', async () => {
+    const s = await boot();
+    for (let i = 0; i < 30; i++) {
+      const h = await fetch(s.base + '/api/health');
+      assert.equal(h.status, 200);
+      assert.equal((await h.json()).ok, true);
+    }
+    // ftp:// passes admit()/limit() and then fails validation: 400 means the scan bucket still had room
+    const codes = [];
+    for (let i = 0; i < 7; i++) codes.push((await fetch(s.base + '/api/scan?url=' + encodeURIComponent('ftp://example.com/'))).status);
+    assert.deepEqual(codes, [400, 400, 400, 400, 400, 400, 429]);
+    assert.equal((await fetch(s.base + '/api/health')).status, 200);
+  });
   test('X-Forwarded-For is ignored by default', async () => {
     const s = await boot();
     let status;

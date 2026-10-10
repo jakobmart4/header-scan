@@ -252,3 +252,16 @@
 
 /* grade cap explanation under the gauges */
 .cap-note { margin: var(--s2) 0 0; padding: var(--s2); border-left: 3px solid var(--warn, currentColor); background: color-mix(in srgb, var(--surface), var(--ink) 4%); font-size: var(--fs-2); overflow-wrap: anywhere; }
+
+/* ---------- share link banner and the compare card (Details tab) ---------- */
+#share-banner { flex: 1 1 18rem; margin: 0; padding: var(--s1) var(--s2); line-height: 1.4; } /* same place and size as #sample-banner */
+#cmp-card { display: grid; gap: var(--s3); }
+#cmp-card > *, #cmp-out > * { margin: 0; min-width: 0; }
+#cmp-file { max-width: 100%; font: inherit; font-size: var(--fs-2); }
+#cmp-out { display: grid; gap: var(--s2); overflow-wrap: anywhere; }
+#cmp-out .cmp-h { font-size: var(--fs-2); }
+#cmp-out .cmp-list { padding-left: 1.25rem; }
+#cmp-msg:empty { display: none; }
+#cmp-msg[data-tone="ok"] { color: var(--pass); }
+#cmp-msg[data-tone="err"] { color: var(--fail); }
+@media screen { #results[data-view="findings"] #cmp-card { display: none; } } /* Details only (skin-tabs.css groups) */

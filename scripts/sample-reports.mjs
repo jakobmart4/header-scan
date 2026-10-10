@@ -68,6 +68,7 @@ const MIXED = {
 <script src="/assets/app.js"></script>
 <script src="http://cdn.example.net/lib.js"></script>`,
     { lang: '', head: `<meta property="og:title" content="Sample Site">
+<link rel="icon" href="/favicon.svg"><meta name="twitter:card" content="summary">
 ` }),
   headers: {
     server: 'nginx/1.18.0', 'x-powered-by': 'Express', 'x-xss-protection': '1; mode=block', 'access-control-allow-origin': '*', 'access-control-allow-credentials': 'true',

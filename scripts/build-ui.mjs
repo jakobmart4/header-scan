@@ -27,7 +27,8 @@ for (const f of CSS) {
   css.push(read(f, f, /<\/style/i));
 }
 if (!css.length) fail('no CSS files found');
-const js = read('app.js', 'app.js', /<\/script/i);
+// share.js defines the global HS that app.js uses: it goes first, in the same inline script (one CSP hash)
+const js = ['share.js', 'app.js'].map((f) => read(f, f, /<\/script/i)).join('\n');
 
 // split/join, not String.replace: CSS/JS may contain "$&" style sequences.
 const out = template

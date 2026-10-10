@@ -39,6 +39,7 @@
     <button type="button" class="btn" data-sample="perfect">A+ 100/100</button>
     <button type="button" class="btn" data-sample="mixed">mixed 50/100</button></p>
   <p id="sample-banner" class="cap-note" role="note" hidden><strong>Sample report, not a real site.</strong> Real scoring engine, made-up site (sample.invalid).</p>
+  <p id="share-banner" class="cap-note" role="note" hidden><strong>Shared report (from the link, not re-scanned).</strong> Scanned <span id="share-when"></span>. Contents are not verified.</p>
 </div>
 <noscript><p class="muted">JavaScript is required to run a scan.</p></noscript>
 
@@ -80,7 +81,7 @@
         </div>
         <p class="cap-note" id="cap-note" hidden></p>
         <p class="muted" id="meta"></p>
-        <div class="row" id="actions"><button type="button" id="copy-json" class="btn">Copy JSON report</button><button type="button" id="dl-json" class="btn">Download JSON report</button></div>
+        <div class="row" id="actions"><button type="button" id="share-link" class="btn" hidden>Copy share link</button><button type="button" id="copy-json" class="btn">Copy JSON report</button><button type="button" id="dl-json" class="btn">Download JSON report</button></div>
       </section>
 
       <section id="donut-card" class="card" aria-label="Pass, warn and fail split">
@@ -173,6 +174,17 @@
           <summary><span id="raw-h" class="eyebrow">Raw response headers</span> <span id="raw-count" class="muted"></span></summary>
           <div class="raw-wrap"><table class="raw"><thead><tr><th scope="col">Header</th><th scope="col">Value</th></tr></thead><tbody id="raw-body"></tbody></table></div>
         </details>
+      </section>
+      <section id="cmp-card" class="card" aria-labelledby="cmp-h">
+        <h2 id="cmp-h" class="eyebrow">Compare with an earlier report</h2>
+        <p class="muted">Pick a downloaded JSON report or paste a share link. Both are read only in this browser.</p>
+        <div class="field"><label for="cmp-file">Earlier JSON report</label><input id="cmp-file" type="file" accept=".json,application/json"></div>
+        <form id="cmp-form" class="row" novalidate>
+          <div class="field grow"><label for="cmp-link">Or a share link</label><input id="cmp-link" type="text" autocomplete="off" spellcheck="false" placeholder="https://…#r=…"></div>
+          <button type="submit" id="cmp-btn" class="btn">Compare</button>
+        </form>
+        <p id="cmp-msg" role="status" aria-live="polite" data-tone="muted"></p>
+        <div id="cmp-out"></div>
       </section>
     </div>
   </div>

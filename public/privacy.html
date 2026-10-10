@@ -29,7 +29,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius
 <article>
 <p><a href="/">&larr; header-scan</a></p>
 <h1>Privacy</h1>
-<p class="muted">Last updated 5 October 2026</p>
+<p class="muted">Last updated 7 October 2026</p>
 
 <h2>What this service does</h2>
 <p>header-scan is a free website scanner run as a personal project. You enter a web address, our server fetches that site (headers, the home page, a few well-known files, TLS and DNS information) and returns a graded report to you.</p>
@@ -39,7 +39,16 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius
 <li><strong>The address you enter</strong> (or the host name for owner verification). It is used to run the scan and is not stored.</li>
 <li><strong>Your IP address.</strong> The server keeps it in memory for one to two minutes to limit how many scans one visitor can start, and to cap parallel scans. It is not written to disk.</li>
 <li><strong>DNS lookups.</strong> To check DNSSEC, the host name of the site you scan is sent from our backend to Cloudflare's public DNS-over-HTTPS resolver (<code>cloudflare-dns.com</code>). Your own IP address is not sent. Other DNS lookups use the backend's normal resolver.</li>
-<li><strong>The scan result.</strong> It is sent back to your browser and is not stored on the server. The Copy and Download buttons work locally in your browser.</li>
+<li><strong>A wake-up request.</strong> Opening the page sends one small request to our scan server so a sleeping free host can wake up before you scan. It carries no address and nothing about you beyond what any web request carries, and it is not stored or logged.</li>
+<li><strong>The scan result.</strong> It is sent back to your browser and is not stored on the server. The Copy, Download, share link and Compare buttons work locally in your browser.</li>
+</ul>
+
+<h2>Share links</h2>
+<ul>
+<li>A share link carries the whole report (the scanned address, the scores and every finding, but not the raw response headers), compressed into the part of the link after <code>#</code>. Browsers never send that fragment to a server, so it does not reach us or our hosting providers' logs. Your browser creates and opens the link; nothing is uploaded.</li>
+<li>Anyone you give the link to can read the report, and so can any app or service you paste it into.</li>
+<li>A share link is not signed: its contents can be edited by hand, so a shared report is not verified. To be sure, scan the site again.</li>
+<li>Compare reads the JSON file you pick, or the share link you paste, only in your browser. Nothing is sent or stored.</li>
 </ul>
 
 <h2>What is not collected</h2>

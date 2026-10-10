@@ -7,6 +7,8 @@
   var CAT_NAME = { headers: 'Headers', cookies: 'Cookies', tls: 'TLS', dns: 'DNS', mail: 'Mail', content: 'Content', seo: 'SEO', ai: 'AI visibility', ux: 'UX hygiene', exposure: 'Exposure' };
   var CAT_CODE = { headers: 'HDR', cookies: 'COK', tls: 'TLS', dns: 'DNS', mail: 'MAL', content: 'CNT', seo: 'SEO', ai: 'AI', ux: 'UX', exposure: 'EXP' };
   var result = null, verifiedHost = '', autoHost = '', txtHost = '', busy = false, toastTimer = 0, busyFocus = null, sampleName = '';
+  // share links (ui/src/share.js, global HS): shareTok = token of the shared report on screen, kept in the hash on tab changes
+  var shareTok = '', CAN_SHARE = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
 
   // Progressive enhancement gate: count-up via a registered custom property needs @property.
   if (window.CSS && typeof CSS.registerProperty === 'function') document.documentElement.classList.add('cp');
@@ -109,12 +111,19 @@
     var res, data;
     try { res = await fetch(path, opts); } catch (e) { throw new Error('Network error: could not reach the server.'); }
     try { data = await res.json(); } catch (e) { throw new Error('Unexpected server response (' + res.status + ').'); }
+    // any JSON answer of the backend (also 400, 429, SCAN_FAILED) means it is awake; the Worker's waking 502 does not
+    if (path.indexOf('/api/') === 0 && !(data && data.error && data.error.code === 'BACKEND_UNREACHABLE')) lastOk = Date.now();
     if (!res.ok) throw new Error((data && data.error && data.error.message) || 'Request failed (' + res.status + ').');
     return data;
   }
   function post(path, body) {
     return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
+  // Cold start: the free backend sleeps after ~15 min idle. lastOk = when it last answered (set in api()); within 14 min it is
+  // surely awake, so a slow scan is the target being slow, not the host waking up. wakeMsg = the scan status the wake message
+  // replaced, while it is on screen.
+  var lastOk = 0, wakeMsg = '';
+  function awake() { return Date.now() - lastOk < 840000; }
 
   // Grade band: A+/A/B pass, C/D warn, E/F fail, N/A skip.
   function gradeBand(g) {
@@ -456,8 +465,9 @@
     enhance(renderRadar, r);
     enhance(stripSync);
     enhance(function () { tabsRender(r, deep); });
-    // Follow the latest scan unless the user typed their own host.
-    if (!r.sample && (!$('host').value || $('host').value === autoHost)) { // a sample's host is not a real one to verify
+    clear($('cmp-out')); say($('cmp-msg'), ''); $('cmp-file').value = ''; // a comparison belongs to the previous report
+    // Follow the latest scan unless the user typed their own host. A sample's or a share link's host is not one to verify.
+    if (!r.sample && !r.shared && (!$('host').value || $('host').value === autoHost)) {
       $('host').value = autoHost = r.host || '';
       $('host').dispatchEvent(new Event('input'));
     }
@@ -580,7 +590,7 @@
     tabsMeasure();
     if (focus) tabEl(v).focus({ preventScroll: true });
     if (scroll) tabsToStrip();
-    if (!noHash) { try { history.replaceState(null, '', '#' + (sampleName ? 'sample=' + sampleName + '&' : '') + 'view=' + v); } catch (e) { /* sandboxed */ } }
+    if (!noHash) { try { history.replaceState(null, '', '#' + (shareTok ? 'r=' + shareTok + '&' : '') + (sampleName ? 'sample=' + sampleName + '&' : '') + 'view=' + v); } catch (e) { /* sandboxed */ } }
   }
   function hashView() {
     var m = /(?:^#|&)view=(overview|findings|details)(?:&|$)/.exec(location.hash);
@@ -697,6 +707,8 @@
     });
     if (window.ResizeObserver) new ResizeObserver(tabsMeasure).observe($('xt'));
     window.addEventListener('hashchange', function () {
+      var t = HS.token(location.hash);
+      if (t && t !== shareTok && !busy) { loadShared(t); return; } // a share link pasted into the address bar
       var s = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
       if (s && s[1] !== sampleName && !busy) { loadSample(s[1]); return; } // a sample typed into the address bar
       var v = hashView();
@@ -779,11 +791,15 @@
     setBusy(true);
     delete $('results').dataset.refilter; // a fresh report gets the full staggered reveal again
     setState('loading', 'false');
-    say($('status'), (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…');
+    var running = (deep ? 'Deep scan' : 'Scan') + ' running, this can take up to 45 seconds…';
+    say($('status'), running);
+    var wake = setTimeout(function () {
+      if (!awake()) { wakeMsg = running; say($('status'), 'Waking up the scanner (free host), up to a minute…'); }
+    }, 5000);
     try {
       var r = deep ? await post('/api/scan', { url: url, deep: true }) : await api('/api/scan?url=' + encodeURIComponent(url));
-      sampleName = '';
-      $('sample-banner').hidden = true;
+      sampleName = shareTok = '';
+      $('sample-banner').hidden = $('share-banner').hidden = true;
       show(r, deep);
       setState('done', 'false');
       say($('status'), 'Scan finished.', 'ok');
@@ -793,6 +809,8 @@
       setState(result ? 'done' : 'error', String(!!result));
       say($('status'), 'Scan failed.', 'err');
     }
+    clearTimeout(wake);
+    wakeMsg = '';
     setBusy(false);
   }
 
@@ -806,7 +824,9 @@
     try {
       var r = await api('/samples/' + name + '.json');
       sampleName = name;
+      shareTok = '';
       $('sample-banner').hidden = false;
+      $('share-banner').hidden = true;
       show(r, false);
       setState('done', 'false');
       say($('status'), 'Sample report loaded: ' + name + '.'); // short and per sample: the banner says "not a real site", and a changed text is re-announced
@@ -819,6 +839,84 @@
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-sample]'), function (b) {
     b.addEventListener('click', function () { if (!busy) loadSample(b.dataset.sample); });
+  });
+
+  // Share links (#r=<token>): the report is decoded in this browser from the URL fragment, which is never sent to a server.
+  // Same show() as a scan; the banner says it is not re-scanned and not verified. The failure message never echoes the link.
+  async function loadShared(tok) {
+    setBusy(true);
+    delete $('results').dataset.refilter;
+    setState('loading', 'false');
+    say($('status'), 'Opening shared report…');
+    try {
+      if (!CAN_SHARE) throw new Error('This browser cannot open share links.');
+      var r = await HS.decode(tok);
+      shareTok = tok;
+      sampleName = '';
+      $('sample-banner').hidden = true;
+      $('share-when').textContent = when(r.scannedAt);
+      $('share-banner').hidden = false;
+      show(r, false);
+      setState('done', 'false');
+      say($('status'), 'Shared report opened.');
+    } catch (e) {
+      $('error-msg').textContent = CAN_SHARE ? 'This share link is damaged, too large or from an incompatible version.' : e.message;
+      setState(result ? 'done' : 'error', String(!!result));
+      say($('status'), 'Share link failed.', 'err');
+    }
+    setBusy(false);
+  }
+
+  // Compare with an earlier report (Details tab): a downloaded JSON file or a share link, read only in this browser.
+  function cmpScore(s) { return (s.score === null ? 'n/a' : s.score) + ' ' + s.grade; }
+  function cmpList(box, title, rows) {
+    if (!rows.length) return;
+    box.appendChild(h('h3', 'cmp-h', title + ' (' + rows.length + ')'));
+    var ul = h('ul', 'cmp-list');
+    rows.forEach(function (x) { ul.appendChild(h('li', '', x.f.title + ' (' + (x.from ? x.from + ' → ' : 'new: ') + x.f.status + ')')); });
+    box.appendChild(ul);
+  }
+  function renderCompare(old) {
+    var cur = result, c = HS.compare(old, cur), box = $('cmp-out'), notes = [];
+    clear(box);
+    var sc = h('ul', 'cmp-list');
+    [['security', 'Security'], ['quality', 'Quality']].forEach(function (p) {
+      var a = old.score[p[0]], b = cur.score[p[0]], d = c.delta[p[0]];
+      sc.appendChild(h('li', '', p[1] + ' ' + cmpScore(a) + ' → ' + cmpScore(b) + (d === null ? '' : ' (' + (d > 0 ? '+' : '') + d + ')')));
+    });
+    box.appendChild(sc);
+    if (old.host !== cur.host) notes.push('Different site: ' + old.host + ' vs ' + cur.host + '.');
+    if (new Date(old.scannedAt) > new Date(cur.scannedAt)) notes.push('The previous report is newer than the current one.');
+    if (old.deep !== cur.deep) {
+      notes.push('Different scan depth: the ' + (cur.deep ? 'current' : 'previous') + ' report is a deep scan' +
+        (c.depth ? ', so its ' + c.depth + ' active-probe findings are left out' : '') + ' and the Security scores are not comparable.');
+    }
+    if (notes.length) box.appendChild(h('p', 'cap-note', notes.join(' ')));
+    cmpList(box, 'Fixed', c.fixed);
+    cmpList(box, 'New problems', c.added);
+    cmpList(box, 'Changed (fail ↔ warn)', c.changed);
+    box.appendChild(h('p', 'muted', 'Unchanged: ' + c.same + ' • Other changes: ' + c.other + ' • Only in previous: ' + c.gone));
+    say($('cmp-msg'), 'Compared with the report of ' + when(old.scannedAt) + '.', 'ok');
+  }
+  function cmpFail() {
+    clear($('cmp-out'));
+    say($('cmp-msg'), 'Could not read that report: it is not a header-scan JSON report or share link, or it is too large.', 'err');
+  }
+  $('cmp-file').addEventListener('change', async function () {
+    var f = this.files && this.files[0];
+    this.value = ''; // picking the same file again fires change again, and no stale name is left next to a later link result
+    if (!f || !result) return;
+    try {
+      if (f.size > 1048576) throw new Error('too large'); // checked before reading
+      renderCompare(HS.parse(JSON.parse(await f.text())));
+    } catch (e) { cmpFail(); }
+  });
+  $('cmp-form').addEventListener('submit', async function (ev) { // a form: Enter in the link field compares too
+    ev.preventDefault();
+    var v = $('cmp-link').value;
+    if (!result || !v.trim()) return;
+    if (!CAN_SHARE) { say($('cmp-msg'), 'This browser cannot open share links.', 'err'); return; }
+    try { renderCompare(await HS.decode(HS.token(v))); } catch (e) { cmpFail(); }
   });
 
   $('scan-form').addEventListener('submit', function (ev) { ev.preventDefault(); if (!busy) runScan(false); });
@@ -890,11 +988,29 @@
   });
 
   async function copy(text, done) {
-    try { await navigator.clipboard.writeText(text); toast(done, 'ok'); }
-    catch (e) { toast('Copy failed: select the text and copy it manually.', 'err'); }
+    try { await navigator.clipboard.writeText(text); toast(done, 'ok'); return true; }
+    catch (e) { toast('Copy failed: select the text and copy it manually.', 'err'); return false; }
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (b) {
     b.addEventListener('click', function () { copy($(b.getAttribute('data-copy')).textContent, 'Copied.'); });
+  });
+  $('share-link').hidden = !CAN_SHARE;
+  $('share-link').addEventListener('click', async function () {
+    if (!result) return;
+    var tok;
+    try { tok = await HS.encode(result); }
+    catch (e) {
+      toast(e.message === 'too large' ? 'This report is too large for a share link. Use Download JSON report.'
+        : 'This report could not be packed into a share link. Use Download JSON report.', 'err');
+      return;
+    }
+    var url = location.href.split('#')[0] + '#r=' + tok;
+    if (await copy(url, url.length > 2000 ? 'Share link copied. It is long: some chat apps cut it, use Download JSON there.' : 'Share link copied.')) return;
+    // no clipboard access: put the link in the address bar instead (tab changes keep it, a new scan removes it)
+    shareTok = tok;
+    sampleName = '';
+    tabSelect($('results').dataset.view || 'overview', false, false);
+    toast('Copy failed: the share link is now in the address bar, copy it from there.', 'err');
   });
   $('copy-json').addEventListener('click', function () { if (result) copy(JSON.stringify(result, null, 2), 'JSON report copied.'); });
   $('dl-json').addEventListener('click', function () {
@@ -978,6 +1094,9 @@
   enhance(initStrip);
 
   syncFilters();
-  var sm = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash);
-  if (sm) loadSample(sm[1]);
+  // prewarm: wake a sleeping backend while the visitor types; silent on failure (a later scan shows the real error)
+  // (api() sets lastOk); when it answers while the wake message is up, the scan still running is the target being slow
+  api('/api/health', { cache: 'no-store' }).then(function () { if (wakeMsg) { say($('status'), wakeMsg); wakeMsg = ''; } }).catch(function () {});
+  var sm = /(?:^#|&)sample=(perfect|mixed)(?:&|$)/.exec(location.hash), st = HS.token(location.hash);
+  if (st) loadShared(st); else if (sm) loadSample(sm[1]);
 })();

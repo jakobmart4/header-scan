@@ -92,8 +92,8 @@ Rows omitted (correct and uninteresting): all `info` results for ux-breadcrumbs,
 ## Systematic error classes
 
 1. **"Has a `<form>`" is treated as "collects user data"** (ux-privacy-policy fail, ux-thank-you warn). Search boxes (HN, Wikipedia, err.ee, MDN), tool inputs (header-scan) and feedback widgets all count. 6 of 12 sites hit at least one wrong result. Only a real lead/contact/signup form (text/email/tel/textarea input, not `type=search`, not a `role=search` form, not a form whose action goes to a search endpoint) should count.
-2. **Window too small for ux-cta-above-fold.** The first 3000 chars of body are mostly nav/SVG/script markup on modern pages; Notion and the dental clinic both have an obvious CTA 5 000 to 78 000 chars in. Word list is also narrow (no shop, learn, subscribe, sign up, try, submit, scan). This check fires a warn on all 12 sites, so it carries no signal at all.
-3. **Marketing checks fire on non-marketing pages.** ux-cta-above-fold, ux-internal-links (single-page tools, placeholders), ux-faq "aim for 5", ux-privacy-policy "no link" warn, ux-thank-you: irrelevant for tools, docs, forums, wikis, news. Page type is not considered anywhere.
+2. **Window too small for ux-cta-above-fold.** The first 3000 chars of body are mostly nav/SVG/script markup on modern pages; Notion and the dental clinic both have an obvious CTA 5 000 to 78 000 chars in. Word list is also narrow (no shop, learn, subscribe, sign up, try, submit, scan). This check fires a warn on all 12 sites, so it carries no signal at all. RESOLVED 2026-10-07: visible-text window and wider word list (see "ux-cta-above-fold redesign" at the end).
+3. **Marketing checks fire on non-marketing pages.** ux-cta-above-fold, ux-internal-links (single-page tools, placeholders), ux-faq "aim for 5", ux-privacy-policy "no link" warn, ux-thank-you: irrelevant for tools, docs, forums, wikis, news. Page type is not considered anywhere. Since 2026-10-07 ux-cta-above-fold is skipped on content pages (docs, news, blog, wiki, forum) and empty shells (see the end of this file).
 4. **Loose regexes.** `tood|projects|cases` in ux-case-studies matched article slugs ("eeltood"), a product feature, and external links (3 FPs on 3 of 12 sites; check is not limited to same-origin). `\b24 ?h\b` matched the nav label "24h uudised". ux-faq counts every `<details>` (err.ee: 11 collapsibles reported as 8 FAQ items).
 5. **Raw-HTML limits presented as site defects.** Client-rendered footers/links (Allbirds, err.ee, eesti.ee) make ux-privacy-policy, ux-internal-links and seo-h1 fail; on eesti.ee the scanner even passes seo-spa-shell on a 15-char Angular shell (FN, only Vite/CRA/Next fingerprints). SPA-shell note on ux-internal-links is inconsistent (present on excalidraw, missing on eesti.ee).
 6. **Shell/app sites double-count one root cause.** seo-spa-shell, seo-h1, ux-internal-links, seo-duplicate-titles (all routes same title), ux-404-page (soft 404) all fail together for excalidraw and eesti.ee. The soft-404 is technically true for an SPA fallback but not a separate defect. Acceptable to keep, but evidence should say "SPA fallback".
@@ -196,15 +196,15 @@ No other verdict is worse than in the last table. For context, 91dfc69 alone tre
 
 False positives, by impact:
 
-1. **excalidraw `ai-robots-blocks-all` fail (severity 5)**. robots.txt has `User-agent: *` with `Allow: /`, `Allow: /$`, `Allow: /sitemap.xml` and `Disallow: /`. Under RFC 9309 the longest match wins and an equal-length tie goes to Allow, so the whole site is crawlable. `parseRobots` keeps only Disallow lines and the check only looks for `Disallow: /`. Fixing it moves the score 70 to 78; the grade stays D (4 other fails). Not new: the same id was in the 2026-10-04 cap list, but it was not in the tables.
-2. **`ux-cta-above-fold` warns on 11 of 11 sites**, including the three marketing pages (allbirds, notion, summit dental) that have an obvious CTA past the 3000-character window. Still no signal (error class 2, deliberately out of scope).
-3. **App shells keep the marketing rules** (excalidraw, eesti.ee): `ux-internal-links` fail, `ux-cta-above-fold` warn, `ux-privacy-policy` warn/fail and the `ux-404-page` soft-404 fail all stack on one root cause that `seo-spa-shell` already reports.
+1. ~~**excalidraw `ai-robots-blocks-all` fail (severity 5)**~~ RESOLVED 2026-10-07 (6767cec, live re-check below: pass, quality 70 D to 78 D). robots.txt has `User-agent: *` with `Allow: /`, `Allow: /$`, `Allow: /sitemap.xml` and `Disallow: /`. Under RFC 9309 the longest match wins and an equal-length tie goes to Allow, so the whole site is crawlable. `parseRobots` keeps only Disallow lines and the check only looks for `Disallow: /`. Fixing it moves the score 70 to 78; the grade stays D (4 other fails). Not new: the same id was in the 2026-10-04 cap list, but it was not in the tables.
+2. ~~**`ux-cta-above-fold` warns on 11 of 11 sites**~~ RESOLVED 2026-10-07 (see "ux-cta-above-fold redesign" below): 3 marketing passes, 7 content/shell skips, 0 warns.
+3. **App shells keep the marketing rules** (excalidraw, eesti.ee): `ux-internal-links` fail, `ux-cta-above-fold` warn (now `skipped`, 2026-10-07), `ux-privacy-policy` warn/fail and the `ux-404-page` soft-404 fail all stack on one root cause that `seo-spa-shell` already reports.
 4. **example.com**: see Regressions (4 rows).
 5. **err.ee** `ux-faq` pass (8 items: the 11 `<details>` are UI collapsibles) and `ux-response-time` pass (nav label "24h uudised"): unchanged known limits.
 6. **notion** `ux-case-studies` pass on `/product/projects` (a product feature): unchanged known limit. `ux-privacy-policy` passes on a help-page id link while `/trust/privacy-policy` exists: weak pass.
 7. **eesti.ee** `ux-privacy-policy` fail: the only "tracker" is Cloudflare's `cloudflareinsights` beacon injected for the scanner's Accept header; open owner decision from the last run.
 8. **allbirds** `ux-privacy-policy` fail / `ux-thank-you` warn: the raw HTML has no privacy link at all (footer rendered client-side); the contact form is a real lead form, so the strict result follows the contract but is likely wrong for the live page.
-9. **hacker news** `ux-privacy-policy` warn, `ux-alt-text` fail (2 of 2 images), `ux-404-page` warn (tiny default body): correct as facts, low value on a forum; `seo-duplicate-titles` is a FP (above).
+9. **hacker news** `ux-privacy-policy` warn, `ux-alt-text` fail (2 of 2 images), `ux-404-page` warn (tiny default body): correct as facts, low value on a forum; the `seo-duplicate-titles` FP is RESOLVED 2026-10-07 (6767cec, live re-check below: pass).
 
 False negatives:
 
@@ -215,3 +215,34 @@ False negatives:
 Re-check 2026-10-06 (same code, same method, 11 s apart, 119 findings and no module errors per site): every `ux-*`, `seo-*` and `ai-*` status and every quality score above reproduced exactly; the only `ux-*` / `seo-spa-shell` statuses that differ from the 2026-10-04 scanner results are still the three rows in "Changed rows". Security scores reproduced except allbirds 88 C to 87 C (live drift; `lib/` is unchanged). example.com still loads `<script src=/s.js>`, so the regression above stands.
 
 Checks that held up on this run: `seo-spa-shell` (now correct on all 11 sites, eesti.ee included), `ux-thank-you` skipped on the three search-box sites (err.ee, HN, Wikipedia), `ux-case-studies` info on err.ee, HN and Wikipedia, `ux-404-page` info on notion, `seo-sitemap` fail on Wikipedia, and the duplicate-title crawl (4 of 5 non-trivial verdicts correct in outcome, HN is the FP).
+
+Live re-check 2026-10-07 (deployed `main` 5a7f1db, `GET https://header-scan.jakobmart4.workers.dev/api/scan?url=...`, 11 s apart, 119 findings and no module errors per site). Only `ux-*` / `seo-*` / `ai-*` statuses that changed since the tables above are listed; everything else reproduced, security scores unchanged (example.com 80 D, excalidraw 90 C, HN 87 C).
+
+| site | check id | before | after | verdict |
+|---|---|---|---|---|
+| example.com | ux-internal-links / ux-cta-above-fold / ux-faq | fail / warn / info | skipped / skipped / skipped (minimal page) | fixed (a197518: one own script on a link-free text page stays minimal) |
+| example.com | ux-privacy-policy | warn | info (minimal page, no form, no tracker) | fixed |
+| example.com | quality score | 67 D | 70 C | as predicted; `ux-404-page` pass on the 577-byte placeholder is still the known FN |
+| excalidraw | ai-robots-blocks-all | fail | pass (`not blocked`) | fixed (RFC 9309 longest match, `Allow: /` ties win) |
+| excalidraw | quality score | 70 D | 78 D | 4 fails remain (`seo-spa-shell`, `ux-404-page`, `ux-internal-links`, `ux-js-bundle-size` 2185 KB) |
+| hacker news | seo-duplicate-titles | fail (1 title) | pass (`9 pages, all unique`) | fixed (`/news` recognised as the home page) |
+| hacker news | quality score | 68 D | 72 D | |
+
+## ux-cta-above-fold redesign (2026-10-07)
+
+Change: the window is the first 2000 characters of visible text from `<body>` (was 3000 raw characters), the word list is wider (shop, order, sign up, subscribe, pricing, demo, request, ... and Estonian prefixes), and the rule is `skipped` on an empty client-rendered shell and on a content page (`pageType().contentSignal`: Article-type JSON-LD, `og:type` article, docs/wiki/forum generator, docs./developer./news./blog. host, /docs/ or /blog/ path, rel=next/prev, five or more `<article>`; never on a shop). Method: the home pages (MDN also a docs page) fetched once each by passive GET, 3 s apart, and run through the local `lib/checks/html.js` (not the deployed API).
+
+| site | before | after | verdict |
+|---|---|---|---|
+| allbirds | warn | pass ("Shop" link early in visible text; `hasCommerce`, stays strict) | fixed |
+| notion | warn | pass (`/pricing`, "Get Notion free") | fixed |
+| summit dental | warn | pass (`tel:` / contact link) | fixed |
+| mdn docs page, mdn home | warn | skipped (`host developer.`) | fixed (N/A) |
+| smashing, err.ee | warn | skipped (`og:type article`) | fixed (N/A) |
+| wikipedia | warn | skipped (`JSON-LD Article`) | fixed (N/A) |
+| hacker news | warn | skipped (`host news.`; it also has a rel=next link) | fixed (N/A) |
+| excalidraw, eesti.ee | warn | skipped (empty client-rendered shell) | fixed (N/A, `seo-spa-shell` reports the cause) |
+| example.com | skipped (minimal) | skipped (minimal) | unchanged |
+| header-scan | skipped (single-page tool) | skipped (single-page tool) | unchanged |
+
+Sensitivity kept: with every CTA word removed from a marketing page the rule warns again (test/cta-above-fold.test.js). Known limits: a blog or news page with none of the signals and under five `<article>` elements still warns; a marketing page with five or more `<article>` cards, Article JSON-LD or `og:type` article is skipped; a hero CTA after more than 2000 characters of visible nav text still warns; only English and Estonian words.
