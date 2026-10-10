@@ -47,3 +47,13 @@ test('cold start: the UI prewarms the backend via /api/health and says when a fr
   assert.match(ui, /Waking up the scanner/);
   assert.match(read('public/privacy.html'), /wake up/i);
 });
+
+test('cold start: the wake message waits 5 s, only when the backend has not answered for 10 min, and is cleared with the scan', () => {
+  const app = read('ui/src/app.js');
+  assert.match(app, /function awake\(\) \{ return Date\.now\(\) - lastOk < 600000; \}/);
+  const run = app.slice(app.indexOf('async function runScan'), app.indexOf('async function loadSample'));
+  assert.match(run, /var wake = setTimeout\(function \(\) \{ if \(!awake\(\)\) say\(\$\('status'\), 'Waking up the scanner[^']*'\); \}, 5000\);/);
+  assert.match(run, /await [^\n]+\n\s*lastOk = Date\.now\(\);/, 'a successful scan marks the backend awake');
+  assert.ok(run.indexOf('clearTimeout(wake)') > run.lastIndexOf('catch (e)'), 'timer cleared after both success and failure');
+  assert.match(app, /fetch\('\/api\/health', \{ cache: 'no-store' \}\)\.then\(function \(r\) \{ if \(r\.ok\) lastOk = Date\.now\(\); \}\)\.catch\(function \(\) \{\}\);/);
+});
