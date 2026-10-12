@@ -1,7 +1,7 @@
 # header-scan: state and next steps
 
 ## Current state
-- `main` = ae36d8a, deployed (Render backend + Cloudflare Worker) and live-verified on 2026-10-12; MDN's `ux-cta-above-fold` is `skipped` there as a content page, as intended. Check `git log` for later commits.
+- `main` = a750da7, deployed (Render backend + Cloudflare Worker) and live-verified on 2026-10-12: `/api/health` shows the commit, cross-site `/api/scan` gets 403, an example.com scan returns 119 findings with no module errors. First CI run on Linux passed.
 - `dist/` is git-ignored, rebuilt by `node scripts/build-pages.mjs`.
 - Full suite: 704 tests, 0 failed (`node --test "test/*.test.js"`); CI runs it on Linux (`.github/workflows/ci.yml`).
 - Settled decisions (no-gos, public repo, workers.dev, ...): `docs/DECISIONS.md`.
@@ -13,11 +13,8 @@
 - CI workflow (UI drift check + tests), `docs/DECISIONS.md`, DEPLOY rollback section, Node >= 22.
 
 ## Owner steps
-1. Push, then Render Manual Deploy (lib/ and server.js changed); the Worker deploys on push.
-2. After the deploy, `GET /api/health` must show the pushed `commit` (confirms Render sets `RENDER_GIT_COMMIT` at runtime).
-3. Check the first CI run in the Actions tab (first Linux run); fix failures, do not skip tests.
-4. Optional: turn on the free GitHub branch protection "require CI". Decide whether render.yaml gets `autoDeployTrigger: checksPass` (owner decision, not changed).
-5. Re-scan excalidraw and HN and add a dated line to `docs/research/ux-corpus.md`.
+1. Optional: turn on the free GitHub branch protection "require CI". Decide whether render.yaml gets `autoDeployTrigger: checksPass` (owner decision, not changed).
+2. Re-scan excalidraw and HN and add a dated line to `docs/research/ux-corpus.md`.
 
 ## Remaining limits
 - CTA rule: only English and Estonian words; a blog post with only og:type article plus a comment form stays strict; a `#start-of-content` skip link counts as a CTA; JSON-LD types are matched as plain names or schema.org IRIs only.
