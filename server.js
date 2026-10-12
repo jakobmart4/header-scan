@@ -65,12 +65,13 @@ export function createServer(deps = {}) {
   const resolveTxt = deps.resolveTxt || realResolveTxt;
   const bindHost = deps.host || process.env.HOST || '127.0.0.1';
   const trustProxy = process.env.HEADERSCAN_TRUST_PROXY === '1';
-  // Behind the Cloudflare Pages proxy: /api/* (except health) needs the shared key; the real client IP arrives in x-headerscan-client.
+  // Behind the Cloudflare Worker proxy: /api/* (except health) needs the shared key; the real client IP arrives in x-headerscan-client.
   const proxyKey = process.env.HEADERSCAN_PROXY_KEY || '';
   const sha = (v) => crypto.createHash('sha256').update(String(v)).digest();
   const proxied = (req) => crypto.timingSafeEqual(sha(req.headers['x-headerscan-key'] || ''), sha(proxyKey));
   const index = loadIndex();
   const ver = version();
+  const commit = (process.env.RENDER_GIT_COMMIT || '').slice(0, 7) || undefined; // set by Render; omitted from health when unset
   let active = 0;
   const activeBy = new Map(); // limiter key -> running scans
 
@@ -171,7 +172,7 @@ export function createServer(deps = {}) {
     }
     if (p === '/api/health') {
       if (req.method !== 'GET') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'method not allowed', { Allow: 'GET' });
-      return send(res, 200, { ok: true, version: ver });
+      return send(res, 200, { ok: true, version: ver, commit });
     }
     if (p === '/api/scan') {
       if (req.method === 'GET') {

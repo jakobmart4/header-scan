@@ -63,3 +63,9 @@ test('ux-default-hostname: only trailing dots are stripped, inner dot runs stay'
   assert.equal(f.status, 'warn');
   assert.equal(f.evidence, 'served from x..vercel.app');
 });
+
+test('ux-default-hostname: skipped when the page was not fetched (no Quality grade from one check)', async () => {
+  const f = (await run(fakeCtx({ status: 0 }))).find((x) => x.id === 'ux-default-hostname');
+  assert.equal(f.status, 'skipped');
+  assert.equal(f.evidence, 'error: page not fetched');
+});

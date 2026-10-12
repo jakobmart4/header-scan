@@ -13,7 +13,10 @@ function read(f, name, closer) {
   if (!existsSync(src(f))) fail('missing ' + f);
   const t = lf(readFileSync(src(f), 'utf8'));
   if (closer.test(t)) fail(name + ' contains a closing tag that would end the inline block');
-  return t;
+  // Ship without comments: CSS loses /* */, indentation and blank lines; JS only full-line // comments (a trailing
+  // // may sit in a string or regex). Safe while no CSS string holds '/*' and the JS has no multi-line template literals.
+  if (f.endsWith('.css')) return t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]+/gm, '').replace(/\n{2,}/g, '\n').trim();
+  return t.replace(/^[ \t]*\/\/.*\n/gm, '');
 }
 
 const template = lf(readFileSync(src('index.template.html'), 'utf8'));

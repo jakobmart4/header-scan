@@ -2,7 +2,7 @@
 
 A SecurityHeaders.com-style scanner that checks much more: security headers (CSP parsed), cookies, TLS, DNS/mail (CAA, SPF, DMARC, DNSSEC), CORS, mixed content, SRI, `security.txt`, plus SEO, AI-visibility and UX-hygiene checks from a 40-item project checklist.
 
-Node >= 20, ESM, **zero npm dependencies**, one static HTML page. 144 findings in total: 119 passive, 25 active (only after ownership is verified).
+Node >= 22, ESM, **zero npm dependencies**, one static HTML page. 144 findings in total: 119 passive, 25 active (only after ownership is verified).
 
 ## Usage
 
@@ -41,9 +41,9 @@ All responses are JSON (`application/json; charset=utf-8`). Errors: `{"error":{"
 | `POST /api/scan` | `{url, deep?:true}` | 200 Result | `deep:true` re-checks ownership on the server; not verified -> 403 `NOT_VERIFIED` (message names the TXT record) |
 | `POST /api/verify/start` | `{host}` | 200 `{host, token, txtName, txtValue, expiresAt}` | |
 | `POST /api/verify/check` | `{host}` | 200 `{host, verified, txtName}` | stateless, DNS lookup on every call |
-| `GET /api/health` | - | 200 `{ok:true, version}` | |
+| `GET /api/health` | - | 200 `{ok:true, version, commit}` | `commit`: first 7 characters of `RENDER_GIT_COMMIT`, left out when unset |
 
-Error codes: `BAD_URL` 400, `BAD_REQUEST` 400, `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `FORBIDDEN` 403 (behind the proxy: `/api/*` without the proxy key), `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After`), `INTERNAL` 500, `SCAN_FAILED` 502, `BUSY` 503 (> 4 concurrent scans); `RATE_LIMITED` 429 is also returned when one client already has 2 scans running, `TIMEOUT` 504.
+Error codes: `BAD_URL` 400, `BAD_REQUEST` 400, `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `FORBIDDEN` 403 (behind the proxy: `/api/*` without the proxy key; the Worker: a browser request with `Sec-Fetch-Site: cross-site`), `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After`), `INTERNAL` 500, `SCAN_FAILED` 502, `BUSY` 503 (> 4 concurrent scans); `RATE_LIMITED` 429 is also returned when one client already has 2 scans running, `TIMEOUT` 504.
 
 Result: `{url, host, scannedAt, durationMs, verified, deep, rawHeaders:[{name,value}], score:{security,quality,categories}, findings:[Finding], errors:[{module,message}]}`. `rawHeaders` = the page's response headers for a raw-headers table (Set-Cookie values, Domain and non-root Path redacted, cookie lines capped, long values cut).
 Finding: `{id, category, title, status: pass|warn|fail|info|skipped, severity: 1-5, evidence (<=300 chars), fix, ref?, checklist?}`.
@@ -70,7 +70,7 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 - **Active probes** (24 fixed paths such as `/.git/HEAD`, `/.env`, backups): only when ownership is verified. GET only, fixed allowlist (never user-supplied paths), no redirects followed, <= 2 requests/s (probes run only after all passive modules have finished, so nothing else hits the target meanwhile), stop on 429 or repeated 5xx. A baseline request to a random path is compared first, so SPA catch-alls and soft 404s never produce false positives. A hit reports only `HTTP <status>, signature '<id>' matched`; file contents are discarded immediately and never logged or returned.
 - **SSRF protection.** Only http/https on ports 80/443; no userinfo; IP literals in decimal/hex/octal form are normalized and checked. Every A/AAAA answer is checked after DNS resolution (loopback, private, link-local incl. `169.254.169.254`, CGNAT, multicast, reserved, IPv4-mapped/NAT64/6to4 IPv6) and **any** blocked answer rejects the host. The connection is pinned to the checked IP (no second lookup, so no DNS rebinding); the original hostname is kept for `Host` and TLS SNI. Every redirect hop is re-validated (max 5, loops detected).
 - **Limits.** Request body 4 KiB, page 1 MiB, other text 256 KiB, probe body 64 KiB, 10 s per request, 45 s per scan, 60 requests per scan (100 for deep), <= 10 crawled pages, <= 3 scripts, max 4 concurrent scans (2 per client).
-- **Rate limit.** In-memory, per client IP (`X-Forwarded-For` ignored unless `HEADERSCAN_TRUST_PROXY=1`): scans 6/min, deep scans 2/min, verify 20/min. IPv6 clients are keyed by their /64, which does not stop someone who holds a /48 (65,536 /64 networks, each with its own quota); the real defence for a public deployment is a Cloudflare WAF rate-limiting rule on `/api/*` (a dashboard setting, paid, not used here). A request rejected for capacity (BUSY, 2-per-client) does not use up the per-minute quota. Behind the proxy (`HEADERSCAN_PROXY_KEY` set) `GET /` is 404 without the key: the UI is served by the Worker only.
+- **Rate limit.** In-memory, per client IP (`X-Forwarded-For` ignored unless `HEADERSCAN_TRUST_PROXY=1`): scans 6/min, deep scans 2/min, verify 20/min. IPv6 clients are keyed by their /64, which does not stop someone who holds a /48 (65,536 /64 networks, each with its own quota); the real defence for a public deployment is a Cloudflare WAF rate-limiting rule on `/api/*` (a zone-level setting; this deployment runs on workers.dev without an own zone, so it is not used). A request rejected for capacity (BUSY, 2-per-client) does not use up the per-minute quota. Behind the proxy (`HEADERSCAN_PROXY_KEY` set) `GET /` is 404 without the key: the UI is served by the Worker only.
 - **Output.** Evidence never contains secrets, cookie values or file contents. The UI renders scan data with `textContent` only; the page is served with a strict CSP.
 - The server binds to `127.0.0.1` by default. Put it behind a reverse proxy with TLS if you expose it.
 
@@ -114,6 +114,8 @@ The token is `base64url(expiresAt).base64url(HMAC-SHA256(secret, host|expiresAt)
 | `scripts/` | Build scripts, the design-variant preview tooling (`ui/DESIGN.md`) and `sample-reports.mjs`, which regenerates `public/samples/` |
 | `design/` | Archived design variants and the sample report used by the previews |
 | `test/` | `npm test` (node:test, local fixture server) |
+| `.github/workflows/ci.yml` | CI on every push to `main` and every pull request (Node 22, as in the `Dockerfile`): rebuilds the UI and fails if `public/index.html` differs from the commit, then runs the tests |
+| `docs/DECISIONS.md` | Settled decisions with their reasons (no npm deps, Worker + Render, no storage, CSP by hash, no headless browser, no cron, public repo, ...) |
 | `docs/specs/` | Contracts of past rounds (parity, UX) |
 | `docs/research/` | Research notes and the UX corpus |
 | `docs/briefs/`, `docs/workflows/` | Agent briefs and the workflow scripts that produced the rounds above |

@@ -1,22 +1,14 @@
-# header-scan SPEC (single contract for 7 parallel builders)
+# header-scan SPEC (contract: check modules, API, scoring)
 
-Node >= 20, ESM (`"type":"module"`), ZERO npm deps, `node:test`. Code + comments in English. Ponytail: small, boring, no speculative features. Windows: use `py` never `python`. Never use port 34872 (Rojo) or 1000 (UA dashboard); default port 8787 (`PORT` env). Never leave a server running after checks.
-Where this spec is silent, choose the simplest option; where it speaks, obey it literally (other builders rely on it).
+Node >= 22, ESM (`"type":"module"`), ZERO npm deps, `node:test`. Code + comments in English. Ponytail: small, boring, no speculative features. Windows: use `py` never `python`. Never use port 34872 (Rojo) or 1000 (UA dashboard); default port 8787 (`PORT` env). Never leave a server running after checks.
+Where this spec is silent, choose the simplest option; where it speaks, obey it literally (code and tests rely on it).
 SecurityHeaders.com parity round (6 new IDs, changed coop/coep/corp, `rawHeaders`): `docs/specs/PARITY-SPEC.md`.
 
-## 1. File layout and ownership
+## 1. File layout
 
-| Builder | Files |
-|---|---|
-| B1 | `lib/ssrf.js`, `lib/verify.js`, `test/ssrf.test.js`, `test/verify.test.js` |
-| B2 | `server.js`, `lib/scan.js`, `lib/score.js`, `package.json`, `README.md`, `test/score.test.js`, `test/scan.test.js`, `test/api.test.js` |
-| B3 | `lib/checks/headers.js`, `lib/checks/cookies.js`, `test/headers.test.js`, `test/cookies.test.js` |
-| B4 | `lib/checks/csp.js`, `lib/checks/tls.js`, `test/csp.test.js`, `test/tls.test.js` |
-| B5 | `lib/checks/dns.js`, `public/index.html`, `test/dns.test.js` |
-| B6 | `lib/checks/html.js`, `test/html.test.js` |
-| B7 | `lib/checks/site.js`, `lib/checks/probes.js`, `test/fixture-server.js`, `test/site.test.js`, `test/probes.test.js` |
+File layout: see README.md Layout.
 
-No other files. No shared helper files: shared helper `finding()` lives in `lib/score.js` (see 3). Tiny HTML regexes are duplicated per module on purpose (independence beats DRY here). `package.json`: `{"name":"header-scan","type":"module","private":true,"scripts":{"start":"node server.js","test":"node --test \"test/*.test.js\""}}` (later rounds added `build:ui`, `build`, `deploy` scripts and `version`), no dependencies. `package.json` test script must set env `HEADERSCAN_ALLOW_PRIVATE=1` via each test file (`process.env.HEADERSCAN_ALLOW_PRIVATE='1'` at top), not in the script (Windows-portable).
+No shared helper files: shared helper `finding()` lives in `lib/score.js` (see 3). Tiny HTML regexes are duplicated per module on purpose (independence beats DRY here). `package.json` has no dependencies. `package.json` test script must set env `HEADERSCAN_ALLOW_PRIVATE=1` via each test file (`process.env.HEADERSCAN_ALLOW_PRIVATE='1'` at top), not in the script (Windows-portable).
 
 ## 2. Contracts
 
@@ -86,7 +78,7 @@ Checklist numbering: item-2 list = 1..20 in file order (vercell=1 ... massive JS
 export async function scan({url, deep=false, verified=false, allowPrivate=(process.env.HEADERSCAN_ALLOW_PRIVATE==='1'),
                             resolve?, fetch?}) -> Promise<Result>
 ```
-`resolve`/`fetch` are optional injections (tests); defaults use `node:dns/promises` `Resolver` and `safeFetch`. Steps: `parseTarget` -> `assertPublicHost` -> fetch page (5 redirects) -> build ctx -> run all modules via `Promise.allSettled` (probes.js only when `deep && verified`; when `deep` and not verified, probes.js is still run and returns its single `skipped` gate finding) -> flatten -> sort by (category order, status severity: fail, warn, info, pass, skipped, then id) -> `score()`. A rejected module adds `{module, message}` to `errors` (no stack) and its findings are missing. Total scan deadline 45 s (`AbortSignal.timeout`-style: after deadline, remaining modules are reported in `errors` as "timeout"). Request budget: 60 per scan (passive), 100 when `deep && verified`. Fetches to the same host: max 4 concurrent (semaphore inside the ctx.fetch wrapper). Module list order (category order): headers, cookies, csp, tls, dns, html, site, probes. `probes` runs only after all other modules have settled (never concurrently with them), so the <= 2 req/s probe pacing is the real request rate against the target.
+`resolve`/`fetch` are optional injections (tests); defaults use `node:dns/promises` `Resolver` and `safeFetch`. Steps: `parseTarget` -> `assertPublicHost` -> fetch page (5 redirects) -> build ctx -> run all modules via `Promise.allSettled` (probes.js only when `deep && verified`; when `deep` and not verified, probes.js is still run and returns its single `skipped` gate finding) -> flatten -> sort by (category order, status severity: fail, warn, info, pass, skipped, then id) -> `score()`. A rejected module adds `{module, message}` to `errors` (no stack) and its findings are missing. Total scan deadline 45 s (`AbortSignal.timeout`-style: after deadline, remaining modules are reported in `errors` as "timeout"). probes.js stops itself before the deadline (probes left are `skipped` "stopped: scan time limit reached") and gets 2 s of slack, so a deep scan can take up to 47 s. Request budget: 60 per scan (passive), 100 when `deep && verified`. Fetches to the same host: max 4 concurrent (semaphore inside the ctx.fetch wrapper). Module list order (category order): headers, cookies, csp, tls, dns, html, site, probes. `probes` runs only after all other modules have settled (never concurrently with them), so the <= 2 req/s probe pacing is the real request rate against the target.
 
 ### 2.6 Result JSON
 ```json
@@ -122,7 +114,7 @@ Serves `public/index.html` only (`GET /` and `GET /index.html` -> index.html; an
 | `POST /api/scan` | `{url, deep?:true}` | 200 Result | `deep:true` -> server does the TXT check itself; not verified -> 403 `NOT_VERIFIED` (message includes the txtName to add) |
 | `POST /api/verify/start` | `{host}` | 200 `{host, token, txtName, txtValue, expiresAt}` | `txtName="_headerscan-verify.<host>"`, `txtValue="headerscan-verify=<token>"` |
 | `POST /api/verify/check` | `{host}` | 200 `{host, verified:boolean, txtName}` | stateless: valid if ANY TXT at txtName carries a token with valid HMAC for that host and not expired |
-| `GET /api/health` | - | 200 `{ok:true, version}` | version from package.json; not rate limited; the UI calls it once on page load to wake a sleeping free host and shows "Waking up the scanner" when a scan is still pending after 5 s and the backend has not answered in 14 min (any JSON reply of the backend, also an error, counts; the Worker's `BACKEND_UNREACHABLE` does not); the health reply clears the message if it arrives during the scan (no cron keep-alive, see DEPLOY.md) |
+| `GET /api/health` | - | 200 `{ok:true, version, commit}` | version from package.json; commit = first 7 characters of `RENDER_GIT_COMMIT`, omitted when unset; not rate limited; the UI calls it once on page load to wake a sleeping free host and shows "Waking up the scanner" when a scan is still pending after 5 s and the backend has not answered in 14 min (any JSON reply of the backend, also an error, counts; the Worker's `BACKEND_UNREACHABLE` does not); the health reply clears the message if it arrives during the scan (no cron keep-alive, see DEPLOY.md) |
 
 Errors: `{"error":{"code":"...","message":"..."}}` and status: `BAD_URL` 400, `BAD_REQUEST` 400 (bad JSON / missing field), `BLOCKED_TARGET` 400, `NOT_VERIFIED` 403, `FORBIDDEN` 403 (only when `HEADERSCAN_PROXY_KEY` is set and the key is missing), `NOT_FOUND` 404, `METHOD_NOT_ALLOWED` 405, `TOO_LARGE` 413 (request body > 4 KiB), `RATE_LIMITED` 429 (+`Retry-After` seconds), `SCAN_FAILED` 502 (target unreachable/DNS failed), `TIMEOUT` 504, `BUSY` 503 (more than 4 concurrent scans globally; 429 `RATE_LIMITED` when one client already runs 2). Capacity is checked before the rate limiter so a rejection does not consume quota. Never return stack traces or internal resolver output; 500 -> `INTERNAL`.
 Limits: request body <= 4 KiB, page body 1 MiB, other text 256 KiB, probe body 64 KiB, per-request 10 s, connect 5 s, redirects 5, whole scan 45 s, crawl <= 10 pages, <= 3 script files fetched, ports 80/443 only (unless allowPrivate).
@@ -151,7 +143,7 @@ Columns: `id | sev | rule (P=pass W=warn F=fail I=info S=skipped)`; `c#` = check
 hdr-hsts 4           F missing; W max-age<15552000; P otherwise. (http target: F "no HTTPS")
 hdr-hsts-subdomains 2 W missing includeSubDomains; P present; S if hsts missing
 hdr-hsts-preload 1    P has preload and max-age>=31536000 and includeSubDomains; else I
-hdr-xcto 3            P value 'nosniff'; else F missing/other
+hdr-xcto 3            P value 'nosniff' (first member when duplicates arrive joined with ', '); else F missing/other
 hdr-frame-protection 3 P X-Frame-Options DENY|SAMEORIGIN or CSP frame-ancestors present; else F
 hdr-referrer-policy 2 P value in {no-referrer, same-origin, strict-origin, strict-origin-when-cross-origin}; W missing or unsafe-url / no-referrer-when-downgrade / origin-when-cross-origin / origin; unknown token W "unrecognized value"
 hdr-permissions-policy 2 P header present; W missing
@@ -175,7 +167,7 @@ hdr-reporting 1       always I: lists Report-To, Reporting-Endpoints, NEL, CSP r
 ### 6.2 cookies.js (category `cookies`; ALL cookies from `page.headers['set-cookie']`; evidence lists cookie NAMES only) - 8
 ```
 cookie-secure 4           F any cookie without Secure on an https page; P all secure; I no cookies
-cookie-httponly 3         F cookie whose name matches /sess|auth|token|sid|jwt|login/i lacks HttpOnly; W other cookie lacks it; I no cookies
+cookie-httponly 3         F session-like cookie lacks HttpOnly (name, camelCase split and lowercased, matches /sess|(^|[^a-z])(jwt|login)($|[^a-z])|(auth|token|(?<!vi)sid)($|[^a-z])/: author_pref, inside_banner, visid_incap do not); W other cookie lacks it; I no cookies
 cookie-samesite 3         W any cookie without SameSite; P all set; I no cookies
 cookie-samesite-none 3    F SameSite=None without Secure; P otherwise; I no cookies
 cookie-prefix 1           P any __Host-/__Secure- cookie valid (Secure, and __Host: Path=/ and no Domain); W prefix used but invalid; I otherwise
@@ -235,13 +227,13 @@ mail-spf-lookups 3       F >10 DNS-lookup mechanisms; W 8-10; P otherwise; S no 
 mail-dmarc-present 4     F missing at _dmarc.host when MX present; W when no MX; P present
 mail-dmarc-policy 4      F p=none; W p=quarantine with pct<100 or sp weaker; P p=reject|quarantine; S no DMARC
 mail-dmarc-rua 1         W no rua=; P present; S no DMARC
-mail-mta-sts 1           I _mta-sts TXT missing; P 'v=STSv1' present
-mail-tls-rpt 1           I _smtp._tls TXT missing; P 'v=TLSRPTv1' present
-mail-dkim 1              I always: probes selectors default,google,selector1,selector2,k1,s1,mail at <sel>._domainkey.host; P if any found; else I "selector unknown, cannot conclude"
+mail-mta-sts 1           I _mta-sts TXT missing; P 'v=STSv1' present at the host or a parent (evidence adds '(at <domain>)')
+mail-tls-rpt 1           I _smtp._tls TXT missing; P 'v=TLSRPTv1' present at the host or a parent (evidence adds '(at <domain>)')
+mail-dkim 1              I always: probes selectors default,google,selector1,selector2,k1,s1,mail at <sel>._domainkey.<domain that publishes MX, else the org domain>, then at the host (evidence adds '(at <domain>)'); P if any found; else I "selector unknown, cannot conclude"
 ```
 
 ### 6.6 html.js (categories `seo`, `ux`, `content`, `ai`; parses `page.body` with a linear tokenizer over the first 1 MiB (see 2.1, hostile input), raw HTML only, no DOM) - 31
-Legend of `c#`: checklist number. Visible text = the text between tokens: tags, comments, `<script>`/`<style>`/`<title>` elements and the `<!doctype ...>` / `<?xml ...?>` declarations are not text. SPA shell = visible text <200 chars AND a shell root: an `<app-root>` element or a `<div>` whose id is `root`, `app`, `__next`, `__nuxt`, `___gatsby` or `svelte`.
+Legend of `c#`: checklist number. Visible text = the text between tokens: tags, comments, `<script>`/`<style>`/`<title>` elements and the `<!doctype ...>` / `<?xml ...?>` declarations are not text. A typed non-HTML response (content-type without `html`, e.g. JSON or a feed) is not judged: every html.js finding is S "not an HTML page (<type>)"; no content-type counts as HTML. SPA shell = visible text <200 chars AND a shell root: an `<app-root>` element or a `<div>` whose id is `root`, `app`, `__next`, `__nuxt`, `___gatsby` or `svelte`.
 ```
 seo-title 3             F missing/empty; P present                                            c31
 seo-title-length 1      W length <10 or >60; P otherwise; S no title                          c31
@@ -250,7 +242,7 @@ seo-meta-desc-length 1  W length <70 or >160; P otherwise; S none               
 seo-canonical 2         P absolute canonical href same host as finalUrl; W missing/relative/other host; also honors Link: rel=canonical header   c11
 seo-h1 3                P exactly one <h1>; W >1; F 0 (evidence notes "0 in raw HTML" when SPA shell)   c9,c10
 seo-heading-order 1     W a heading level skips (h1->h3); P otherwise
-seo-lang 3              P <html lang> matches ^[a-z]{2,3}(-[A-Za-z0-9]+)*$; F missing/invalid   c16
+seo-lang 3              P <html lang> matches /^[a-z]{2,3}(-[a-z0-9]+)*$/i; F missing/invalid   c16
 seo-viewport 3          P <meta name=viewport> contains width=device-width; W tag present without it; F tag missing
 seo-og-image 2          F og:image missing; W not absolute http(s) URL; P ok (no HEAD request here)   c7,c33
 seo-og-basic 1          W og:title or og:description missing; P both present
@@ -291,7 +283,7 @@ seo-sitemap 3             sitemap URL from robots `Sitemap:` else /sitemap.xml: 
 ai-llms-txt 1             P GET /llms.txt 200, not HTML, >20 bytes; W otherwise (optional standard, never F)   c12
 ux-404-page 3             GET /<16hex>-nf: P 404 with body >=300 bytes and not a default server text; W 404 with tiny/default body ("Cannot GET", nginx/apache default); F 200 (soft 404; also on tools and SPA shells). I when the 404 is tiny/default on a single-page tool (`real HTTP 404; a custom 404 page is not needed on a single-page tool`) and when unknown paths answer 401, or 403 on a single-page tool or from a Cloudflare bot filter (`cf-mitigated` header / challenge body); 403 elsewhere stays W `random path returns HTTP 403` (S3/CloudFront without an error document)   c3,c21
 ux-favicon 2              P <link rel~=icon> found in page body or GET /favicon.ico 200 image/*; W none    c14
-ux-default-hostname 2     W finalUrl host (trailing dots ignored) ends with a default-hostname suffix: .vercel.app|.netlify.app|.pages.dev|.workers.dev|.github.io|.onrender.com|.herokuapp.com|.fly.dev|.up.railway.app|.azurewebsites.net|.web.app|.firebaseapp.com|.appspot.com|.surge.sh|.glitch.me|.replit.app|.deno.dev|.ondigitalocean.app|.amplifyapp.com|.cloudfront.net|.wixsite.com|.webflow.io|.framer.app|.framer.website|.carrd.co|.blogspot.com (label-bounded: x.vercel.app warns, myvercel.app and the bare apex pass); P otherwise   c1
+ux-default-hostname 2     W finalUrl host (trailing dots ignored) ends with a default-hostname suffix: .vercel.app|.netlify.app|.pages.dev|.workers.dev|.github.io|.onrender.com|.herokuapp.com|.fly.dev|.up.railway.app|.azurewebsites.net|.web.app|.firebaseapp.com|.appspot.com|.surge.sh|.glitch.me|.replit.app|.deno.dev|.ondigitalocean.app|.amplifyapp.com|.cloudfront.net|.wixsite.com|.webflow.io|.framer.app|.framer.website|.carrd.co|.blogspot.com (label-bounded: x.vercel.app warns, myvercel.app and the bare apex pass); P otherwise; S page not fetched   c1
 seo-duplicate-titles 3    compare the scanned page (<=10 pages in all) with up to 9 others: same-origin `<a href>` links of the page, then sitemap `<loc>` URLs (GET each, 256 KiB, HTML 200 only; .pdf, images, .zip, .css, .js, .xml, .ico, .mp4, .txt links are skipped). Candidates are deduped by normalised path: a URL is origin + path + query with a trailing slash and `index.html|htm` removed (`/about` and `/about/` are one page). Pages are then merged when they are the same page: (a) a fetched body byte-identical to the scanned page's raw body, or one with the same title and meta description as the scanned page whose own words are at least 90% the same (Jaccard of the word sets; own words = visible text outside `<a>`, `<nav>`, `<header>` and `<footer>`, digits dropped, so shared menus and footers are not counted and headline links and counters of a listing do not split it), is the home page under another URL (`/index.html`, `/?lang=en`, `/home`, or `/` and `/news` on a news front page whose stories, counters and ages change per request) and is dropped; a candidate cut at 256 KiB is compared with the same prefix of the home page; (b) every other page has an identity, its same-origin `<link rel=canonical>` if present (attributes read quote-aware, `&amp;` decoded, relative values resolved, normalised like the path key; cross-origin, unparseable or href-less canonicals are ignored) else its final URL after redirects, and only one page per identity is compared: the scanned page first, then pages whose identity is their own URL before pages whose canonical points elsewhere (link order never decides which alias is kept); a page redirected to another origin is dropped. Identical bodies of two other pages without a shared identity still count (a genuine duplicate). Known limits: a wrong canonical (every page pointing at home) hides duplicates (judged by seo-canonical, not here), the HTTP `Link` header canonical is not read, and a page with the home page's title, description and at least 90% of its own words is merged into it. F duplicate <title> across the remaining pages; W duplicate meta description; P all unique; I fewer than 2 pages to compare   c5,c31
 ux-thank-you 1            GET /thank-you,/thanks,/aitah,/tanks (max 4): P any 200 HTML page that is not a shell, i.e. its first 1024 characters differ from those of the random-path 404 body and of the RAW home page body (`page.body`, not the comment/script-stripped copy); I none and no form; W none but a lead form exists (`pageType().hasLeadForm`; fallback `<form` when the page type is unknown); S, with no fetches, when the page has form(s) but only benign search/tool, login (password is the only personal field) or button-only/hidden-only ones   c24
 ux-js-bundle-size 2       sum size of same-origin <script src> (max 3 fetched, Content-Length else body length, transferred if Content-Encoding): F >1 MB total; W >500 KB total or a single file >300 KB or uncompressed; P otherwise; I no scripts   c20
@@ -347,7 +339,7 @@ exp-probe-dir-listing    3 /uploads/               contains "Index of /"
 
 Total: 22+8+16+11+15+31+16+25 = 144 findings (119 passive, 25 deep). Categories per finding: headers.js/csp.js(csp-*)->headers; mixed-*/sri-* ->content; tls-*->tls; dns-*->dns; mail-*->mail; seo-*/ux-* as named in 6.6-6.7 (`seo-*`->seo, `ux-*`->ux, `ai-*`->ai, `exp-*`->exposure); `ux-alt-text` ux; `ux-default-hostname` ux; `seo-noindex` seo.
 
-## 8. Frontend (public/index.html, B5)
+## 8. Frontend (public/index.html)
 One static file, inline `<style>`/`<script>` (see CSP hashing in section 4), no external requests, no framework, light+dark via `prefers-color-scheme`, works at 320 px, keyboard-usable, `<html lang="en">`, labelled inputs, `aria-live` region for progress. UI: URL input + "Scan" (GET /api/scan), grade badges (security + quality) with sub-score bars per category, findings grouped by category with status filter (fail/warn default open, pass collapsed), each finding shows title, evidence, fix, checklist tag. "Deep scan" panel: enter host -> POST /api/verify/start -> show TXT name+value with copy button -> "Check" (POST /api/verify/check) -> when verified enable "Run deep scan" (POST /api/scan deep). Render ALL scan data with `textContent`, never `innerHTML`. No localStorage needed.
 
 ## 9. Tests (node:test; each file starts with `process.env.HEADERSCAN_ALLOW_PRIVATE='1'` when it needs localhost)
@@ -361,11 +353,10 @@ One static file, inline `<style>`/`<script>` (see CSP hashing in section 4), no 
 - `test/hostile-input.test.js`: hostile bodies stay fast (see 2.1) and one regression test per false-verdict fix of the page-type, minimal-page, search-box, privacy-link, duplicate-title, robots.txt and thank-you rules; `test/robots.test.js` (RFC 9309 matching), `test/duptitles.test.js` (canonical/redirect/near-identical home aliases, real duplicates, hostile candidate bodies) and `test/hostname.test.js` (default-hostname suffixes, trailing dots, a 200k-dot host) cover the later fixes of those three rules. `test/sample-reports.test.js`: `public/samples/*.json` are labelled samples, their stored scores equal `score()` of their findings, `perfect` is A+ 100 for both groups, `mixed` lands within 47 to 53 for both, their finding ids equal the live catalog (119 passive ids) and they contain no e-mail address (see README, Sample reports).
 - Command: `npm test` (= `node --test "test/*.test.js"`). All servers closed in `after()`. Finding counts asserted in `test/scan.test.js`: 119 passive, 144 deep.
 
-## 10. README (B2)
-What it is, `npm start` (port 8787), API table (link to section 4 content), the ownership-verification flow, security posture (passive by default, probes read-only GET/allowlist/no content stored, SSRF rules, rate limits), checklist mapping (c# -> ID), limitations (no headless browser: console errors, sticky CTA; DNSSEC best effort; SPF lookup count approximate; in-memory rate limit). Must stay in sync with this spec.
+## 10. (removed)
 
 ## 11. Deployment shape (Cloudflare Worker + Render; steps in `DEPLOY.md`)
 - `worker/index.js` runs only for `/api/*` (`run_worker_first` in `wrangler.toml`); `dist/` (built from `public/` with the site-wide CSP in `_headers`) is served by the platform; this includes `/privacy` and the static sample reports `/samples/perfect.json` and `/samples/mixed.json`, which the standalone `server.js` does not serve (section 4). Secrets `BACKEND_URL` and `PROXY_KEY` (= backend `HEADERSCAN_PROXY_KEY`). Deploy order: Render first, then Cloudflare.
-- Worker routes: `/api/scan` GET/POST, `/api/verify/start` and `/check` POST, `/api/health` GET; other paths 404, wrong method 405, missing secrets 500 `MISCONFIGURED`, backend down or an HTML 502-504 -> JSON 502 `BACKEND_UNREACHABLE` with `Retry-After: 30`. It forwards `x-headerscan-key` and the real client IP (`x-headerscan-client`).
+- Worker routes: `/api/scan` GET/POST, `/api/verify/start` and `/check` POST, `/api/health` GET; other paths 404, wrong method 405, `Sec-Fetch-Site: cross-site` 403 `FORBIDDEN` before any backend call, missing secrets 500 `MISCONFIGURED`, backend down or an HTML 502-504 -> JSON 502 `BACKEND_UNREACHABLE` with `Retry-After: 30`. It forwards `x-headerscan-key` and the real client IP (`x-headerscan-client`).
 - Every response the Worker produces itself carries the security headers (`SECURITY` in `worker/index.js`, kept in step with `scripts/build-pages.mjs`; `_headers` never applies to Worker responses). Plain `http://` gets a 308 to `https://` on Worker-handled paths only; static assets are not redirected (known limit, acceptable: `.dev` is HSTS-preloaded).
 - No `security.txt`, no email address and no name anywhere in `public/`; the privacy page states what `server.js` really keeps (client IP in memory 60 to 120 s, nothing on disk, only internal error messages logged) that the scanned host name is sent to `cloudflare-dns.com` for the DNSSEC check, and the page-load wake-up request to `/api/health`.

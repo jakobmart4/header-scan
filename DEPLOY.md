@@ -11,7 +11,7 @@ Why split: the scanner needs `node:tls` / `node:dns` / raw sockets, which Worker
 Deploy order: Render first (the Worker needs its URL), then Cloudflare.
 
 ## 1. Backend (Render, free)
-1. Render -> New -> Blueprint -> pick this private repo (`render.yaml`).
+1. Render -> New -> Blueprint -> pick this public repo (`render.yaml`).
 2. Set env `HEADERSCAN_PROXY_KEY` to a long random string (e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
    `HEADERSCAN_SECRET` is generated once and persists (needed so ownership tokens survive restarts).
 3. Copy the service URL, e.g. `https://header-scan-backend.onrender.com`.
@@ -35,11 +35,19 @@ CLI alternative: `npx wrangler login && npm run deploy`, then `npx wrangler secr
 - `curl -i http://header-scan.<your-subdomain>.workers.dev/api/health` -> 308 to `https://` (Worker-handled path).
 - Scan your own site with it: it should grade well.
 
+## 4. Rollback
+- Worker: Dashboard -> Workers & Pages -> header-scan -> Deployments -> previous version (static assets are part of the version), or `npx.cmd wrangler rollback`.
+- Backend: Render dashboard -> the service -> Events/Deploys -> roll back to a previous deploy, or `git revert <sha>` + push + Manual Deploy.
+- If the API shape changed, roll back the Worker first. Nothing is stored, so there is no data to roll back.
+- What is live: `GET /api/health` on the backend shows the running `commit` (first 7 characters of `RENDER_GIT_COMMIT`); the Worker's version is in its Deployments list.
+- CI (`.github/workflows/ci.yml`) runs the UI drift check and the tests on every push to `main`; it does not gate the deploys.
+
 ## Limits / notes
-- Rate limit is in memory per instance (per real client IP via the proxy; IPv6 per /64), plus at most 2 running scans per client and 4 in total. **Known limit:** a /64 bucket does not stop someone who holds a /48 (65,536 /64 networks, each with its own quota), and once the map holds more than 50,000 keys a request with a new key gets 429 for 60 s. The real defence for public use is a Cloudflare WAF rate-limiting rule on `/api/*` (dashboard setting, not in this repo; paid, not used by the current deployment).
+- Rate limit is in memory per instance (per real client IP via the proxy; IPv6 per /64), plus at most 2 running scans per client and 4 in total. **Known limit:** a /64 bucket does not stop someone who holds a /48 (65,536 /64 networks, each with its own quota), and once the map holds more than 50,000 keys a request with a new key gets 429 for 60 s. The real defence for public use is a Cloudflare WAF rate-limiting rule on `/api/*` (a zone-level setting; this deployment runs on workers.dev without an own zone, so it is not used).
 - **Known limit:** `/privacy` and `/samples/*.json` (the sample reports behind the UI's "Sample reports" buttons) are static assets of the Worker deployment. The standalone `server.js` serves only `/` and the API (`other public files -> 404`), so a local `npm start` has a dead footer Privacy link and failing sample buttons (`test/api.test.js` pins "other public files -> 404").
 - The Worker sets the security headers on every response it produces itself (proxied `/api/*` answers, its JSON errors and the 308); `dist/_headers` covers static files only. Plain `http://` gets a 308 to `https://` on Worker-handled paths only (`/api/*` and paths without a static file).
 - **Known limit:** static assets (`/`, `/privacy`, ...) are served by the platform and are NOT redirected from `http://`, because the Worker does not run for them (`run_worker_first = ["/api/*"]`). Acceptable because the `.dev` TLD is HSTS-preloaded, so browsers never send plain HTTP to `workers.dev`; on a custom domain use "Always Use HTTPS".
-- No `security.txt` is published on purpose (it needs a contact address and the owner publishes no personal data); `test/static-pages.test.js` guards this. The privacy page (`public/privacy.html`) must stay in line with `server.js` and `worker/index.js`; re-read it when logging, storage or third-party calls change.
+- No `security.txt` is published on purpose (it needs a contact address and the owner publishes no personal data); `test/static-pages.test.js` guards this. The privacy page (`public/privacy.html`) must stay in line with `server.js` and `worker/index.js`; re-read it when logging, storage or third-party calls change, and bump its "Last updated" date whenever you change it.
 - Paths without a static file fall through to the Worker, which answers a JSON 404 (now with the security headers). `assets.not_found_handling = "404-page"` would serve a static 404 page instead (not enabled).
 - Never enable `HEADERSCAN_ALLOW_PRIVATE` in production (tests only).
+- The repo is public: secrets (`HEADERSCAN_PROXY_KEY`, `PROXY_KEY`, `BACKEND_URL`) live only in the Render dashboard and Cloudflare secrets (dashboard or `wrangler secret put`), never in the repo.

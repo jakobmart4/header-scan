@@ -105,3 +105,19 @@ test('no cron keep-alive: no scheduled handler, no [triggers] in wrangler.toml (
   const { readFileSync } = await import('node:fs');
   assert.doesNotMatch(readFileSync('wrangler.toml', 'utf8'), /^\s*\[triggers\]/m);
 });
+
+test('cross-site requests are refused with 403 before any fetch; same-origin, same-site and no header are forwarded', async () => {
+  const orig = globalThis.fetch; let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response('{"ok":true}', { status: 200, headers: { 'content-type': 'application/json' } }); };
+  try {
+    const r = await call('https://s.test/api/scan?url=https://a.com', { headers: { 'sec-fetch-site': 'cross-site' } });
+    assert.equal(r.status, 403);
+    assert.equal((await r.json()).error.code, 'FORBIDDEN');
+    assert.equal(calls, 0);
+    for (const sf of ['same-origin', 'same-site', null]) {
+      const res = await call('https://s.test/api/scan?url=https://a.com', { headers: sf ? { 'sec-fetch-site': sf } : {} });
+      assert.equal(res.status, 200, String(sf));
+    }
+    assert.equal(calls, 3);
+  } finally { globalThis.fetch = orig; }
+});

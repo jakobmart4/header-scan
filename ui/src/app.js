@@ -145,6 +145,10 @@
     findings.forEach(function (f) { c[f.status]++; });
     return c;
   }
+  function doneMsg(r) {
+    var c = counts(r.findings);
+    return 'Scan finished: Security ' + r.score.security.grade + ', Quality ' + r.score.quality.grade + ', ' + c.fail + ' failed, ' + c.warn + ' warnings.';
+  }
 
   // ISO timestamp -> local date and time; anything unparseable is shown as sent
   function when(iso) {
@@ -459,6 +463,7 @@
 
   function show(r, deep) {
     result = r;
+    $('url').removeAttribute('aria-invalid'); // a sample or share link replaces a stale empty-URL error
     renderRaw(r);
     renderGauges(r); renderDonut(r.findings); renderHeat(r.findings); renderCats(r); renderFindings(r); syncFilters();
     enhance(renderStack, r.findings);
@@ -504,6 +509,7 @@
     b.type = 'button';
     b.setAttribute('aria-controls', ids.join(' '));
     b.appendChild(tt);
+    b.appendChild(h('span', 'sr', ' (' + li.dataset.s + ', severity ' + li.dataset.sev + ' of 5)'));
     clear(title);
     title.appendChild(b);
     // phones: only the first three failed rows start open (a scan can have 15), the others show the one-line preview
@@ -628,7 +634,7 @@
     if (rows.length) {
       var ol = h('ol', 'xt-top');
       rows.slice(0, 3).forEach(function (r) {
-        var item = h('li'), b = h('button', 'xt-item'), t = r.li.querySelector('.fnd-title'), f = r.li.querySelector('.fnd-fix');
+        var item = h('li'), b = h('button', 'xt-item'), t = r.li.querySelector('.fnd-tt') || r.li.querySelector('.fnd-title'), f = r.li.querySelector('.fnd-fix');
         b.type = 'button';
         b.appendChild(h('span', 'xt-sev', 'Sev ' + r.sev));
         b.appendChild(h('span', 'xt-ttl', t ? t.textContent : ''));
@@ -786,8 +792,9 @@
   }
 
   async function runScan(deep) {
-    var url = $('url').value.trim();
-    if (!url) { say($('status'), 'Enter a URL first.', 'err'); return; }
+    var u = $('url'), url = u.value.trim();
+    if (!url) { u.setAttribute('aria-invalid', 'true'); u.focus(); say($('status'), 'Enter a URL first.', 'err'); return; }
+    u.removeAttribute('aria-invalid');
     setBusy(true);
     delete $('results').dataset.refilter; // a fresh report gets the full staggered reveal again
     setState('loading', 'false');
@@ -802,7 +809,7 @@
       $('sample-banner').hidden = $('share-banner').hidden = true;
       show(r, deep);
       setState('done', 'false');
-      say($('status'), 'Scan finished.', 'ok');
+      say($('status'), doneMsg(r), 'ok');
     } catch (e) {
       $('error-msg').textContent = e.message;
       // Keep the previous report (and its Copy/Download buttons); the error box sits above it.
@@ -940,8 +947,8 @@
   }
 
   $('verify-start').addEventListener('click', async function () {
-    var host = $('host').value.trim();
-    if (!host) { say($('verify-msg'), 'Enter the host you own.', 'err'); return; }
+    var hs = $('host'), host = hs.value.trim();
+    if (!host) { hs.setAttribute('aria-invalid', 'true'); hs.focus(); say($('verify-msg'), 'Enter the host you own.', 'err'); return; }
     setBusy(true); verifiedHost = '';
     setVerify('idle'); // never leave a previous host's record on screen
     try {
@@ -973,6 +980,7 @@
 
   // Editing the host invalidates the local unlock (the server re-checks on every deep scan anyway).
   $('host').addEventListener('input', function () {
+    this.removeAttribute('aria-invalid');
     var host = $('host').value.trim();
     if (verifiedHost && host !== verifiedHost) { verifiedHost = txtHost = ''; $('deep-btn').disabled = true; }
     if (txtHost !== host) { // the shown record/badge/message belongs to another host (or to a verification just lost)
@@ -981,6 +989,7 @@
     }
   });
 
+  $('url').addEventListener('input', function () { this.removeAttribute('aria-invalid'); });
   $('deep-btn').addEventListener('click', function () {
     if (!verifiedHost || busy) return;
     if (!$('url').value.trim()) $('url').value = verifiedHost;

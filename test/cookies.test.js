@@ -65,3 +65,12 @@ describe('cookies.js', () => {
     } finally { await srv.close(); }
   });
 });
+
+describe('cookies.js: session-like names match on word boundaries', () => {
+  const httponly = async (name) => by(await run(withCookies([`${name}=1; Secure; SameSite=Lax`])))['cookie-httponly'];
+  for (const n of ['PHPSESSID', 'JSESSIONID', 'connect.sid', 'authToken', 'csrf_token', 'sid', 'jwt', 'login_state', 'oauth_state', 'sessionid',
+    '.ASPXAUTH', 'authtoken', 'accesstoken', 'csrftoken', 'usersid', 'SSID', 'HSID', 'APISID', '__Secure-3PAPISID'])
+    test(`${n} is session-like (fail without HttpOnly)`, async () => assert.equal(await httponly(n), 'fail'));
+  for (const n of ['inside_banner', 'author_pref', 'visid_incap_123', 'theme'])
+    test(`${n} is not session-like (warn only)`, async () => assert.equal(await httponly(n), 'warn'));
+});

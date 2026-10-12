@@ -90,6 +90,18 @@ describe('scan() self-test', () => {
     const ci = (f) => ORDER.indexOf(f.category);
     for (let i = 1; i < rBad.findings.length; i++) assert.ok(ci(rBad.findings[i - 1]) <= ci(rBad.findings[i]), `${rBad.findings[i].id} out of order`);
   });
+  test('a crashing module is isolated: errors lists it, other modules still report', async () => {
+    const fetch = async (u) => ({ status: 200, headers: { 'content-type': 'text/html' }, body: '<html><title>x</title></html>', finalUrl: u, redirects: [], timingMs: 1 });
+    const r = await scan({ url: 'https://example.test/', fetch, resolve: new Proxy({}, { get() { throw new Error('boom'); } }), allowPrivate: true });
+    assert.deepEqual(r.errors, [{ module: 'dns', message: 'boom' }]);
+    assert.equal(r.findings.filter((f) => f.category === 'dns' || f.category === 'mail').length, 0);
+    for (const c of ['headers', 'cookies', 'content', 'seo']) assert.ok(r.findings.some((f) => f.category === c), c);
+  });
+  test('an unreachable page gets no Quality grade', async () => {
+    const fetch = async () => { throw Object.assign(new Error('down'), { code: 'NETWORK' }); };
+    const r = await scan({ url: 'https://example.test/', fetch, resolve: stubResolve(), allowPrivate: true });
+    assert.equal(r.score.quality.grade, 'N/A');
+  });
   test('bad input: private target and bad URL are refused', async () => {
     await assert.rejects(scan({ url: 'http://10.0.0.1/', allowPrivate: false }), (e) => ['BLOCKED_TARGET', 'BAD_URL'].includes(e.code));
     await assert.rejects(scan({ url: 'ftp://example.com/', allowPrivate: false }), (e) => e.code === 'BAD_URL');

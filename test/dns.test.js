@@ -79,3 +79,21 @@ describe('dns.js', () => {
     assert.equal(out.length, IDS.length);
   });
 });
+
+describe('dns.js: www host inherits the mail domain records', () => {
+  test('MTA-STS, TLS-RPT and DKIM are found at the parent domain', async () => {
+    const recs = { 'example.test': ['v=spf1 -all'], '_dmarc.example.test': ['v=DMARC1; p=reject'], '_mta-sts.example.test': ['v=STSv1; id=1'],
+      '_smtp._tls.example.test': ['v=TLSRPTv1; rua=mailto:t@example.test'], 'selector1._domainkey.example.test': ['v=DKIM1; p=abc'] };
+    const out = await run(fakeCtx({ url: 'https://www.example.test/', resolve: stubResolve({ txt: async (n) => recs[n] || [], mx: async (d) => d === 'example.test' ? [{ exchange: 'mx.example.test', priority: 10 }] : [] }) }));
+    const f = Object.fromEntries(out.map((x) => [x.id, x]));
+    for (const id of ['mail-mta-sts', 'mail-tls-rpt', 'mail-dkim']) {
+      assert.equal(f[id].status, 'pass', id);
+      assert.match(f[id].evidence, /\(at example\.test\)/, id);
+    }
+  });
+  test('DKIM without MX is looked up at the registrable domain, host still counts', async () => {
+    const dk = async (name) => by(await run(fakeCtx({ url: 'https://www.example.test/', resolve: stubResolve({ txt: async (n) => (n === name ? ['v=DKIM1; p=abc'] : []) }) })))['mail-dkim'];
+    assert.equal(await dk('default._domainkey.example.test'), 'pass');
+    assert.equal(await dk('default._domainkey.www.example.test'), 'pass');
+  });
+});

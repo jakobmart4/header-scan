@@ -84,3 +84,60 @@ test('cold start: any JSON answer of the backend marks it awake for 14 min (Rend
   now += 2 * 60000;
   assert.equal(ctx.awake(), false, '15 min after the last answer');
 });
+
+test('overview category rows: the stretched .crow-go button is not flattened by the display: contents wrapper rule', () => {
+  const css = read('ui/src/charts.css');
+  const rules = [...css.matchAll(/^([^{}\n]*#cats > \.crow > [^{}\n]*)\{[^}]*display:\s*contents/gm)].map((m) => m[1]);
+  assert.ok(rules.length, 'wrapper rule found');
+  for (const sel of rules) assert.match(sel, /:not\(\.crow-go\)/, sel);
+});
+
+test('finding toggle: the accessible name ends with the status and severity in a visually hidden span', () => {
+  const app = read('ui/src/app.js');
+  const row = app.slice(app.indexOf('function compactRow('), app.indexOf('function fxRows('));
+  assert.ok(row.includes("b.appendChild(h('span', 'sr', ' (' + li.dataset.s + ', severity ' + li.dataset.sev + ' of 5)'));"));
+  assert.ok(row.indexOf("'sr'") > row.indexOf('b.appendChild(tt)'), 'the visible title stays first in the name');
+  assert.match(read('ui/src/base.css'), /\.sr \{[^}]*clip-path: inset\(50%\)/);
+  assert.ok(app.includes("t = r.li.querySelector('.fnd-tt') || r.li.querySelector('.fnd-title')"), 'top fixes copy the visible title, not the sr suffix');
+});
+
+test('empty URL / host: the field gets aria-invalid and focus, cleared again on input', () => {
+  const app = read('ui/src/app.js');
+  const run = app.slice(app.indexOf('async function runScan'), app.indexOf('async function loadSample'));
+  assert.match(run, /if \(!url\) \{ u\.setAttribute\('aria-invalid', 'true'\); u\.focus\(\); say\(\$\('status'\), 'Enter a URL first\.', 'err'\); return; \}/);
+  assert.ok(run.includes("u.removeAttribute('aria-invalid');"), 'a filled-in URL (also from the deep-scan button) is valid');
+  assert.ok(app.includes("$('url').addEventListener('input', function () { this.removeAttribute('aria-invalid'); });"));
+  const show = app.slice(app.indexOf('function show('), app.indexOf('renderRaw(r);'));
+  assert.ok(show.includes("$('url').removeAttribute('aria-invalid');"), 'a loaded sample or share link clears a stale empty-URL error');
+  const ver = app.slice(app.indexOf("$('verify-start').addEventListener"), app.indexOf("$('deep-btn').addEventListener"));
+  assert.match(ver, /if \(!host\) \{ hs\.setAttribute\('aria-invalid', 'true'\); hs\.focus\(\); say\(\$\('verify-msg'\), 'Enter the host you own\.', 'err'\); return; \}/);
+  assert.match(ver, /\$\('host'\)\.addEventListener\('input', function \(\) \{\s*this\.removeAttribute\('aria-invalid'\);/);
+});
+
+test('scan finished status announces both grades and the fail/warn counts of the real report shape', () => {
+  const app = read('ui/src/app.js');
+  const ctx = vm.createContext({});
+  vm.runInContext(app.slice(app.indexOf('function counts('), app.indexOf('// ISO timestamp')), ctx);
+  const r = JSON.parse(read('public/samples/mixed.json')), c = ctx.counts(r.findings);
+  assert.ok(c.fail > 0 && c.warn > 0);
+  assert.equal(ctx.doneMsg(r), `Scan finished: Security ${r.score.security.grade}, Quality ${r.score.quality.grade}, ${c.fail} failed, ${c.warn} warnings.`);
+  assert.match(ctx.doneMsg(r), /^Scan finished: Security [A-F][+-]?, Quality [A-F][+-]?, \d+ failed, \d+ warnings\.$/);
+  const run = app.slice(app.indexOf('async function runScan'), app.indexOf('async function loadSample'));
+  assert.ok(run.includes("say($('status'), doneMsg(r), 'ok');"));
+  assert.ok(app.includes("say($('status'), 'Sample report loaded: ' + name + '.');") && app.includes("say($('status'), 'Shared report opened.');"), 'samples and share links keep their own message');
+});
+
+test('build-ui strips CSS comments, indentation and full-line JS comments; strings with // and the script itself survive', () => {
+  const ui = read('public/index.html');
+  const style = ui.match(/<style>([\s\S]*?)<\/style>/)[1], script = ui.match(/<script>([\s\S]*?)<\/script>/)[1];
+  assert.doesNotMatch(style, /\/\*/, 'no CSS comments');
+  assert.doesNotMatch(style, /^[ \t]+/m, 'no CSS indentation');
+  assert.doesNotMatch(style, /\n\n/, 'no blank lines');
+  assert.doesNotMatch(script, /^[ \t]*\/\/.*$/m, 'no full-line JS comments');
+  assert.doesNotThrow(() => new vm.Script(script), 'the stripped script still parses');
+  const src = read('ui/src/app.js');
+  for (const line of src.split('\n').filter((l) => /\/\/|\/\*/.test(l) && !/^\s*\/\//.test(l)).slice(0, 50)) {
+    const code = line.trim();
+    assert.ok(script.includes(code), 'a line with code and // or /* is kept verbatim: ' + code);
+  }
+});

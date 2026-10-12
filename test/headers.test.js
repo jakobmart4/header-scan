@@ -87,3 +87,14 @@ describe('headers.js (fixture)', () => {
     for (const id of ['hdr-xcto', 'hdr-frame-protection', 'hdr-referrer-policy', 'hdr-permissions-policy', 'hdr-coop', 'hdr-coep', 'hdr-corp', 'hdr-server-leak', 'hdr-powered-by', 'cors-wildcard-credentials', 'cors-reflected-origin', 'cors-null-origin']) assert.equal(s[id], 'pass', id);
   });
 });
+
+describe('headers.js: comma-joined duplicate headers', () => {
+  const s = async (headers) => by(await run(fakeCtx({ headers, fetch: res({}) })));
+  test("CSP frame-ancestors after a comma counts (CDN + origin both send CSP)", async () => {
+    assert.equal((await s({ 'content-security-policy': "default-src 'self', frame-ancestors 'none'" }))['hdr-frame-protection'], 'pass');
+  });
+  test('X-Content-Type-Options uses the first list member', async () => {
+    assert.equal((await s({ 'x-content-type-options': 'nosniff, nosniff' }))['hdr-xcto'], 'pass');
+    assert.equal((await s({ 'x-content-type-options': 'sniff, nosniff' }))['hdr-xcto'], 'fail');
+  });
+});

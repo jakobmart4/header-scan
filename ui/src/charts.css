@@ -112,7 +112,7 @@
   border-bottom: 1px solid var(--rule);
 }
 /* tolerate a wrapper around name/tag */
-#cats > .crow > :not(.gauge-sm):not(.bar):not(.crow-name):not(.crow-tag) { display: contents; }
+#cats > .crow > :not(.gauge-sm):not(.bar):not(.crow-name):not(.crow-tag):not(.crow-go) { display: contents; }
 .crow .gauge-sm { grid-area: g; align-self: center; }
 .crow-name {
   grid-area: n;

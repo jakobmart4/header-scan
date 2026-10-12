@@ -105,6 +105,16 @@ describe('probes.js', () => {
     } finally { await srv.close(); }
   });
 
+  test('near the scan deadline: probes stop early and the collected findings are returned', async () => {
+    let calls = 0;
+    const ctx = { ...fakeCtx({ verified: true, fetch: async (u) => { calls++; return { status: 404, headers: {}, body: '', finalUrl: u }; } }), deadline: Date.now() + 1000 };
+    const out = await run(ctx);
+    assert.equal(calls, 1, 'only the baseline request');
+    assert.equal(out.length, 25);
+    assert.equal(by(out)['exp-probes-gate'].status, 'pass');
+    assert.ok(out.slice(1).every((f) => f.status === 'skipped' && f.evidence === 'stopped: scan time limit reached'));
+  });
+
   test('429 stops the run early', async () => {
     const srv = await start({ mode: 'limited' });
     try {

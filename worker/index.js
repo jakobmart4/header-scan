@@ -30,6 +30,9 @@ async function handle(request, env) {
   const methods = ROUTES[url.pathname];
   if (!methods) return json(404, 'NOT_FOUND', 'not found');
   if (!methods.includes(request.method)) return json(405, 'METHOD_NOT_ALLOWED', 'method not allowed', { allow: methods.join(', ') });
+  // A cross-site page (<img src=.../api/scan?...>) must not spend its visitors' per-IP quota. Browsers set this header and pages
+  // cannot forge it; same-origin (the UI), same-site and clients that send no header (curl, API users) are allowed.
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return json(403, 'FORBIDDEN', 'cross-site requests are not allowed');
   if (!env.BACKEND_URL || !env.PROXY_KEY) return json(500, 'MISCONFIGURED', 'server is not configured');
 
   const headers = new Headers({

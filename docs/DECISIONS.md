@@ -1,0 +1,14 @@
+# Settled decisions
+
+Decided; do not reopen without new facts. Reasons are one line; the evidence is in the linked files.
+
+- **No npm dependencies.** Node stdlib only, so there is nothing to audit, update or install. [SPEC.md](../SPEC.md) header, [package.json](../package.json), [README.md](../README.md).
+- **Cloudflare Worker + Render split.** The scanner needs `node:tls`, `node:dns` and raw sockets, which Workers do not provide; the Worker serves the static UI and proxies `/api/*` with a shared key and the real client IP. [DEPLOY.md](../DEPLOY.md) ("Why split"), [SPEC.md](../SPEC.md) section 11.
+- **No storage; share link in the URL fragment.** The server keeps nothing but the in-memory rate-limit map; a shared report travels in `#r=...`, which browsers never send to a server, and is marked "not re-scanned, not verified". [README.md](../README.md) (Share links and Compare), [public/privacy.html](../public/privacy.html).
+- **CSP by hash.** Inline `<style>`/`<script>` are allowed by their SHA-256 in one CSP rule, no `'unsafe-inline'`, no inline style attributes or `on*` handlers; any edit to inline code needs a rebuild. [scripts/build-pages.mjs](../scripts/build-pages.mjs), [scripts/build-ui.mjs](../scripts/build-ui.mjs) (forbidden patterns), [test/static-pages.test.js](../test/static-pages.test.js), [docs/research/research-csp.md](research/research-csp.md).
+- **No headless browser.** Render free has 512 MB; Cloudflare Browser Run is 10 min/day shared, cannot pin the checked IP (SSRF guard) and would be the first npm dependency. Console-error and sticky-CTA checks stay `skipped`. [README.md](../README.md) (Limitations).
+- **No cron keep-warm.** Staying awake 24/7 costs ~744 of Render's 750 free hours per month, so one more service or restart would suspend the backend; the UI wakes it with one `/api/health` instead. Keep exactly one free Render service. [DEPLOY.md](../DEPLOY.md) section 1, guarded by [test/worker.test.js](../test/worker.test.js) (no `scheduled()`, no `[triggers]`).
+- **Public repo.** Render needs it. Commits use the GitHub noreply address; secrets live only in the Render dashboard and Cloudflare secrets ([.gitignore](../.gitignore) covers `.env` and `.dev.vars`). [DEPLOY.md](../DEPLOY.md) (Limits / notes).
+- **`http://` on static assets is not redirected.** The Worker runs only for `/api/*`; `.dev` is HSTS-preloaded, so browsers never send plain HTTP to `workers.dev`. [DEPLOY.md](../DEPLOY.md) (Limits / notes).
+- **workers.dev subdomain kept, no own domain.** `ux-default-hostname` warns on our own report, which is correct and accepted; a WAF rate-limit rule would need an own zone. [docs/research/ux-audit.md](research/ux-audit.md) (ux-default-hostname).
+- **eesti.ee's `cloudflareinsights` beacon counts as a tracker** (`ux-privacy-policy` fails there). [docs/research/ux-corpus.md](research/ux-corpus.md).

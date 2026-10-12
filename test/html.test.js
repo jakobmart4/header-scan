@@ -73,3 +73,23 @@ describe('html.js', () => {
     for (const f of await run(fakeCtx({ body: GOOD, fetch: fetch200 }))) if (f.checklist !== undefined) assert.ok(f.checklist >= 1 && f.checklist <= 40, f.id);
   });
 });
+
+describe('html.js: non-HTML targets and lang case', () => {
+  test('a JSON response is not judged as a page', async () => {
+    const out = await run(fakeCtx({ headers: { 'content-type': 'application/json; charset=utf-8' }, body: '{"ok":true}', fetch: fetch200 }));
+    for (const f of out) {
+      assert.equal(f.status, 'skipped', f.id);
+      assert.equal(f.evidence, 'not an HTML page (application/json)', f.id);
+    }
+  });
+  test('text/html and xhtml content types are still judged', async () => {
+    for (const ct of ['text/html; charset=utf-8', 'application/xhtml+xml'])
+      assert.equal(by(await run(fakeCtx({ headers: { 'content-type': ct }, body: GOOD, fetch: fetch200 })))['seo-title'], 'pass', ct);
+  });
+  test('seo-lang is case-insensitive (BCP 47)', async () => {
+    const lang = async (v) => by(await run(fakeCtx({ body: GOOD.replace('lang="en"', `lang="${v}"`), fetch: fetch200 })))['seo-lang'];
+    assert.equal(await lang('EN'), 'pass');
+    assert.equal(await lang('EN-us'), 'pass');
+    assert.equal(await lang('en_US'), 'fail');
+  });
+});

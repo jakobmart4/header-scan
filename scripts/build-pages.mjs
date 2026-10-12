@@ -1,4 +1,4 @@
-// Build dist/ for Cloudflare Pages: copy public/, write _headers with a CSP that allows the inline
+// Build dist/ for the Worker's static assets: copy public/, write _headers with a CSP that allows the inline
 // <style>/<script> by SHA-256 hash (same rule as server.js loadIndex).
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import crypto from 'node:crypto';

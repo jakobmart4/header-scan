@@ -8,11 +8,11 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const servers = [];
 
-async function boot() {
+async function boot(extraEnv = {}) {
   const port = 41000 + Math.floor(Math.random() * 8000);
   const child = spawn(process.execPath, ['server.js'], {
     cwd: root, stdio: 'ignore', windowsHide: true,
-    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', HEADERSCAN_ALLOW_PRIVATE: '1', HEADERSCAN_SECRET: 'api-test-secret-not-real' },
+    env: { ...process.env, RENDER_GIT_COMMIT: '', PORT: String(port), HOST: '127.0.0.1', HEADERSCAN_ALLOW_PRIVATE: '1', HEADERSCAN_SECRET: 'api-test-secret-not-real', ...extraEnv },
   });
   const srv = { port, base: `http://127.0.0.1:${port}`, child };
   servers.push(srv);
@@ -38,6 +38,11 @@ describe('API', () => {
     const j = await r.json();
     assert.equal(j.ok, true);
     assert.ok(j.version);
+    assert.ok(!('commit' in j), 'commit is omitted when RENDER_GIT_COMMIT is unset');
+  });
+  test('health reports the short deploy commit from RENDER_GIT_COMMIT', async () => {
+    const c = await boot({ RENDER_GIT_COMMIT: '0123456789abcdef0123456789abcdef01234567' });
+    assert.equal((await (await fetch(c.base + '/api/health')).json()).commit, '0123456');
   });
   test('security headers on every response; index.html has a strict CSP', async () => {
     const api = await fetch(s.base + '/api/health');
